@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="client/public/vanguard-banner.png" alt="Vanguard Banner" width="100%" />
+  <img src="https://media.giphy.com/media/VbH1V530c505u2rZ7O/giphy.gif" alt="Vanguard Community Collaboration" width="100%" />
 </p>
 
 <p align="center">
