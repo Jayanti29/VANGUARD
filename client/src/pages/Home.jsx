@@ -13,28 +13,30 @@ import {
   TrendingUp,
   FileText,
   MapPin,
-  ArrowRight
+  ArrowRight,
+  Users
 } from 'lucide-react';
 import useAuth from '../hooks/useAuth';
 import { db } from '../lib/firebase';
-import { collection, query, where, limit, onSnapshot, orderBy } from 'firebase/firestore';
+import { collection, query, where, limit, onSnapshot, getDocs } from 'firebase/firestore';
 
 export default function Home() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { dbUser, userProfile } = useAuth();
-
-  const [criticalCount, setCriticalCount] = useState(0);
-  const [totalOpenIssues, setTotalOpenIssues] = useState(0);
-  const [latestAlert, setLatestAlert] = useState(null);
-  const [availableWorkersCount, setAvailableWorkersCount] = useState(0);
-  
-  // Real-time Community Message Preview
-  const [latestMessage, setLatestMessage] = useState(null);
-
   const role = (dbUser?.role || userProfile?.role || 'citizen').toLowerCase();
 
-  // Time-aware greeting
+  const theme = {
+    bg: 'var(--bg)',
+    surface: 'var(--surface)',
+    surface2: 'var(--surface-2)',
+    text: 'var(--text)',
+    muted: 'var(--text-muted)',
+    border: 'var(--border)',
+    accent: 'var(--accent)',
+    accentSoft: 'var(--accent-soft)',
+  };
+
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour >= 5 && hour < 12) return t('greeting_morning', 'Good morning');
@@ -43,256 +45,172 @@ export default function Home() {
     return t('greeting_night', 'Good night');
   };
 
-  const getWelcomeMessage = () => {
-    switch (role) {
-      case 'worker': return 'Find work opportunities';
-      case 'official': return 'Manage community issues';
-      case 'volunteer': return 'Make a difference';
-      default: return 'Protect your community';
-    }
-  };
+  // ─────────────────────────────────────────────────────────────────
+  // CITIZEN DASHBOARD
+  // ─────────────────────────────────────────────────────────────────
+  if (role === 'citizen') {
+    const [openIssuesCount, setOpenIssuesCount] = useState(0);
+    const [myReportsCount, setMyReportsCount] = useState(0);
+    const [communityCount, setCommunityCount] = useState(124); // mock default
+    const [recentIssues, setRecentIssues] = useState([]);
 
-  const getBadgeStyle = () => {
-    switch (role) {
-      case 'worker': return 'bg-orange-100 text-orange-700 border-orange-200';
-      case 'official': return 'bg-purple-100 text-purple-700 border-purple-200';
-      case 'volunteer': return 'bg-green-100 text-green-700 border-green-200';
-      default: return 'bg-blue-100 text-blue-700 border-blue-200';
-    }
-  };
+    useEffect(() => {
+      if (!dbUser) return;
 
-  const communityId = `${dbUser?.district || 'bangalore'}_${dbUser?.village || 'ward6'}`.toLowerCase().replace(/\s+/g, '');
+      // 1. Open issues in user's ward
+      const openQ = query(
+        collection(db, 'issues'),
+        where('ward', '==', dbUser.ward || '6'),
+        where('status', '==', 'open')
+      );
+      const unsubOpen = onSnapshot(openQ, (snap) => {
+        setOpenIssuesCount(snap.size);
+      });
 
-  // Real-time listeners for issues & counts
-  useEffect(() => {
-    if (!dbUser) return;
+      // 2. Issues reported by current user
+      const myQ = query(
+        collection(db, 'issues'),
+        where('reporterId', '==', dbUser.uid)
+      );
+      const unsubMy = onSnapshot(myQ, (snap) => {
+        setMyReportsCount(snap.size);
+      });
 
-    // 1. Fetch Issues count in user's ward
-    const issuesQuery = query(
-      collection(db, 'issues'),
-      where('ward', '==', dbUser.ward || '6'),
-      where('status', '==', 'open')
-    );
-    const unsubscribeIssues = onSnapshot(issuesQuery, (snapshot) => {
-      const docs = snapshot.docs.map(doc => doc.data());
-      setTotalOpenIssues(docs.length);
-      const criticals = docs.filter(issue => issue.severity === 'red');
-      setCriticalCount(criticals.length);
+      // 3. Community members count (district match)
+      const usersQ = query(
+        collection(db, 'users'),
+        where('district', '==', dbUser.district || 'Ramanagara')
+      );
+      getDocs(usersQ).then((snap) => {
+        if (snap.size > 0) setCommunityCount(snap.size);
+      });
 
-      // Latest red/orange alert
-      const highAlert = docs.find(issue => issue.severity === 'red' || issue.severity === 'orange');
-      setLatestAlert(highAlert || null);
-    });
+      // 4. Last 5 issues
+      const recentQ = query(
+        collection(db, 'issues'),
+        where('village', '==', dbUser.village || 'Ramanagara'),
+        limit(5)
+      );
+      const unsubRecent = onSnapshot(recentQ, (snap) => {
+        const docs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setRecentIssues(docs);
+      });
 
-    // 2. Fetch community latest message
-    const msgQuery = query(
-      collection(db, 'communities', communityId, 'messages'),
-      orderBy('timestamp', 'desc'),
-      limit(1)
-    );
-    const unsubscribeMessages = onSnapshot(msgQuery, (snapshot) => {
-      if (!snapshot.empty) {
-        setLatestMessage(snapshot.docs[0].data());
-      } else {
-        setLatestMessage(null);
+      return () => {
+        unsubOpen();
+        unsubMy();
+        unsubRecent();
+      };
+    }, [dbUser]);
+
+    const getSeverityStyle = (severity) => {
+      switch (severity) {
+        case 'red': return { background: '#FEF2F2', color: '#DC2626', border: '1px solid #FECACA' };
+        case 'orange': return { background: '#FFF7ED', color: '#EA580C', border: '1px solid #FED7AA' };
+        case 'yellow': return { background: '#FFFBEB', color: '#D97706', border: '1px solid #FDE68A' };
+        default: return { background: '#F0FDF4', color: '#16A34A', border: '1px solid #BBF7D0' };
       }
-    });
-
-    // 3. Fetch count of available workers nearby
-    const workersQuery = query(
-      collection(db, 'workers'),
-      where('district', '==', dbUser.district || 'Bangalore'),
-      where('isAvailable', '==', true)
-    );
-    const unsubscribeWorkers = onSnapshot(workersQuery, (snapshot) => {
-      setAvailableWorkersCount(snapshot.size);
-    });
-
-    return () => {
-      unsubscribeIssues();
-      unsubscribeMessages();
-      unsubscribeWorkers();
     };
-  }, [dbUser, communityId]);
 
-  const getRoleActions = () => {
-    switch (role) {
-      case 'worker':
-        return [
-          { label: 'My Jobs', icon: Briefcase, path: '/workers', color: 'text-amber-500', disabled: false },
-          { label: 'Post My Services', icon: Plus, path: '/profile', color: 'text-blue-500', disabled: false },
-          { label: 'Community Chat', icon: MessageSquare, path: '/community', color: 'text-blue-500', disabled: false },
-          { label: 'Map View', icon: Map, path: '/map', color: 'text-blue-500', disabled: false },
-          { label: 'My Profile', icon: User, path: '/profile', color: 'text-blue-500', disabled: false },
-          { label: 'Earnings (coming soon)', icon: TrendingUp, path: '#', color: 'text-slate-400', disabled: true }
-        ];
-      case 'official':
-        return [
-          { label: 'Admin Dashboard', icon: Shield, path: '/admin', color: 'text-purple-500', disabled: false },
-          { label: 'Community Chat', icon: MessageSquare, path: '/community', color: 'text-blue-500', disabled: false },
-          { label: 'Map View', icon: Map, path: '/map', color: 'text-blue-500', disabled: false },
-          { label: 'Issue Reports', icon: FileText, path: '/map', color: 'text-blue-500', disabled: false },
-          { label: 'Statistics', icon: TrendingUp, path: '/admin', color: 'text-blue-500', disabled: false },
-          { label: 'Officials Directory', icon: Briefcase, path: '/officials', color: 'text-amber-500', disabled: false }
-        ];
-      case 'volunteer':
-        return [
-          { label: 'Report Issue', icon: AlertTriangle, path: '/report', color: 'text-red-500', disabled: false },
-          { label: 'Community Chat', icon: MessageSquare, path: '/community', color: 'text-blue-500', disabled: false },
-          { label: 'Active Emergencies', icon: Shield, path: '/emergency', color: 'text-red-500', disabled: false },
-          { label: 'Map View', icon: Map, path: '/map', color: 'text-blue-500', disabled: false },
-          { label: 'AI Assistant', icon: Bot, path: '/ai', color: 'text-purple-500', disabled: false },
-          { label: 'Volunteer Tasks (coming soon)', icon: Plus, path: '#', color: 'text-slate-400', disabled: true }
-        ];
-      default: // citizen
-        return [
-          { label: 'Report Issue', icon: AlertTriangle, path: '/report', color: 'text-red-500', disabled: false },
-          { label: 'Community Chat', icon: MessageSquare, path: '/community', color: 'text-blue-500', disabled: false },
-          { label: 'Emergency Alert', icon: Shield, path: '/emergency', color: 'text-red-500', disabled: false },
-          { label: 'Map View', icon: Map, path: '/map', color: 'text-blue-500', disabled: false },
-          { label: 'AI Assistant', icon: Bot, path: '/ai', color: 'text-purple-500', disabled: false },
-          { label: 'Officials Directory', icon: Briefcase, path: '/officials', color: 'text-amber-500', disabled: false }
-        ];
-    }
-  };
+    return (
+      <div className="space-y-6" style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px' }}>
+        {/* Header */}
+        <div style={{ background: theme.surface, border: '1px solid ' + theme.border, padding: '20px', borderRadius: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: 'var(--shadow)' }}>
+          <div>
+            <h2 style={{ fontSize: '18px', fontWeight: 800, color: theme.text, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {getGreeting()}, {dbUser?.name || 'Citizen'}
+              <span style={{ background: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE', fontSize: '10px', fontWeight: 700, padding: '2px 8px', borderRadius: '12px' }}>
+                Citizen
+              </span>
+            </h2>
+            <p style={{ fontSize: '12px', color: theme.muted, marginTop: '4px' }}>Protect your community</p>
+            <div style={{ fontSize: '12px', color: theme.muted, marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 'bold' }}>
+              <MapPin size={14} className="text-accent" /> {dbUser?.village || 'Ramanagara'}, Ward {dbUser?.ward || '6'}
+            </div>
+          </div>
+          <img src={dbUser?.profileImageUrl || 'https://api.dicebear.com/7.x/bottts/svg?seed=citizen'} alt="avatar" style={{ width: '48px', height: '48px', borderRadius: '50%', border: '1px solid ' + theme.border }} />
+        </div>
 
-  const quickActions = getRoleActions();
+        {/* Stats Row */}
+        <div className="grid grid-cols-3 gap-4">
+          <div style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', textAlign: 'center', boxShadow: 'var(--shadow)' }}>
+            <span style={{ fontSize: '24px', fontWeight: 800, color: 'var(--danger)', block: true }}>{openIssuesCount}</span>
+            <span style={{ fontSize: '11px', color: theme.muted, fontWeight: 700, display: 'block', marginTop: '4px' }}>Open Issues</span>
+          </div>
+          <div style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', textAlign: 'center', boxShadow: 'var(--shadow)' }}>
+            <span style={{ fontSize: '24px', fontWeight: 800, color: 'var(--accent)', block: true }}>{myReportsCount}</span>
+            <span style={{ fontSize: '11px', color: theme.muted, fontWeight: 700, display: 'block', marginTop: '4px' }}>My Reports</span>
+          </div>
+          <div style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', textAlign: 'center', boxShadow: 'var(--shadow)' }}>
+            <span style={{ fontSize: '24px', fontWeight: 800, color: 'var(--success)', block: true }}>{communityCount}</span>
+            <span style={{ fontSize: '11px', color: theme.muted, fontWeight: 700, display: 'block', marginTop: '4px' }}>Members</span>
+          </div>
+        </div>
 
+        {/* Quick Actions Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          <button onClick={() => navigate('/report')} style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', boxShadow: 'var(--shadow)' }}>
+            <AlertTriangle size={28} color="#DC2626" />
+            <span style={{ fontSize: '12px', fontWeight: 800, color: theme.text }}>Report Issue</span>
+          </button>
+          <button onClick={() => navigate('/community')} style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', boxShadow: 'var(--shadow)' }}>
+            <MessageSquare size={28} color="#1B6FD8" />
+            <span style={{ fontSize: '12px', fontWeight: 800, color: theme.text }}>Community Chat</span>
+          </button>
+          <button onClick={() => navigate('/map')} style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', boxShadow: 'var(--shadow)' }}>
+            <Map size={28} color="#1B6FD8" />
+            <span style={{ fontSize: '12px', fontWeight: 800, color: theme.text }}>Live Map</span>
+          </button>
+          <button onClick={() => navigate('/emergency')} style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', boxShadow: 'var(--shadow)' }}>
+            <Shield size={28} color="#DC2626" />
+            <span style={{ fontSize: '12px', fontWeight: 800, color: theme.text }}>Emergency Alert</span>
+          </button>
+          <button onClick={() => navigate('/ai')} style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', boxShadow: 'var(--shadow)' }}>
+            <Bot size={28} color="#7C3AED" />
+            <span style={{ fontSize: '12px', fontWeight: 800, color: theme.text }}>AI Assistant</span>
+          </button>
+          <button onClick={() => navigate('/officials')} style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', boxShadow: 'var(--shadow)' }}>
+            <Briefcase size={28} color="#D97706" />
+            <span style={{ fontSize: '12px', fontWeight: 800, color: theme.text }}>Officials</span>
+          </button>
+        </div>
+
+        {/* Recent Issues Feed */}
+        <div style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '20px', boxShadow: 'var(--shadow)' }}>
+          <h3 style={{ fontSize: '14px', fontWeight: 800, color: theme.text, textTransform: 'uppercase', marginBottom: '16px', tracking: 'wide' }}>
+            Recent Ward Issues
+          </h3>
+          {recentIssues.length === 0 ? (
+            <p style={{ fontSize: '12px', color: theme.muted }}>No issues reported in this ward yet.</p>
+          ) : (
+            <div className="space-y-3">
+              {recentIssues.map(issue => (
+                <div key={issue.id} style={{ display: 'flex', alignItems: 'center', justify: 'space-between', padding: '12px', borderRadius: '12px', background: theme.surface2, border: '1px solid ' + theme.border }} onClick={() => navigate(`/issues/${issue.id}`)} className="cursor-pointer hover:opacity-90">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ borderLeft: '4px solid ' + (issue.severity === 'red' ? '#DC2626' : issue.severity === 'orange' ? '#EA580C' : '#D97706'), paddingLeft: '8px' }}>
+                      <span style={{ fontSize: '12px', fontWeight: 800, color: theme.text, display: 'block' }}>{issue.title}</span>
+                      <span style={{ fontSize: '10px', color: theme.muted }}>{issue.categoryLabel || issue.category}</span>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ ...getSeverityStyle(issue.severity), fontSize: '9px', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase' }}>
+                      {issue.severity}
+                    </span>
+                    <span style={{ fontSize: '10px', color: theme.muted }}>{issue.status}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Fallback loading skeleton / basic layout
   return (
-    <div className="space-y-6">
-      
-      {/* Time-Aware Greeting Header */}
-      <div className="flex items-center justify-between bg-[var(--surface)] p-5 rounded-2xl border border-[var(--border)] shadow-sm">
-        <div>
-          <h2 className="text-lg font-black text-[var(--text)] flex items-center gap-2 flex-wrap">
-            {getGreeting()}, {dbUser?.name || 'Citizen'}
-            <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border uppercase tracking-wider capitalize ${getBadgeStyle()}`}>
-              {role}
-            </span>
-          </h2>
-          <p className="text-xs text-[var(--text-muted)] mt-1 font-semibold">
-            {getWelcomeMessage()}
-          </p>
-          <div className="text-xs text-[var(--text-muted)] mt-1 flex items-center gap-1 font-bold">
-            <MapPin className="w-3.5 h-3.5 text-[var(--accent)]" /> {dbUser?.village || 'Ramanagara'}, Ward {dbUser?.ward || '6'}
-          </div>
-        </div>
-        <img 
-          src={dbUser?.profileImageUrl || 'https://api.dicebear.com/7.x/bottts/svg?seed=avatar'} 
-          alt="profile" 
-          className="w-12 h-12 rounded-full border border-[var(--border)] object-cover cursor-pointer"
-          onClick={() => navigate('/profile')}
-        />
-      </div>
-
-      {/* 2x3 Quick Action Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        {quickActions.map(action => {
-          const Icon = action.icon;
-          return (
-            <button
-              key={action.label}
-              disabled={action.disabled}
-              onClick={() => !action.disabled && navigate(action.path)}
-              className={`min-h-[96px] p-4 rounded-2xl flex flex-col items-center justify-center gap-2 cursor-pointer shadow-sm hover:scale-102 transition border border-[var(--border)] bg-[var(--surface)] ${
-                action.disabled ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
-            >
-              <Icon size={28} className={action.color} />
-              <span className="text-xs font-black text-center text-[var(--text)]">{action.label}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Real-time Dashboard cards */}
-      <div className="space-y-4 pt-2">
-        <h3 className="text-sm font-black text-[var(--text)] uppercase tracking-wider">
-          {t('community_updates', 'Community Updates')}
-        </h3>
-
-        {/* Card 1: Critical Alerts */}
-        <div 
-          onClick={() => navigate('/map')}
-          className="bg-[var(--surface)] border-l-4 border-red-600 rounded-2xl p-4 shadow-sm border border-[var(--border)] flex gap-4 items-center justify-between cursor-pointer hover:shadow"
-        >
-          <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 bg-red-100 dark:bg-red-950/20 text-red-600 rounded-xl flex items-center justify-center flex-shrink-0">
-              <Shield className="w-6 h-6 animate-pulse" />
-            </div>
-            <div>
-              <h4 className="text-xs font-bold text-[var(--text)]">Local Critical Issues</h4>
-              <p className="text-[10px] text-[var(--text-muted)] mt-0.5 font-bold">
-                {criticalCount > 0 
-                  ? `${criticalCount} ${t('urgent_hazards', 'Urgent hazards need attention')}` 
-                  : t('all_clear', 'All clear! No critical issues reported')}
-              </p>
-            </div>
-          </div>
-          <ArrowRight className="w-5 h-5 text-[var(--text-muted)]" />
-        </div>
-
-        {/* Card 2: Community Chat Updates */}
-        <div 
-          onClick={() => navigate('/community')}
-          className="bg-[var(--surface)] border-l-4 border-green-600 rounded-2xl p-4 shadow-sm border border-[var(--border)] flex gap-4 items-center justify-between cursor-pointer hover:shadow"
-        >
-          <div className="flex items-center gap-3.5 flex-1 min-w-0">
-            <div className="w-12 h-12 bg-green-100 dark:bg-green-950/20 text-green-600 rounded-xl flex items-center justify-center flex-shrink-0">
-              <MessageSquare className="w-6 h-6" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <h4 className="text-xs font-bold text-[var(--text)]">Latest Chat Update</h4>
-              <p className="text-[10px] text-[var(--text-muted)] mt-0.5 truncate font-bold">
-                {latestMessage ? `[${latestMessage.senderName}]: "${latestMessage.text}"` : t('no_messages', 'No chat messages posted yet')}
-              </p>
-            </div>
-          </div>
-          <ArrowRight className="w-5 h-5 text-[var(--text-muted)]" />
-        </div>
-
-        {/* Card 3: Workers Nearby */}
-        <div 
-          onClick={() => navigate('/workers')}
-          className="bg-[var(--surface)] border-l-4 border-orange-500 rounded-2xl p-4 shadow-sm border border-[var(--border)] flex gap-4 items-center justify-between cursor-pointer hover:shadow"
-        >
-          <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 bg-orange-100 dark:bg-orange-950/20 text-orange-500 rounded-xl flex items-center justify-center flex-shrink-0">
-              <Briefcase className="w-6 h-6" />
-            </div>
-            <div>
-              <h4 className="text-xs font-bold text-[var(--text)]">Available Workers</h4>
-              <p className="text-[10px] text-[var(--text-muted)] mt-0.5 font-bold">
-                {availableWorkersCount > 0 
-                  ? `${availableWorkersCount} ${t('workers_ready', 'skill providers ready to work nearby')}` 
-                  : t('no_workers', 'No registered workers online')}
-              </p>
-            </div>
-          </div>
-          <ArrowRight className="w-5 h-5 text-[var(--text-muted)]" />
-        </div>
-
-        {/* Card 4: AI Alert */}
-        {latestAlert && (
-          <div 
-            onClick={() => navigate(`/issues/${latestAlert.id || ''}`)}
-            className="bg-[var(--surface)] border-l-4 border-amber-500 rounded-2xl p-4 shadow-sm border border-[var(--border)] flex gap-4 items-center justify-between cursor-pointer hover:shadow animate-fadeIn"
-          >
-            <div className="flex items-center gap-3.5 flex-1 min-w-0">
-              <div className="w-12 h-12 bg-amber-100 dark:bg-amber-950/20 text-amber-600 rounded-xl flex items-center justify-center flex-shrink-0">
-                <AlertTriangle className="w-6 h-6" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <h4 className="text-xs font-bold text-[var(--text)]">AI Prediction Alert</h4>
-                <p className="text-[10px] text-[var(--text-muted)] mt-0.5 truncate font-bold">
-                  {latestAlert.riskSummary || latestAlert.title}
-                </p>
-              </div>
-            </div>
-            <ArrowRight className="w-5 h-5 text-[var(--text-muted)]" />
-          </div>
-        )}
-      </div>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', color: theme.muted }}>
+      Loading Vanguard Dashboard ({role})...
     </div>
   );
 }
