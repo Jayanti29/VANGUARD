@@ -1,103 +1,107 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  MapContainer, 
-  TileLayer, 
-  Marker, 
-  useMap, 
-  useMapEvents 
-} from 'react-leaflet';
 import { 
   Camera, 
   Mic, 
   MapPin, 
+  Loader2, 
   ArrowLeft, 
-  ArrowRight, 
-  RotateCcw, 
-  Volume2, 
-  Play, 
-  Pause,
+  Check, 
+  Download, 
+  Share2, 
   AlertTriangle,
-  FileCheck
+  Phone,
+  Mail,
+  RefreshCw,
+  Sparkles
 } from 'lucide-react';
+import { db, storage } from '../lib/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { ref, uploadString, getDownloadURL } from 'firebase/storage';
+import { MapContainer, TileLayer, CircleMarker, useMapEvents } from 'react-leaflet';
+import toast from 'react-hot-toast';
 import useAuth from '../hooks/useAuth';
-import useLocation from '../hooks/useLocation';
-import useIssues from '../hooks/useIssues';
 import { analyzeIssueImage } from '../lib/gemini';
-import { downloadPdfReport } from '../lib/pdfGenerator';
-import LoadingShield from '../components/ui/LoadingShield';
-import AIResultCard from '../components/ui/AIResultCard';
+import { generateIssuePDF } from '../lib/pdfGenerator';
 
-// Leaflet click handler component
-function MapEvents({ onChangeCoords }) {
+function ClickMapEvents({ setCoords, setAddress }) {
   useMapEvents({
     click(e) {
-      onChangeCoords(e.latlng);
+      const { lat, lng } = e.latlng;
+      setCoords({ lat, lng });
+      fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`)
+        .then(r => r.json())
+        .then(data => {
+          setAddress(data.display_name || `${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+        })
+        .catch(err => {
+          console.error("Geocoding failed:", err);
+          setAddress(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+        });
     }
   });
   return null;
 }
 
-// Leaflet auto-recenter component
-function MapRecenter({ coords }) {
-  const map = useMap();
-  useEffect(() => {
-    map.setView(coords, map.getZoom());
-  }, [coords, map]);
-  return null;
-}
-
 export default function ReportIssue() {
-  const { t } = useTranslation();
   const navigate = useNavigate();
-  const { dbUser } = useAuth();
-  const { location, setLocation, detectLocation, reverseGeocode } = useLocation();
-  const { reportIssue } = useIssues();
+  const { t } = useTranslation();
+  const { dbUser, user } = useAuth();
 
   const [step, setStep] = useState(1);
-  const [submitting, setSubmitting] = useState(false);
-
-  // Step 1: Photo
-  const [photo, setPhoto] = useState(null); // base64 string
-  const fileInputRef = useRef(null);
-
-  // Step 2: Voice Note
-  const [isRecording, setIsRecording] = useState(false);
-  const [voiceBlob, setVoiceBlob] = useState(null);
-  const [voiceUrl, setVoiceUrl] = useState(null);
+  const [photoBase64, setPhotoBase64] = useState(null);
   const [transcription, setTranscription] = useState('');
-  const mediaRecorderRef = useRef(null);
-  const audioChunksRef = useRef([]);
-  const recognitionRef = useRef(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const audioPlayerRef = useRef(null);
-
-  // Step 3: Text Description
   const [description, setDescription] = useState('');
-
-  // Step 4: Map Pin adjustment
-  const [adjustCoords, setAdjustCoords] = useState({ lat: location.lat, lng: location.lng });
-  const [resolvedAddress, setResolvedAddress] = useState(location.address);
-
-  // AI Pipeline output state
+  const [isListening, setIsListening] = useState(false);
+  const [coords, setCoords] = useState([20.5937, 78.9629]);
+  const [address, setAddress] = useState('Detecting location...');
+  
+  // Loading & AI Result States
   const [aiLoading, setAiLoading] = useState(false);
+  const [loadingTextIndex, setLoadingTextIndex] = useState(0);
   const [aiResult, setAiResult] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
 
-  // Detect location on load or step transition
-  useEffect(() => {
-    if (step === 4) {
-      detectLocation().then(loc => {
-        setAdjustCoords({ lat: loc.lat, lng: loc.lng });
-        setResolvedAddress(loc.address);
-      }).catch(err => {
-        console.warn("Unable to auto-detect coords:", err);
-      });
+  const recognitionRef = useRef(null);
+  const loadingTexts = [
+    "Analyzing image...",
+    "Detecting hazard...",
+    "Calculating risk...",
+    "Determining authority..."
+  ];
+
+  // Geolocation detection on mount or manual trigger
+  const detectLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setCoords([latitude, longitude]);
+          fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`)
+            .then(r => r.json())
+            .then(data => {
+              setAddress(data.display_name || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+            })
+            .catch(err => {
+              setAddress(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+            });
+        },
+        (error) => {
+          console.warn("Unable to fetch GPS position, using default user coordinates.");
+          const defaultCoords = [dbUser?.lat || 12.7244, dbUser?.lng || 77.2911];
+          setCoords(defaultCoords);
+          setAddress(dbUser?.village || "Community Area");
+        }
+      );
     }
-  }, [step]);
+  };
 
-  // Setup Web Speech API recognition
+  useEffect(() => {
+    detectLocation();
+  }, []);
+
+  // Web Speech API configuration
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
@@ -107,558 +111,550 @@ export default function ReportIssue() {
 
       const getSpeechLang = (lang) => {
         const mapping = {
-          en: 'en-IN',
-          hi: 'hi-IN',
-          kn: 'kn-IN',
-          ta: 'ta-IN',
-          te: 'te-IN',
-          ml: 'ml-IN',
-          bn: 'bn-IN',
-          mr: 'mr-IN',
-          gu: 'gu-IN',
-          pa: 'pa-IN'
+          en: 'en-IN', hi: 'hi-IN', kn: 'kn-IN', ta: 'ta-IN', te: 'te-IN',
+          ml: 'ml-IN', bn: 'bn-IN', mr: 'mr-IN', gu: 'gu-IN', pa: 'pa-IN'
         };
         return mapping[lang] || 'en-IN';
       };
 
       rec.lang = getSpeechLang(localStorage.getItem('vanguard_language') || 'en');
-      
+
       rec.onresult = (event) => {
         const text = event.results[0][0].transcript;
         setTranscription(text);
         setDescription(prev => prev ? `${prev}. ${text}` : text);
+        setIsListening(false);
       };
 
-      rec.onerror = (e) => {
-        console.error("Speech Recognition Error:", e);
+      rec.onerror = (err) => {
+        console.error("Speech Recognition Error:", err);
+        setIsListening(false);
+      };
+
+      rec.onend = () => {
+        setIsListening(false);
       };
 
       recognitionRef.current = rec;
     }
   }, []);
 
-  // Image Selection
-  const handlePhotoSelect = (e) => {
+  // Interval timer for rotating AI loading texts
+  useEffect(() => {
+    let interval;
+    if (aiLoading) {
+      interval = setInterval(() => {
+        setLoadingTextIndex(prev => (prev + 1) % loadingTexts.length);
+      }, 1500);
+    }
+    return () => clearInterval(interval);
+  }, [aiLoading]);
+
+  // Convert uploaded image to base64
+  const handlePhotoUpload = (e) => {
     const file = e.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setPhoto(reader.result);
-      setStep(2);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const triggerFileSelect = () => {
-    fileInputRef.current?.click();
-  };
-
-  // Voice Recording Logic
-  const startRecording = async () => {
-    audioChunksRef.current = [];
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) {
-          audioChunksRef.current.push(e.data);
-        }
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        setPhotoBase64(reader.result);
       };
-
-      mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
-        setVoiceBlob(audioBlob);
-        setVoiceUrl(URL.createObjectURL(audioBlob));
-      };
-
-      mediaRecorder.start();
-      setIsRecording(true);
-
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.start();
-        } catch (err) {}
-      }
-    } catch (err) {
-      console.error("Microphone access failed:", err);
-      alert("Microphone permission denied.");
+      reader.readAsDataURL(file);
     }
   };
 
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      mediaRecorderRef.current.stream.getTracks().forEach(t => t.stop());
-      setIsRecording(false);
+  // Mic Listening Actions
+  const toggleListening = () => {
+    if (!recognitionRef.current) {
+      toast.error("Speech recognition is not supported in this browser.");
+      return;
     }
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.stop();
-      } catch (e) {}
-    }
-  };
-
-  const togglePlayback = () => {
-    if (!audioPlayerRef.current) return;
-    if (isPlaying) {
-      audioPlayerRef.current.pause();
-      setIsPlaying(false);
+    if (isListening) {
+      recognitionRef.current.stop();
     } else {
-      audioPlayerRef.current.play();
-      setIsPlaying(true);
+      setIsListening(true);
+      recognitionRef.current.start();
     }
   };
 
-  const handleAudioEnded = () => {
-    setIsPlaying(false);
-  };
-
-  // Click handler to adjust coordinates directly on Leaflet map
-  const handleMapClick = async (latlng) => {
-    const newCoords = { lat: latlng.lat, lng: latlng.lng };
-    setAdjustCoords(newCoords);
-    
-    try {
-      const geo = await reverseGeocode(newCoords.lat, newCoords.lng);
-      setResolvedAddress(geo.address);
-      setLocation({ ...location, ...newCoords, ...geo });
-    } catch (e) {
-      console.warn("Unable to reverse geocode map click:", e);
+  // Triggers Gemini Image analysis
+  const runAIAnalysis = async () => {
+    if (!photoBase64) {
+      toast.error("Please upload or take a photo first.");
+      return;
     }
-  };
-
-  // Slider adjustments
-  const handleCoordShift = async (axis, val) => {
-    const shift = parseFloat(val);
-    const newCoords = { ...adjustCoords, [axis]: shift };
-    setAdjustCoords(newCoords);
-    
-    try {
-      const geo = await reverseGeocode(newCoords.lat, newCoords.lng);
-      setResolvedAddress(geo.address);
-      setLocation({ ...location, ...newCoords, ...geo });
-    } catch (e) {
-      console.warn("Unable to reverse geocode coordinate shift:", e);
-    }
-  };
-
-  // AI Pipeline Execution Trigger
-  const handleAIAnalysis = async () => {
     setAiLoading(true);
-    setStep(5);
-
     try {
-      const language = localStorage.getItem('vanguard_language') || 'en';
-      const result = await analyzeIssueImage(photo, description, language);
+      const base64Clean = photoBase64.split(',')[1] || photoBase64;
+      const result = await analyzeIssueImage(
+        base64Clean,
+        description,
+        localStorage.getItem('vanguard_language') || 'en'
+      );
       setAiResult(result);
-    } catch (err) {
-      console.error("AI Analysis process failed: ", err);
-      alert("AI pipeline encountered an error. Proceeding with default values.");
+      setStep(4);
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to analyze image. Please try again.");
     } finally {
       setAiLoading(false);
     }
   };
 
-  // Submit Issue to DB (saves details & triggers functions)
-  const handleFinalSubmit = async () => {
-    setSubmitting(true);
+  // Save issue data to Firebase
+  const handleSaveIssue = async (shareWithCommunity = false) => {
+    if (isSaving) return;
+    setIsSaving(true);
+    const saveToast = toast.loading("Submitting report to VANGUARD civic logs...");
     try {
-      const mockPhotoUrl = photo;
-      
-      const payload = {
-        title: aiResult?.categoryLabel || 'Civic safety issue',
-        description: description,
-        photoUrl: mockPhotoUrl,
-        audioNoteUrl: voiceUrl || '',
-        lat: adjustCoords.lat,
-        lng: adjustCoords.lng,
+      let downloadUrl = '';
+      if (photoBase64) {
+        const fileRef = ref(storage, `issues/issue_${Date.now()}.jpg`);
+        const uploadResult = await uploadString(fileRef, photoBase64, 'data_url');
+        downloadUrl = await getDownloadURL(uploadResult.ref);
+      }
+
+      const issuePayload = {
+        reporterId: user?.uid || 'anonymous',
+        reporterName: dbUser?.name || 'Citizen User',
+        title: aiResult?.categoryLabel || 'Civic Issue',
+        description: description || aiResult?.reportText || 'Community reported issue',
+        photoUrl: downloadUrl,
+        lat: coords[0],
+        lng: coords[1],
+        ward: dbUser?.ward || 'N/A',
+        village: dbUser?.village || 'N/A',
+        district: dbUser?.district || 'N/A',
+        state: dbUser?.state || 'N/A',
         category: aiResult?.category || 'other',
-        severity: aiResult?.severity || 'green',
-        riskPrediction: aiResult?.riskPrediction || '',
-        severityReason: aiResult?.severityReason || '',
-        impactScore: aiResult?.impactScore || 30,
-        recommendedAuthority: aiResult?.recommendedAuthority || 'Local Board',
-        escalationLevel: aiResult?.escalationLevel || 'community',
-        reportText: aiResult?.reportText || '',
-        suggestedAction: aiResult?.suggestedAction || '',
-        pdfUrl: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf' // placeholder
+        categoryLabel: aiResult?.categoryLabel || 'Issue',
+        severity: aiResult?.severity || 'yellow',
+        severityLabel: aiResult?.severityLabel || 'Needs Attention',
+        riskSummary: aiResult?.riskPrediction || 'Civic safety hazard',
+        impactScore: aiResult?.impactScore || 50,
+        recommendedAuthority: aiResult?.recommendedAuthority || 'Local Ward Office',
+        escalationLevel: aiResult?.escalationLevel || 'ward',
+        status: 'open',
+        aiReportText: aiResult?.reportText || '',
+        confirmations: [],
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
       };
 
-      await reportIssue(payload);
-      alert("Issue successfully reported to officials!");
-      navigate('/');
-    } catch (err) {
-      console.error("Failed to submit issue: ", err);
-      alert("Submission error. Please verify and try again.");
+      const docRef = await addDoc(collection(db, 'issues'), issuePayload);
+
+      // If requested, post issue details to community emergency chat
+      if (shareWithCommunity) {
+        const communityId = `${dbUser?.district || 'bangalore'}_${dbUser?.village || 'ward6'}`.toLowerCase().replace(/\s+/g, '');
+        await addDoc(collection(db, 'communities', communityId, 'messages'), {
+          senderId: 'system_ai',
+          senderName: '🛡 VANGUARD AI',
+          senderRole: 'AI',
+          text: `🚨 EMERGENCY HAZARD REPORTED: ${aiResult?.categoryLabel || aiResult?.category} has been logged in our area. Severity: ${aiResult?.severityLabel || aiResult?.severity.toUpperCase()}. Prediction: ${aiResult?.riskPrediction}`,
+          mediaUrl: downloadUrl,
+          type: 'image',
+          channel: 'Emergency',
+          timestamp: serverTimestamp()
+        });
+        toast.success("Alert shared with community channel!");
+      }
+
+      toast.dismiss(saveToast);
+      toast.success("Issue reported successfully!");
+      setTimeout(() => {
+        navigate('/map');
+      }, 2000);
+    } catch (e) {
+      console.error(e);
+      toast.dismiss(saveToast);
+      toast.error("Failed to submit issue. Please try again.");
     } finally {
-      setSubmitting(false);
+      setIsSaving(false);
     }
   };
 
-  return (
-    <div className="max-w-2xl mx-auto space-y-6 pb-20 md:pb-6">
-      {/* Top Header */}
-      <div className="flex items-center gap-3">
-        <button 
-          onClick={() => step > 1 ? setStep(step - 1) : navigate('/')}
-          className="btn-icon"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <div>
-          <h2 className="text-xl font-bold text-text dark:text-white leading-tight">
-            {aiResult ? 'Report Analysis' : 'Report Community Issue'}
-          </h2>
-          <p className="text-xs text-text-muted mt-0.5">
-            {aiResult ? 'Review AI classification parameters' : `Step ${step} of 4`}
-          </p>
+  // Generate and save local report PDF
+  const downloadReportPDF = () => {
+    if (!aiResult) return;
+    const doc = generateIssuePDF({ address, ward: dbUser?.ward, village: dbUser?.village }, aiResult);
+    doc.save(`vanguard_report_${Date.now()}.pdf`);
+    toast.success("PDF Downloaded successfully!");
+  };
+
+  // Step header wizard indicator
+  const renderProgress = () => {
+    const stepsList = [
+      { id: 1, label: "Photo" },
+      { id: 2, label: "Details" },
+      { id: 3, label: "Location" },
+      { id: 4, label: "AI Report" }
+    ];
+    return (
+      <div className="flex items-center justify-between border-b pb-4 border-slate-200 dark:border-slate-700">
+        {stepsList.map((s, idx) => (
+          <React.Fragment key={s.id}>
+            <div className="flex items-center gap-2">
+              <span className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition ${
+                step >= s.id 
+                  ? 'bg-accent text-white shadow-sm' 
+                  : 'bg-slate-100 text-slate-400 dark:bg-slate-800'
+              }`}>
+                {step > s.id ? <Check className="w-4 h-4" /> : s.id}
+              </span>
+              <span className={`text-xs font-bold hidden sm:inline ${
+                step === s.id ? 'text-text dark:text-white' : 'text-slate-400'
+              }`}>
+                {s.label}
+              </span>
+            </div>
+            {idx < stepsList.length - 1 && (
+              <div className={`flex-1 h-0.5 mx-2 transition ${
+                step > s.id ? 'bg-accent' : 'bg-slate-200 dark:bg-slate-700'
+              }`} />
+            )}
+          </React.Fragment>
+        ))}
+      </div>
+    );
+  };
+
+  // Loading Screen Overlay
+  if (aiLoading) {
+    return (
+      <div className="fixed inset-0 bg-slate-900 bg-opacity-95 z-[9999] flex flex-col items-center justify-center p-6 text-white select-none">
+        <div className="relative w-32 h-32 flex items-center justify-center">
+          <svg className="w-24 h-24 text-accent animate-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          <div className="absolute inset-0 border-4 border-transparent border-t-accent rounded-full animate-spin" />
         </div>
+        <h3 className="text-xl font-bold mt-6 tracking-wide transition-all duration-300">
+          {loadingTexts[loadingTextIndex]}
+        </h3>
+        <p className="text-xs text-slate-400 mt-2">VANGUARD Civic Assistant Engine</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-2xl mx-auto space-y-6">
+      {/* progress card */}
+      <div className="bg-surface dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-border dark:border-slate-700">
+        {renderProgress()}
       </div>
 
-      <AnimatePresence mode="wait">
-        
-        {/* STEP 1: PHOTO UPLOAD */}
-        {step === 1 && (
-          <motion.div
-            key="step1"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            className="card-vanguard space-y-6"
-          >
-            <div className="text-center space-y-1">
-              <h3 className="text-lg font-bold text-text dark:text-white">Upload Incident Photo</h3>
-              <p className="text-xs text-text-muted">Take a photo of the pothole, trash, leakage, or hazard.</p>
-            </div>
+      {step === 1 && (
+        <div className="bg-surface dark:bg-slate-800 p-6 rounded-2xl border border-border dark:border-slate-700 shadow-sm space-y-6">
+          <h2 className="text-lg font-black text-text dark:text-white flex items-center gap-2">
+            <Camera className="w-5 h-5 text-accent" /> Step 1: Upload Civic Hazard Photo
+          </h2>
 
-            {photo ? (
-              <div className="space-y-4">
-                <div className="relative aspect-video w-full rounded-xl overflow-hidden border border-border dark:border-slate-700 bg-slate-100">
-                  <img src={photo} alt="Preview" className="w-full h-full object-cover" />
-                  <button
-                    onClick={() => setPhoto(null)}
-                    className="absolute top-3 right-3 bg-red-600 hover:bg-red-700 text-white rounded-full p-2.5 shadow-md flex items-center justify-center cursor-pointer transition"
-                    title="Remove Photo"
-                  >
-                    <RotateCcw className="w-5 h-5" />
-                  </button>
-                </div>
-                <button
-                  onClick={() => setStep(2)}
-                  className="w-full btn-primary flex items-center justify-center gap-2"
+          {!photoBase64 ? (
+            <label className="flex flex-col items-center justify-center border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-accent dark:hover:border-accent rounded-2xl h-[180px] cursor-pointer transition p-4 text-center">
+              <Camera className="w-10 h-10 text-slate-400 mb-2" />
+              <span className="text-sm font-bold text-text dark:text-white">📷 Take Photo or Upload from Gallery</span>
+              <span className="text-[10px] text-text-muted mt-1">Accepts images (JPEG, PNG) up to 5MB</span>
+              <input 
+                type="file" 
+                accept="image/*" 
+                onChange={handlePhotoUpload} 
+                className="hidden" 
+              />
+            </label>
+          ) : (
+            <div className="space-y-4">
+              <div className="relative w-full h-[220px] rounded-xl overflow-hidden border border-border dark:border-slate-700">
+                <img 
+                  src={photoBase64} 
+                  alt="Hazard preview" 
+                  className="w-full h-full object-cover"
+                />
+                <button 
+                  onClick={() => setPhotoBase64(null)}
+                  className="absolute top-3 right-3 bg-red-600 hover:bg-red-700 text-white rounded-xl px-3 py-1.5 text-xs font-bold shadow-md cursor-pointer"
                 >
-                  Confirm & Continue <ArrowRight className="w-5 h-5" />
+                  Change Photo
                 </button>
               </div>
-            ) : (
-              <div 
-                onClick={triggerFileSelect}
-                className="border-3 border-dashed border-border dark:border-slate-700 rounded-2xl h-56 flex flex-col items-center justify-center gap-3 cursor-pointer hover:border-accent hover:bg-accent-soft/30 dark:hover:bg-slate-700/20 transition-all duration-200"
-              >
-                <div className="w-14 h-14 bg-accent-soft text-accent rounded-full flex items-center justify-center">
-                  <Camera className="w-7 h-7" />
-                </div>
-                <div className="text-center">
-                  <p className="font-bold text-text dark:text-white">Take Photo or Upload</p>
-                  <p className="text-xs text-text-muted mt-0.5">Camera capture or gallery image files</p>
-                </div>
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  capture="environment"
-                  className="hidden" 
-                  ref={fileInputRef}
-                  onChange={handlePhotoSelect}
-                />
-              </div>
-            )}
-          </motion.div>
-        )}
-
-        {/* STEP 2: VOICE DESCRIPTION */}
-        {step === 2 && (
-          <motion.div
-            key="step2"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            className="card-vanguard space-y-6"
-          >
-            <div className="text-center space-y-1">
-              <h3 className="text-lg font-bold text-text dark:text-white">Add Voice Description</h3>
-              <p className="text-xs text-text-muted">Explain the problem in Hindi, English, or your local dialect (optional).</p>
             </div>
+          )}
 
-            <div className="flex flex-col items-center justify-center py-4 space-y-4">
-              <button
-                type="button"
-                onMouseDown={startRecording}
-                onMouseUp={stopRecording}
-                onTouchStart={startRecording}
-                onTouchEnd={stopRecording}
-                className={`w-20 h-20 rounded-full flex items-center justify-center shadow-lg transition active:scale-95 cursor-pointer ${
-                  isRecording 
-                    ? 'bg-red-600 text-white animate-pulse-ring' 
-                    : 'bg-accent text-white hover:bg-opacity-95'
-                }`}
-              >
-                <Mic className="w-8 h-8" />
-              </button>
+          <div className="flex justify-between items-center pt-2">
+            <button 
+              onClick={() => navigate('/')}
+              className="h-12 px-5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 text-text dark:text-white text-xs font-bold rounded-xl cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button 
+              disabled={!photoBase64}
+              onClick={() => setStep(2)}
+              className="h-12 px-6 bg-accent hover:bg-opacity-90 disabled:opacity-50 text-white text-xs font-bold rounded-xl cursor-pointer shadow-sm flex items-center gap-1"
+            >
+              Next Step
+            </button>
+          </div>
+        </div>
+      )}
 
-              <p className="text-xs font-bold text-text-muted uppercase tracking-wider">
-                {isRecording ? 'Recording... Release to Stop' : 'Hold to Record'}
-              </p>
+      {step === 2 && (
+        <div className="bg-surface dark:bg-slate-800 p-6 rounded-2xl border border-border dark:border-slate-700 shadow-sm space-y-6">
+          <h2 className="text-lg font-black text-text dark:text-white flex items-center gap-2">
+            <Mic className="w-5 h-5 text-accent" /> Step 2: Describe the Hazard
+          </h2>
 
-              {isRecording && (
-                <div className="flex gap-1 items-center h-8">
-                  {[...Array(8)].map((_, i) => (
-                    <span 
-                      key={i} 
-                      className="w-1 bg-red-600 rounded-full animate-bounce"
-                      style={{ 
-                        height: `${Math.random() * 24 + 8}px`,
-                        animationDelay: `${i * 0.1}s`,
-                        animationDuration: '0.6s'
-                      }}
-                    />
-                  ))}
-                </div>
-              )}
-
-              {voiceUrl && (
-                <div className="w-full bg-slate-50 dark:bg-slate-700/40 p-4 rounded-xl border border-border dark:border-slate-700 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={togglePlayback}
-                      className="w-10 h-10 bg-accent text-white rounded-lg flex items-center justify-center cursor-pointer hover:bg-opacity-95"
-                    >
-                      {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
-                    </button>
-                    <div className="flex flex-col">
-                      <span className="text-xs font-bold text-text dark:text-white">Voice Note Recorded</span>
-                      <span className="text-[10px] text-text-muted">Transcribed via Speech-to-Text</span>
-                    </div>
-                  </div>
-                  <audio 
-                    ref={audioPlayerRef} 
-                    src={voiceUrl} 
-                    onEnded={handleAudioEnded}
-                    className="hidden" 
-                  />
-                </div>
-              )}
-
-              {transcription && (
-                <div className="w-full text-left space-y-1">
-                  <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Speech Transcription:</span>
-                  <p className="text-sm italic font-medium p-3 bg-slate-50 dark:bg-slate-700/20 border border-border dark:border-slate-700 rounded-lg text-text dark:text-slate-300 leading-relaxed">
-                    "{transcription}"
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <div className="flex gap-3">
-              <button onClick={() => setStep(1)} className="w-1/3 btn-secondary">
-                Back
-              </button>
-              <button onClick={() => setStep(3)} className="w-2/3 btn-primary flex items-center justify-center gap-2">
-                Continue <ArrowRight className="w-5 h-5" />
-              </button>
-            </div>
-          </motion.div>
-        )}
-
-        {/* STEP 3: TEXT DESCRIPTION */}
-        {step === 3 && (
-          <motion.div
-            key="step3"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            className="card-vanguard space-y-6"
-          >
-            <div className="text-center space-y-1">
-              <h3 className="text-lg font-bold text-text dark:text-white">Add Written Details</h3>
-              <p className="text-xs text-text-muted">Optionally write details (e.g. Broken wire near school bus stand).</p>
-            </div>
-
-            <div className="space-y-2">
-              <textarea
+          <div className="space-y-4">
+            <label className="text-xs font-bold text-text-muted">Describe using text or record voice note:</label>
+            <div className="relative">
+              <textarea 
                 value={description}
-                onChange={(e) => setDescription(e.target.value.slice(0, 300))}
-                rows="5"
-                placeholder="Write description details here..."
-                className="w-full bg-surface dark:bg-slate-800 border-2 border-border dark:border-slate-700 rounded-xl p-4 text-sm text-text dark:text-white outline-none focus:border-accent"
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Describe the issue (e.g. Broken road with dangerous potholes near public park, water pipe leakage creating a massive sinkhole...)"
+                className="w-full h-32 p-4 bg-slate-50 dark:bg-slate-900 border border-border dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-accent dark:text-white"
+                maxLength={300}
               />
-              <div className="text-right text-xs text-text-muted font-bold">
-                {description.length} / 300 characters
+              <span className="absolute bottom-3 right-3 text-[10px] font-bold text-text-muted">
+                {description.length}/300
+              </span>
+            </div>
+
+            <div className="flex flex-col items-center justify-center p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-border dark:border-slate-700">
+              <button
+                onClick={toggleListening}
+                className={`w-14 h-14 rounded-full flex items-center justify-center shadow-md transition cursor-pointer ${
+                  isListening 
+                    ? 'bg-red-600 text-white animate-pulse' 
+                    : 'bg-accent-soft text-accent hover:bg-accent hover:text-white'
+                }`}
+                title="Tap to speak"
+              >
+                <Mic className="w-6 h-6" />
+              </button>
+              <span className="text-xs font-bold mt-2 text-text dark:text-white">
+                {isListening ? "Listening... Speak now" : "Tap to Speak (Voice Input)"}
+              </span>
+              {transcription && (
+                <p className="text-xs text-accent font-bold mt-2 text-center italic">
+                  Transcribed: "{transcription}"
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="flex justify-between items-center pt-2">
+            <button 
+              onClick={() => setStep(1)}
+              className="h-12 px-5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 text-text dark:text-white text-xs font-bold rounded-xl cursor-pointer"
+            >
+              Back
+            </button>
+            <button 
+              onClick={() => setStep(3)}
+              className="h-12 px-6 bg-accent hover:bg-opacity-90 text-white text-xs font-bold rounded-xl cursor-pointer shadow-sm"
+            >
+              Next Step
+            </button>
+          </div>
+        </div>
+      )}
+
+      {step === 3 && (
+        <div className="bg-surface dark:bg-slate-800 p-6 rounded-2xl border border-border dark:border-slate-700 shadow-sm space-y-6">
+          <h2 className="text-lg font-black text-text dark:text-white flex items-center gap-2">
+            <MapPin className="w-5 h-5 text-accent" /> Step 3: Confirm GPS Location
+          </h2>
+
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-3.5 bg-slate-50 dark:bg-slate-900 rounded-xl border border-border dark:border-slate-700 gap-2">
+              <div className="min-w-0 flex-1">
+                <span className="text-[10px] font-bold text-accent uppercase block">📍 GPS Detected Address</span>
+                <p className="text-xs font-bold text-text dark:text-white truncate">{address}</p>
               </div>
-            </div>
-
-            <div className="flex gap-3">
-              <button onClick={() => setStep(2)} className="w-1/3 btn-secondary">
-                Back
-              </button>
-              <button onClick={() => setStep(4)} className="w-2/3 btn-primary flex items-center justify-center gap-2">
-                Continue <ArrowRight className="w-5 h-5" />
+              <button 
+                onClick={detectLocation}
+                className="w-9 h-9 flex items-center justify-center bg-white dark:bg-slate-800 rounded-lg border border-border dark:border-slate-700 text-accent cursor-pointer hover:bg-slate-100"
+                title="Refresh location"
+              >
+                <RefreshCw className="w-4 h-4" />
               </button>
             </div>
-          </motion.div>
-        )}
 
-        {/* STEP 4: LOCATION CONFIRMATION */}
-        {step === 4 && (
-          <motion.div
-            key="step4"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            className="card-vanguard space-y-5"
-          >
-            <div className="text-center space-y-1">
-              <h3 className="text-lg font-bold text-text dark:text-white">Verify Hazard Location</h3>
-              <p className="text-xs text-text-muted">Ensure coordinates match the physical incident spot.</p>
+            <div className="h-[200px] w-full rounded-xl overflow-hidden border border-border dark:border-slate-700 relative z-0">
+              <MapContainer
+                center={coords}
+                zoom={13}
+                style={{ width: '100%', height: '100%' }}
+                zoomControl={false}
+              >
+                <TileLayer
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+                <ClickMapEvents setCoords={setCoords} setAddress={setAddress} />
+                <CircleMarker
+                  center={coords}
+                  radius={10}
+                  fillColor="#1B6FD8"
+                  color="#FFFFFF"
+                  weight={2}
+                  fillOpacity={0.8}
+                />
+              </MapContainer>
+            </div>
+            <p className="text-[10px] text-text-muted font-bold text-center">
+              💡 Drag or tap anywhere on the map above to manually correct the pin position.
+            </p>
+          </div>
+
+          <div className="flex justify-between items-center pt-2">
+            <button 
+              onClick={() => setStep(2)}
+              className="h-12 px-5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 text-text dark:text-white text-xs font-bold rounded-xl cursor-pointer"
+            >
+              Back
+            </button>
+            <button 
+              onClick={runAIAnalysis}
+              className="h-12 px-6 bg-accent hover:bg-opacity-90 text-white text-xs font-bold rounded-xl cursor-pointer shadow-sm flex items-center gap-1.5"
+            >
+              <Sparkles className="w-4 h-4 text-yellow-300" /> Analyze with AI
+            </button>
+          </div>
+        </div>
+      )}
+
+      {step === 4 && aiResult && (
+        <div className="space-y-6">
+          {/* Results dashboard card */}
+          <div className="bg-surface dark:bg-slate-800 rounded-2xl border border-border dark:border-slate-700 overflow-hidden shadow-md">
+            
+            {/* Severity Colored banner */}
+            <div className={`p-4 text-white font-bold flex items-center justify-between uppercase ${
+              aiResult.severity === 'red' ? 'bg-red-600' :
+              aiResult.severity === 'orange' ? 'bg-orange-600' :
+              aiResult.severity === 'yellow' ? 'bg-yellow-500' : 'bg-green-600'
+            }`}>
+              <span className="text-xs font-black tracking-wide flex items-center gap-1">
+                <AlertTriangle className="w-4 h-4" /> {aiResult.severityLabel || 'Hazard Status'}
+              </span>
+              <span className="text-[10px] font-black uppercase bg-white bg-opacity-20 px-2 py-0.5 rounded">
+                Escalated to: {aiResult.escalationLevel}
+              </span>
             </div>
 
-            <div className="space-y-4">
+            <div className="p-6 space-y-6">
               
-              {/* Interactive React-Leaflet Map coordinates selector */}
-              <div className="h-60 w-full rounded-xl overflow-hidden border border-border dark:border-slate-700 relative z-0">
-                <MapContainer
-                  center={[adjustCoords.lat, adjustCoords.lng]}
-                  zoom={15}
-                  style={{ width: '100%', height: '100%' }}
-                >
-                  <TileLayer
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  />
-                  <MapEvents onChangeCoords={handleMapClick} />
-                  <Marker position={[adjustCoords.lat, adjustCoords.lng]} />
-                  <MapRecenter coords={[adjustCoords.lat, adjustCoords.lng]} />
-                </MapContainer>
-              </div>
-
-              <div className="text-center text-xs text-text-muted font-bold">
-                📍 Click anywhere on the map above to select coordinates.
-              </div>
-
-              <div className="bg-slate-50 dark:bg-slate-700/40 p-4 rounded-xl border border-border dark:border-slate-700 space-y-1.5 text-left">
-                <div className="flex items-center gap-1.5 text-accent font-bold text-sm">
-                  <MapPin className="w-4 h-4" />
-                  <span>Reported Location Address:</span>
+              {/* Category info */}
+              <div className="flex items-center justify-between border-b pb-4 border-slate-100 dark:border-slate-700">
+                <div>
+                  <span className="text-[10px] font-bold text-text-muted block uppercase">Civic Category</span>
+                  <h3 className="text-lg font-black text-text dark:text-white">
+                    {aiResult.categoryLabel || aiResult.category?.replace('_', ' ')}
+                  </h3>
                 </div>
-                <p className="text-xs font-semibold text-text dark:text-slate-200">
-                  {resolvedAddress || 'Determining location coordinates...'}
+                <div className="relative w-16 h-16 flex items-center justify-center">
+                  {/* Circular progress bar (CSS only) */}
+                  <svg className="w-full h-full transform -rotate-90">
+                    <circle cx="32" cy="32" r="28" fill="transparent" stroke="var(--color-border)" strokeWidth="4" />
+                    <circle 
+                      cx="32" cy="32" r="28" 
+                      fill="transparent" 
+                      stroke="var(--color-accent)" 
+                      strokeWidth="4" 
+                      strokeDasharray={176} 
+                      strokeDashoffset={176 - (176 * aiResult.impactScore) / 100}
+                    />
+                  </svg>
+                  <span className="absolute text-xs font-black text-text dark:text-white">
+                    {aiResult.impactScore}
+                  </span>
+                </div>
+              </div>
+
+              {/* Severity choose explanation reason */}
+              <div className="space-y-1">
+                <span className="text-[10px] font-bold text-text-muted block uppercase">Analysis Reason</span>
+                <p className="text-xs font-semibold leading-relaxed text-text dark:text-white">
+                  {aiResult.severityReason}
                 </p>
               </div>
 
-              {/* Slider Controls (Elder Friendly) */}
-              <div className="space-y-3 bg-slate-50 dark:bg-slate-700/40 p-4 rounded-xl border border-border dark:border-slate-700 text-left">
-                <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider block">
-                  Fine-tune coordinates:
-                </span>
-                
-                <div className="space-y-1">
-                  <div className="flex justify-between text-xs font-semibold text-text dark:text-slate-300">
-                    <span>Shift Latitude</span>
-                    <span>{adjustCoords.lat.toFixed(5)}</span>
-                  </div>
-                  <input
-                    type="range"
-                    min={(location.lat - 0.005).toFixed(5)}
-                    max={(location.lat + 0.005).toFixed(5)}
-                    step="0.0001"
-                    value={adjustCoords.lat}
-                    onChange={(e) => handleCoordShift('lat', e.target.value)}
-                    className="w-full accent-accent"
-                  />
-                </div>
-
-                <div className="space-y-1 mt-2">
-                  <div className="flex justify-between text-xs font-semibold text-text dark:text-slate-300">
-                    <span>Shift Longitude</span>
-                    <span>{adjustCoords.lng.toFixed(5)}</span>
-                  </div>
-                  <input
-                    type="range"
-                    min={(location.lng - 0.005).toFixed(5)}
-                    max={(location.lng + 0.005).toFixed(5)}
-                    step="0.0001"
-                    value={adjustCoords.lng}
-                    onChange={(e) => handleCoordShift('lng', e.target.value)}
-                    className="w-full accent-accent"
-                  />
+              {/* Risk Prediction summary */}
+              <div className="p-3 bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/50 rounded-xl flex items-start gap-2.5">
+                <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <span className="text-[10px] font-bold text-red-700 dark:text-red-400 block uppercase">predicted community risk</span>
+                  <p className="text-xs font-bold text-red-900 dark:text-red-200 mt-0.5 leading-relaxed">{aiResult.riskPrediction}</p>
                 </div>
               </div>
-            </div>
 
-            <div className="flex gap-3">
-              <button onClick={() => setStep(3)} className="w-1/3 btn-secondary">
-                Back
-              </button>
-              <button 
-                onClick={handleAIAnalysis}
-                className="w-2/3 btn-primary flex items-center justify-center gap-2"
-              >
-                Analyze with AI <ArrowRight className="w-5 h-5" />
-              </button>
-            </div>
-          </motion.div>
-        )}
-
-        {/* STEP 5: AI PIPELINE PROCESSING / RESULTS DISPLAY */}
-        {step === 5 && (
-          <motion.div
-            key="step5"
-            initial={{ opacity: 0, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="card-vanguard space-y-6"
-          >
-            {aiLoading ? (
-              <LoadingShield />
-            ) : (
-              <div className="space-y-6">
-                <div className="flex items-center justify-between border-b border-border dark:border-slate-700 pb-4">
-                  <div className="flex items-center gap-2">
-                    <FileCheck className="w-6 h-6 text-accent" />
-                    <h3 className="text-lg font-black text-text dark:text-white">
-                      AI Safety Assessment
-                    </h3>
-                  </div>
-                  <span className="text-xs font-bold text-text-muted">
-                    Analysis Completed
-                  </span>
+              {/* Recommended Authority */}
+              <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-border dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <span className="text-[10px] font-bold text-text-muted block uppercase">recommended dispatch agency</span>
+                  <h4 className="text-sm font-black text-text dark:text-white truncate mt-0.5">{aiResult.recommendedAuthority}</h4>
                 </div>
-
-                <AIResultCard 
-                  result={aiResult}
-                  onDownloadPdf={() => downloadPdfReport({ 
-                    ...aiResult, 
-                    createdAt: new Date().toISOString(), 
-                    reporterName: dbUser?.name, 
-                    village: dbUser?.village, 
-                    ward: dbUser?.ward, 
-                    lat: adjustCoords.lat, 
-                    lng: adjustCoords.lng 
-                  })}
-                  onShareCommunity={() => {
-                    alert("Alert posted to community general channel!");
-                  }}
-                  onSubmit={handleFinalSubmit}
-                  submitting={submitting}
-                />
+                <div className="flex gap-2">
+                  <a 
+                    href="tel:100"
+                    className="w-10 h-10 bg-accent-soft text-accent rounded-lg flex items-center justify-center cursor-pointer"
+                    title="Call emergency helpline"
+                  >
+                    <Phone className="w-4 h-4" />
+                  </a>
+                  <a 
+                    href="mailto:civic@vanguard.in"
+                    className="w-10 h-10 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-lg flex items-center justify-center border border-border dark:border-slate-700 cursor-pointer"
+                    title="Send official report"
+                  >
+                    <Mail className="w-4 h-4" />
+                  </a>
+                </div>
               </div>
-            )}
-          </motion.div>
-        )}
 
-      </AnimatePresence>
+              {/* Official complaint paragraph */}
+              <div className="space-y-1">
+                <span className="text-[10px] font-bold text-text-muted block uppercase">Generated Complaint Text</span>
+                <blockquote className="border-l-4 border-slate-300 dark:border-slate-600 pl-4 py-1 italic text-xs text-text-muted leading-relaxed">
+                  "{aiResult.reportText}"
+                </blockquote>
+              </div>
+
+              {/* Action buttons grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                <button
+                  onClick={downloadReportPDF}
+                  className="h-12 bg-white dark:bg-slate-800 border border-accent text-accent dark:text-blue-400 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 hover:bg-slate-50 dark:hover:bg-slate-750 cursor-pointer"
+                >
+                  <Download className="w-4 h-4" /> Download PDF Report
+                </button>
+                <button
+                  disabled={isSaving}
+                  onClick={() => handleSaveIssue(true)}
+                  className="h-12 bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  <Share2 className="w-4 h-4" /> Share with Community
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Core Submit action bar */}
+          <div className="flex gap-3 justify-end items-center">
+            <button
+              onClick={() => setStep(3)}
+              className="h-12 px-6 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 text-text dark:text-white text-xs font-bold rounded-xl cursor-pointer"
+            >
+              Modify Location
+            </button>
+            <button
+              disabled={isSaving}
+              onClick={() => handleSaveIssue(false)}
+              className="h-12 px-8 bg-accent hover:bg-opacity-95 text-white text-xs font-bold rounded-xl cursor-pointer flex items-center gap-1 disabled:opacity-50 shadow-md"
+            >
+              {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Submit Issue Log
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
