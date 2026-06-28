@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { LanguageProvider } from './contexts/LanguageContext'
 import { Toaster } from 'react-hot-toast'
 import { seedOfficials } from './lib/seedData'
+import { ThemeProvider } from './contexts/ThemeContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import './lib/i18n' // import to initialize translation engine
 
@@ -30,7 +31,7 @@ function AppLayout() {
   const { dbUser } = useAuth()
   
   return (
-    <div className="flex min-h-screen bg-bg text-text overflow-x-hidden">
+    <div className="flex min-h-screen bg-[var(--bg)] text-[var(--text)] overflow-x-hidden">
       <Sidebar />
       <div className="flex-1 flex flex-col min-w-0 pb-[72px] md:pb-0">
         <TopBar />
@@ -49,7 +50,7 @@ function AppLayout() {
             <Route 
               path="/admin" 
               element={
-                dbUser?.role === 'Official' 
+                (dbUser?.role || '').toLowerCase() === 'official' 
                   ? <AdminDashboard /> 
                   : <Navigate to="/" replace />
               } 
@@ -66,46 +67,40 @@ function AppLayout() {
 export default function App() {
   useEffect(() => {
     seedOfficials()
-    
-    // Initialize dark/light mode from localStorage
-    const isDark = localStorage.getItem('vanguard_dark_mode') === 'true'
-    if (isDark) {
-      document.documentElement.classList.add('dark')
-    } else {
-      document.documentElement.classList.remove('dark')
-    }
   }, [])
 
   return (
-    <AuthProvider>
-      <LanguageProvider>
-        <BrowserRouter>
-          <Toaster 
-            position="top-center" 
-            reverseOrder={false}
-            toastOptions={{
-              style: {
-                borderRadius: '12px',
-                background: '#0F2B4E',
-                color: '#fff',
-                fontSize: '13px',
-                fontWeight: '600'
-              }
-            }}
-          />
-          <Routes>
-            {/* Public routes */}
-            <Route path="/onboarding" element={<Onboarding />} />
-            
-            {/* Protected routes wrapped in ProtectedRoute */}
-            <Route path="/*" element={
-              <ProtectedRoute>
-                <AppLayout />
-              </ProtectedRoute>
-            } />
-          </Routes>
-        </BrowserRouter>
-      </LanguageProvider>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <LanguageProvider>
+          <BrowserRouter>
+            <Toaster 
+              position="top-center" 
+              reverseOrder={false}
+              toastOptions={{
+                style: {
+                  borderRadius: '12px',
+                  background: '#0F2B4E',
+                  color: '#fff',
+                  fontSize: '13px',
+                  fontWeight: '600'
+                }
+              }}
+            />
+            <Routes>
+              {/* Public routes */}
+              <Route path="/onboarding" element={<Onboarding />} />
+              
+              {/* Protected routes wrapped in ProtectedRoute */}
+              <Route path="/*" element={
+                <ProtectedRoute>
+                  <AppLayout />
+                </ProtectedRoute>
+              } />
+            </Routes>
+          </BrowserRouter>
+        </LanguageProvider>
+      </AuthProvider>
+    </ThemeProvider>
   )
 }

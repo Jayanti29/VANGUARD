@@ -25,7 +25,7 @@ import toast from 'react-hot-toast';
 
 export default function Community() {
   const { t } = useTranslation();
-  const { user, dbUser } = useAuth();
+  const { currentUser, dbUser, userProfile } = useAuth();
   
   const [activeChannel, setActiveChannel] = useState('General');
   const [messages, setMessages] = useState([]);
@@ -36,10 +36,13 @@ export default function Community() {
   const [pttSpeaking, setPttSpeaking] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
   
-  // MediaRecorder states for audio note
+  // Voice recording state
   const [isRecording, setIsRecording] = useState(false);
+  const [audioBlob, setAudioBlob] = useState(null);
+  const [audioUrl, setAudioUrl] = useState(null);
   const mediaRecorderRef = useRef(null);
-  const audioChunksRef = useRef([]);
+  const streamRef = useRef(null);
+  const chunksRef = useRef([]);
 
   const chatEndRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -70,105 +73,165 @@ export default function Community() {
     return () => unsubscribe();
   }, [communityId]);
 
-  // Audio Playback helper
-  const AudioPlayer = ({ src }) => {
-    const [playing, setPlaying] = useState(false);
-    const audioRef = useRef(new Audio(src));
-
-    useEffect(() => {
-      const audio = audioRef.current;
-      const handleEnd = () => setPlaying(false);
-      audio.addEventListener('ended', handleEnd);
-      return () => {
-        audio.removeEventListener('ended', handleEnd);
-        audio.pause();
-      };
-    }, []);
-
-    const togglePlay = () => {
-      if (playing) {
-        audioRef.current.pause();
-        setPlaying(false);
-      } else {
-        audioRef.current.play();
-        setPlaying(true);
+  // CRITICAL: Cleanup on component unmount
+  useEffect(() => {
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+      if (audioUrl) {
+        URL.revokeObjectURL(audioUrl);
       }
     };
+  }, [audioUrl]);
 
-    return (
-      <div className="flex items-center gap-3 bg-white/20 p-2.5 rounded-lg max-w-[240px]">
-        <button 
-          onClick={togglePlay}
-          className="w-8 h-8 rounded-full bg-white text-slate-800 flex items-center justify-center cursor-pointer shadow-sm hover:scale-105 transition"
-        >
-          {playing ? <Pause className="w-4 h-4 text-accent" /> : <Play className="w-4 h-4 fill-accent text-accent" />}
-        </button>
-        <div className="flex-1">
-          <div className="h-1 bg-white/30 rounded-full overflow-hidden w-28">
-            <div className={`h-full bg-white transition-all ${playing ? 'w-full duration-[10s]' : 'w-1/3'}`} />
-          </div>
-          <span className="text-[9px] font-bold text-white/80 block mt-1">Audio Note Voice message</span>
-        </div>
-      </div>
-    );
+  const startRecording = async () => {
+    try {
+      // Request mic permission
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          sampleRate: 44100
+        }
+      });
+      
+      streamRef.current = stream;
+      chunksRef.current = [];
+      
+      // Use supported mime type
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : MediaRecorder.isTypeSupported('audio/webm')
+        ? 'audio/webm'
+        : 'audio/mp4';
+      
+      const mediaRecorder = new MediaRecorder(stream, { mimeType });
+      mediaRecorderRef.current = mediaRecorder;
+      
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+          chunksRef.current.push(e.data);
+        }
+      };
+      
+      mediaRecorder.onstop = () => {
+        // Create blob from chunks
+        const blob = new Blob(chunksRef.current, { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        setAudioBlob(blob);
+        setAudioUrl(url);
+        chunksRef.current = [];
+        
+        // CRITICAL: Stop all tracks to turn off mic
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach(track => {
+            track.stop();
+            track.enabled = false;
+          });
+          streamRef.current = null;
+        }
+      };
+      
+      mediaRecorder.start(100); // collect data every 100ms
+      setIsRecording(true);
+      
+    } catch (err) {
+      console.error('Mic error:', err);
+      if (err.name === 'NotAllowedError') {
+        alert('Microphone permission denied. Please allow mic access.');
+      }
+    }
   };
 
-  // Text message send
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && 
+        mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
+    setIsRecording(false);
+  };
+
+  const sendVoiceMessage = async () => {
+    if (!audioBlob) return;
+    
+    const uploadToast = toast.loading("Sending voice note...");
+    // Convert blob to base64 for Firestore storage
+    const reader = new FileReader();
+    reader.readAsDataURL(audioBlob);
+    reader.onload = async () => {
+      const base64Audio = reader.result;
+      
+      try {
+        await addDoc(collection(db, 'communities', communityId, 'messages'), {
+          senderId: currentUser.uid,
+          senderName: dbUser?.name || userProfile?.name || 'User',
+          senderRole: dbUser?.role || userProfile?.role || 'citizen',
+          audioData: base64Audio, // store as base64
+          type: 'audio',
+          channel: activeChannel,
+          timestamp: serverTimestamp()
+        });
+        toast.dismiss(uploadToast);
+        toast.success("Voice note sent!");
+      } catch (err) {
+        console.error(err);
+        toast.dismiss(uploadToast);
+        toast.error("Failed to send voice note.");
+      }
+      
+      // Reset recording state
+      setAudioBlob(null);
+      if (audioUrl) URL.revokeObjectURL(audioUrl);
+      setAudioUrl(null);
+    };
+  };
+
   const handleSendMessage = async (e) => {
-    e?.preventDefault();
+    e.preventDefault();
     if (!inputText.trim()) return;
+
+    const messageToSend = inputText;
+    setInputText('');
 
     try {
       await addDoc(collection(db, 'communities', communityId, 'messages'), {
-        senderId: user?.uid || 'anonymous',
+        senderId: currentUser?.uid || 'anonymous',
         senderName: dbUser?.name || 'Citizen',
         senderRole: dbUser?.role || 'Citizen',
-        text: inputText,
+        text: messageToSend,
         type: 'text',
         channel: activeChannel,
         timestamp: serverTimestamp()
       });
-      setInputText('');
     } catch (err) {
-      console.error(err);
+      console.error("Message send failed:", err);
       toast.error("Failed to send message.");
     }
   };
 
-  // Upload file attachment (image or PDF)
   const handleFileUpload = async (e, type) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    setShowAttachments(false);
     setUploadingFile(true);
     const uploadToast = toast.loading(`Uploading ${type}...`);
-    try {
-      let downloadUrl = '';
-      if (type === 'image') {
-        downloadUrl = await uploadImage(file);
-      } else {
-        // PDF fallback: convert to base64 data URL
-        downloadUrl = await new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onload = (e) => resolve(e.target.result);
-          reader.readAsDataURL(file);
-        });
-      }
 
+    try {
+      const downloadUrl = await uploadImage(file);
       await addDoc(collection(db, 'communities', communityId, 'messages'), {
-        senderId: user?.uid || 'anonymous',
+        senderId: currentUser?.uid || 'anonymous',
         senderName: dbUser?.name || 'Citizen',
         senderRole: dbUser?.role || 'Citizen',
-        text: `Shared a ${type}`,
+        text: type === 'image' ? 'Sent an image' : file.name,
         mediaUrl: downloadUrl,
         type: type,
         channel: activeChannel,
         timestamp: serverTimestamp()
       });
-      
       toast.dismiss(uploadToast);
-      toast.success(`${type} shared successfully!`);
-      setShowAttachments(false);
+      toast.success(`${type} sent!`);
     } catch (err) {
       console.error(err);
       toast.dismiss(uploadToast);
@@ -178,81 +241,17 @@ export default function Community() {
     }
   };
 
-  // Voice recording triggers
-  const startRecording = async () => {
-    audioChunksRef.current = [];
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
-        }
-      };
-
-      mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
-        await uploadAudioNote(audioBlob);
-      };
-
-      mediaRecorder.start();
-      setIsRecording(true);
-      toast("Recording audio note... speak now!");
-    } catch (err) {
-      console.error("Audio recording permission denied:", err);
-      toast.error("Mic access denied or unsupported.");
-    }
-  };
-
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
-    }
-  };
-
-  const uploadAudioNote = async (blob) => {
-    const uploadToast = toast.loading("Sending voice note...");
-    try {
-      // Audio fallback: convert to base64 data URL
-      const downloadUrl = await new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (e) => resolve(e.target.result);
-        reader.readAsDataURL(blob);
-      });
-
-      await addDoc(collection(db, 'communities', communityId, 'messages'), {
-        senderId: user?.uid || 'anonymous',
-        senderName: dbUser?.name || 'Citizen',
-        senderRole: dbUser?.role || 'Citizen',
-        text: 'Voice note message',
-        audioUrl: downloadUrl,
-        type: 'audio',
-        channel: activeChannel,
-        timestamp: serverTimestamp()
-      });
-      toast.dismiss(uploadToast);
-      toast.success("Voice note sent!");
-    } catch (err) {
-      console.error(err);
-      toast.dismiss(uploadToast);
-      toast.error("Failed to send voice note.");
-    }
-  };
-
   const channelsList = [
-    { id: 'General', label: '🏘 General' },
-    { id: 'Emergency', label: '🚨 Emergency' },
-    { id: 'Workers', label: '👷 Workers' },
-    { id: 'Announcements', label: '📢 Announcements' },
-    { id: 'Agriculture', label: '🌾 Agriculture' }
+    { id: 'General', label: 'General' },
+    { id: 'Emergency', label: 'Emergency' },
+    { id: 'Workers', label: 'Workers' },
+    { id: 'Announcements', label: 'Announcements' },
+    { id: 'Agriculture', label: 'Agriculture' }
   ];
 
   // Helper function for message alignment and backgrounds
   const getMessageBubbleStyle = (senderId, type) => {
-    const isOwn = senderId === user?.uid;
+    const isOwn = senderId === currentUser?.uid;
     if (isOwn) {
       return {
         containerClass: "justify-end",
@@ -267,9 +266,9 @@ export default function Community() {
 
   const getRoleBadge = (role) => {
     switch (role?.toLowerCase()) {
-      case 'official': return <span className="bg-blue-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded uppercase">Official 🔵</span>;
-      case 'volunteer': return <span className="bg-green-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded uppercase">Volunteer 🟢</span>;
-      case 'worker': return <span className="bg-orange-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded uppercase">Worker 🟠</span>;
+      case 'official': return <span className="bg-purple-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded uppercase">Official</span>;
+      case 'volunteer': return <span className="bg-green-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded uppercase">Volunteer</span>;
+      case 'worker': return <span className="bg-orange-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded uppercase">Worker</span>;
       default: return null;
     }
   };
@@ -283,7 +282,7 @@ export default function Community() {
       <div className="bg-white dark:bg-slate-800 border-b border-border dark:border-slate-700 px-6 py-4 flex items-center justify-between z-10">
         <div>
           <h2 className="text-sm font-black text-text dark:text-white capitalize">
-            🏘 {dbUser?.village || 'Our Village'} Community Hub
+            {dbUser?.village || 'Our Village'} Community Hub
           </h2>
           <span className="text-[10px] text-text-muted font-bold block mt-0.5">
             {dbUser?.district || 'District'} District &bull; {activeChannel} Room
@@ -370,7 +369,7 @@ export default function Community() {
           </div>
         ) : (
           filteredMessages.map(msg => {
-            const isOwn = msg.senderId === user?.uid;
+            const isOwn = msg.senderId === currentUser?.uid;
             const bubbleStyle = getMessageBubbleStyle(msg.senderId, msg.type);
             const timeStr = msg.timestamp ? new Date(msg.timestamp.toDate()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now';
 
@@ -413,8 +412,13 @@ export default function Community() {
                     </a>
                   )}
 
-                  {msg.type === 'audio' && (
-                    <AudioPlayer src={msg.audioUrl} />
+                  {msg.type === 'audio' && msg.audioData && (
+                    <audio 
+                      controls 
+                      src={msg.audioData}
+                      style={{maxWidth:'200px', height:'36px'}}
+                      preload="metadata"
+                    />
                   )}
 
                   <span className="text-[8px] text-white/70 block text-right font-black mt-1">
@@ -452,8 +456,29 @@ export default function Community() {
         </div>
       )}
 
+      {/* Show audio preview before sending */}
+      {audioUrl && !isRecording && (
+        <div className="bg-white dark:bg-slate-800 border-t border-border dark:border-slate-700 p-4 flex gap-3 items-center justify-between">
+          <audio controls src={audioUrl} style={{height:'32px', flex:1}} />
+          <div className="flex gap-2">
+            <button 
+              onClick={sendVoiceMessage}
+              className="px-4 py-2 bg-accent text-white font-bold text-xs rounded-xl hover:bg-opacity-90 transition cursor-pointer"
+            >
+              Send
+            </button>
+            <button 
+              onClick={() => { setAudioUrl(null); setAudioBlob(null); }}
+              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 text-text dark:text-white font-bold text-xs rounded-xl transition cursor-pointer"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Bottom Message Input Bar */}
-      <form onSubmit={handleSendMessage} className="bg-white dark:bg-slate-800 border-t border-border dark:border-slate-700 p-4 flex items-center gap-3">
+      <div className="bg-white dark:bg-slate-800 border-t border-border dark:border-slate-700 p-4 flex items-center gap-3">
         <button
           type="button"
           onClick={() => setShowAttachments(!showAttachments)}
@@ -464,34 +489,44 @@ export default function Community() {
         </button>
 
         <button
-          type="button"
-          onMouseDown={startRecording}
+          onMouseDown={startRecording}   // desktop: hold to record
           onMouseUp={stopRecording}
-          className={`w-11 h-11 rounded-xl flex items-center justify-center cursor-pointer border ${
-            isRecording 
-              ? 'bg-red-600 text-white animate-pulse border-red-650' 
-              : 'bg-slate-100 dark:bg-slate-700 text-text-muted border-border dark:border-slate-650'
-          }`}
-          title="Hold to send audio message"
+          onTouchStart={startRecording}  // mobile: touch to record
+          onTouchEnd={stopRecording}
+          style={{
+            background: isRecording ? '#DC2626' : '#1B6FD8',
+            border: 'none',
+            borderRadius: '50%',
+            width: '44px', height: '44px',
+            cursor: 'pointer',
+            fontSize: '18px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#fff'
+          }}
+          title="Hold to speak"
         >
-          <Mic className="w-5 h-5" />
+          {isRecording ? '⏹' : '🎤'}
         </button>
 
-        <input
-          value={inputText}
-          onChange={(e) => setInputText(e.target.value)}
-          placeholder={`Message #${activeChannel}...`}
-          className="flex-1 h-11 px-4 bg-slate-50 dark:bg-slate-900 border border-border dark:border-slate-700 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-accent dark:text-white"
-        />
+        <form onSubmit={handleSendMessage} className="flex-1 flex gap-2">
+          <input
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            placeholder={`Message #${activeChannel}...`}
+            className="flex-1 h-11 px-4 bg-slate-50 dark:bg-slate-900 border border-border dark:border-slate-700 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-accent dark:text-white"
+          />
 
-        <button
-          type="submit"
-          disabled={!inputText.trim()}
-          className="w-11 h-11 bg-accent disabled:opacity-40 text-white rounded-xl flex items-center justify-center cursor-pointer shadow-sm"
-        >
-          <Send className="w-4 h-4" />
-        </button>
-      </form>
+          <button
+            type="submit"
+            disabled={!inputText.trim()}
+            className="w-11 h-11 bg-accent disabled:opacity-40 text-white rounded-xl flex items-center justify-center cursor-pointer shadow-sm"
+          >
+            <Send className="w-4 h-4" />
+          </button>
+        </form>
+      </div>
     </div>
   );
 }

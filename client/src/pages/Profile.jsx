@@ -20,6 +20,7 @@ import {
 import useAuth from '../hooks/useAuth';
 import useIssues from '../hooks/useIssues';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useTheme } from '../contexts/ThemeContext';
 
 export default function Profile() {
   const navigate = useNavigate();
@@ -33,10 +34,7 @@ export default function Profile() {
     localStorage.getItem('vanguard_notifications') === 'true'
   );
   
-  const [darkMode, setDarkMode] = useState(
-    localStorage.getItem('vanguard_dark_mode') === 'true' ||
-    document.documentElement.classList.contains('dark')
-  );
+  const { theme, toggleTheme } = useTheme();
 
   const [showLangModal, setShowLangModal] = useState(false);
 
@@ -61,18 +59,7 @@ export default function Profile() {
     }
   }, [issues, dbUser]);
 
-  // Dark Mode Toggle
-  const toggleDarkMode = () => {
-    const nextDark = !darkMode;
-    setDarkMode(nextDark);
-    localStorage.setItem('vanguard_dark_mode', String(nextDark));
-    
-    if (nextDark) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  };
+
 
   // Notification Toggle
   const toggleNotifications = () => {
@@ -215,26 +202,20 @@ export default function Profile() {
         <div className="flex items-center justify-between p-4.5 min-h-[56px]">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-indigo-50 dark:bg-slate-700 text-indigo-600 dark:text-indigo-300 rounded-xl flex items-center justify-center">
-              {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+              {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </div>
             <div>
-              <span className="text-sm font-bold text-text dark:text-white block">🌙 Dark Appearance</span>
+              <span className="text-sm font-bold text-text dark:text-white block">Dark Appearance</span>
               <span className="text-[10px] text-text-muted font-medium mt-0.5 block">
                 Enable low-light readability themes.
               </span>
             </div>
           </div>
-          <button
-            onClick={toggleDarkMode}
-            className={`w-12 h-6.5 rounded-full p-0.5 transition-colors cursor-pointer ${
-              darkMode ? 'bg-accent' : 'bg-slate-300 dark:bg-slate-600'
-            }`}
+          <button 
+            onClick={toggleTheme}
+            className="px-4 py-2 bg-accent text-white font-bold text-xs rounded-xl hover:bg-opacity-90 transition cursor-pointer"
           >
-            <div 
-              className={`w-5.5 h-5.5 rounded-full bg-white transition-transform ${
-                darkMode ? 'translate-x-5.5' : 'translate-x-0'
-              }`}
-            />
+            {theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
           </button>
         </div>
 

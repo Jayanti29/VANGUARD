@@ -2,18 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { 
-  AlertOctagon, 
+  AlertTriangle, 
   MessageSquare, 
-  Users, 
-  MapPin, 
-  ShieldAlert, 
-  PlusCircle,
-  AlertTriangle,
-  ArrowRight,
+  Briefcase, 
+  Shield, 
+  Map, 
+  Bot,
+  User,
+  Plus,
   TrendingUp,
-  Map,
-  Wrench,
-  Bot
+  FileText,
+  MapPin,
+  ArrowRight
 } from 'lucide-react';
 import useAuth from '../hooks/useAuth';
 import { db } from '../lib/firebase';
@@ -22,7 +22,7 @@ import { collection, query, where, limit, onSnapshot, orderBy } from 'firebase/f
 export default function Home() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { dbUser, user } = useAuth();
+  const { dbUser, userProfile } = useAuth();
 
   const [criticalCount, setCriticalCount] = useState(0);
   const [totalOpenIssues, setTotalOpenIssues] = useState(0);
@@ -32,6 +32,8 @@ export default function Home() {
   // Real-time Community Message Preview
   const [latestMessage, setLatestMessage] = useState(null);
 
+  const role = (dbUser?.role || userProfile?.role || 'citizen').toLowerCase();
+
   // Time-aware greeting
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -39,6 +41,24 @@ export default function Home() {
     if (hour >= 12 && hour < 17) return t('greeting_afternoon', 'Good afternoon');
     if (hour >= 17 && hour < 21) return t('greeting_evening', 'Good evening');
     return t('greeting_night', 'Good night');
+  };
+
+  const getWelcomeMessage = () => {
+    switch (role) {
+      case 'worker': return 'Find work opportunities';
+      case 'official': return 'Manage community issues';
+      case 'volunteer': return 'Make a difference';
+      default: return 'Protect your community';
+    }
+  };
+
+  const getBadgeStyle = () => {
+    switch (role) {
+      case 'worker': return 'bg-orange-100 text-orange-700 border-orange-200';
+      case 'official': return 'bg-purple-100 text-purple-700 border-purple-200';
+      case 'volunteer': return 'bg-green-100 text-green-700 border-green-200';
+      default: return 'bg-blue-100 text-blue-700 border-blue-200';
+    }
   };
 
   const communityId = `${dbUser?.district || 'bangalore'}_${dbUser?.village || 'ward6'}`.toLowerCase().replace(/\s+/g, '');
@@ -95,135 +115,181 @@ export default function Home() {
     };
   }, [dbUser, communityId]);
 
-  const quickActions = [
-    { label: t('report_issue', 'Report Issue'), icon: PlusCircle, path: '/report', color: 'bg-accent text-white' },
-    { label: t('common.community', 'Community Chat'), icon: MessageSquare, path: '/community', color: 'bg-green-600 text-white' },
-    { label: t('common.workers', 'Worker Market'), icon: Users, path: '/workers', color: 'bg-orange-500 text-white' },
-    { label: t('common.emergency', 'Emergency Alert'), icon: AlertOctagon, path: '/emergency', color: 'bg-red-650 text-white' },
-    { label: t('common.map', 'Issue Map'), icon: Map, path: '/map', color: 'bg-blue-650 text-white' },
-    { label: t('common.ai', 'AI Assistant'), icon: Bot, path: '/ai', color: 'bg-slate-700 text-white' }
-  ];
+  const getRoleActions = () => {
+    switch (role) {
+      case 'worker':
+        return [
+          { label: 'My Jobs', icon: Briefcase, path: '/workers', color: 'text-amber-500', disabled: false },
+          { label: 'Post My Services', icon: Plus, path: '/profile', color: 'text-blue-500', disabled: false },
+          { label: 'Community Chat', icon: MessageSquare, path: '/community', color: 'text-blue-500', disabled: false },
+          { label: 'Map View', icon: Map, path: '/map', color: 'text-blue-500', disabled: false },
+          { label: 'My Profile', icon: User, path: '/profile', color: 'text-blue-500', disabled: false },
+          { label: 'Earnings (coming soon)', icon: TrendingUp, path: '#', color: 'text-slate-400', disabled: true }
+        ];
+      case 'official':
+        return [
+          { label: 'Admin Dashboard', icon: Shield, path: '/admin', color: 'text-purple-500', disabled: false },
+          { label: 'Community Chat', icon: MessageSquare, path: '/community', color: 'text-blue-500', disabled: false },
+          { label: 'Map View', icon: Map, path: '/map', color: 'text-blue-500', disabled: false },
+          { label: 'Issue Reports', icon: FileText, path: '/map', color: 'text-blue-500', disabled: false },
+          { label: 'Statistics', icon: TrendingUp, path: '/admin', color: 'text-blue-500', disabled: false },
+          { label: 'Officials Directory', icon: Briefcase, path: '/officials', color: 'text-amber-500', disabled: false }
+        ];
+      case 'volunteer':
+        return [
+          { label: 'Report Issue', icon: AlertTriangle, path: '/report', color: 'text-red-500', disabled: false },
+          { label: 'Community Chat', icon: MessageSquare, path: '/community', color: 'text-blue-500', disabled: false },
+          { label: 'Active Emergencies', icon: Shield, path: '/emergency', color: 'text-red-500', disabled: false },
+          { label: 'Map View', icon: Map, path: '/map', color: 'text-blue-500', disabled: false },
+          { label: 'AI Assistant', icon: Bot, path: '/ai', color: 'text-purple-500', disabled: false },
+          { label: 'Volunteer Tasks (coming soon)', icon: Plus, path: '#', color: 'text-slate-400', disabled: true }
+        ];
+      default: // citizen
+        return [
+          { label: 'Report Issue', icon: AlertTriangle, path: '/report', color: 'text-red-500', disabled: false },
+          { label: 'Community Chat', icon: MessageSquare, path: '/community', color: 'text-blue-500', disabled: false },
+          { label: 'Emergency Alert', icon: Shield, path: '/emergency', color: 'text-red-500', disabled: false },
+          { label: 'Map View', icon: Map, path: '/map', color: 'text-blue-500', disabled: false },
+          { label: 'AI Assistant', icon: Bot, path: '/ai', color: 'text-purple-500', disabled: false },
+          { label: 'Officials Directory', icon: Briefcase, path: '/officials', color: 'text-amber-500', disabled: false }
+        ];
+    }
+  };
+
+  const quickActions = getRoleActions();
 
   return (
     <div className="space-y-6">
       
       {/* Time-Aware Greeting Header */}
-      <div className="flex items-center justify-between bg-white dark:bg-slate-800 p-5 rounded-2xl border border-border dark:border-slate-700 shadow-sm">
+      <div className="flex items-center justify-between bg-[var(--surface)] p-5 rounded-2xl border border-[var(--border)] shadow-sm">
         <div>
-          <h2 className="text-lg font-black text-text dark:text-white">
-            🌅 {getGreeting()}, {dbUser?.name || 'Citizen'}
+          <h2 className="text-lg font-black text-[var(--text)] flex items-center gap-2 flex-wrap">
+            {getGreeting()}, {dbUser?.name || 'Citizen'}
+            <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border uppercase tracking-wider capitalize ${getBadgeStyle()}`}>
+              {role}
+            </span>
           </h2>
-          <p className="text-xs text-text-muted mt-0.5 flex items-center gap-1 font-bold">
-            <MapPin className="w-3.5 h-3.5 text-accent" /> {dbUser?.village || 'Ramanagara'}, Ward {dbUser?.ward || '6'}
+          <p className="text-xs text-[var(--text-muted)] mt-1 font-semibold">
+            {getWelcomeMessage()}
           </p>
+          <div className="text-xs text-[var(--text-muted)] mt-1 flex items-center gap-1 font-bold">
+            <MapPin className="w-3.5 h-3.5 text-[var(--accent)]" /> {dbUser?.village || 'Ramanagara'}, Ward {dbUser?.ward || '6'}
+          </div>
         </div>
         <img 
           src={dbUser?.profileImageUrl || 'https://api.dicebear.com/7.x/bottts/svg?seed=avatar'} 
           alt="profile" 
-          className="w-12 h-12 rounded-full border border-border dark:border-slate-650 object-cover cursor-pointer"
+          className="w-12 h-12 rounded-full border border-[var(--border)] object-cover cursor-pointer"
           onClick={() => navigate('/profile')}
         />
       </div>
 
       {/* 2x3 Quick Action Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        {quickActions.map(action => (
-          <button
-            key={action.label}
-            onClick={() => navigate(action.path)}
-            className={`min-h-[96px] p-4 rounded-2xl flex flex-col items-center justify-center gap-2 cursor-pointer shadow-sm hover:scale-102 transition ${action.color}`}
-          >
-            <action.icon className="w-8 h-8" />
-            <span className="text-xs font-black text-center">{action.label}</span>
-          </button>
-        ))}
+        {quickActions.map(action => {
+          const Icon = action.icon;
+          return (
+            <button
+              key={action.label}
+              disabled={action.disabled}
+              onClick={() => !action.disabled && navigate(action.path)}
+              className={`min-h-[96px] p-4 rounded-2xl flex flex-col items-center justify-center gap-2 cursor-pointer shadow-sm hover:scale-102 transition border border-[var(--border)] bg-[var(--surface)] ${
+                action.disabled ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
+            >
+              <Icon size={28} className={action.color} />
+              <span className="text-xs font-black text-center text-[var(--text)]">{action.label}</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Real-time Dashboard cards */}
       <div className="space-y-4 pt-2">
-        <h3 className="text-sm font-black text-text dark:text-white uppercase tracking-wider">
+        <h3 className="text-sm font-black text-[var(--text)] uppercase tracking-wider">
           {t('community_updates', 'Community Updates')}
         </h3>
 
         {/* Card 1: Critical Alerts */}
         <div 
           onClick={() => navigate('/map')}
-          className="bg-surface dark:bg-slate-800 border-l-4 border-red-600 rounded-2xl p-4 shadow-sm border border-border dark:border-slate-700 flex gap-4 items-center justify-between cursor-pointer hover:shadow"
+          className="bg-[var(--surface)] border-l-4 border-red-600 rounded-2xl p-4 shadow-sm border border-[var(--border)] flex gap-4 items-center justify-between cursor-pointer hover:shadow"
         >
           <div className="flex items-center gap-3.5">
             <div className="w-12 h-12 bg-red-100 dark:bg-red-950/20 text-red-600 rounded-xl flex items-center justify-center flex-shrink-0">
-              <ShieldAlert className="w-6 h-6 animate-pulse" />
+              <Shield className="w-6 h-6 animate-pulse" />
             </div>
             <div>
-              <h4 className="text-xs font-bold text-text dark:text-white">🚨 {t('critical_issues', 'Local Critical Issues')}</h4>
-              <p className="text-[10px] text-text-muted mt-0.5 font-bold">
+              <h4 className="text-xs font-bold text-[var(--text)]">Local Critical Issues</h4>
+              <p className="text-[10px] text-[var(--text-muted)] mt-0.5 font-bold">
                 {criticalCount > 0 
                   ? `${criticalCount} ${t('urgent_hazards', 'Urgent hazards need attention')}` 
                   : t('all_clear', 'All clear! No critical issues reported')}
               </p>
             </div>
           </div>
-          <ArrowRight className="w-5 h-5 text-text-muted" />
+          <ArrowRight className="w-5 h-5 text-[var(--text-muted)]" />
         </div>
 
         {/* Card 2: Community Chat Updates */}
         <div 
           onClick={() => navigate('/community')}
-          className="bg-surface dark:bg-slate-800 border-l-4 border-green-600 rounded-2xl p-4 shadow-sm border border-border dark:border-slate-700 flex gap-4 items-center justify-between cursor-pointer hover:shadow"
+          className="bg-[var(--surface)] border-l-4 border-green-600 rounded-2xl p-4 shadow-sm border border-[var(--border)] flex gap-4 items-center justify-between cursor-pointer hover:shadow"
         >
           <div className="flex items-center gap-3.5 flex-1 min-w-0">
             <div className="w-12 h-12 bg-green-100 dark:bg-green-950/20 text-green-600 rounded-xl flex items-center justify-center flex-shrink-0">
               <MessageSquare className="w-6 h-6" />
             </div>
             <div className="min-w-0 flex-1">
-              <h4 className="text-xs font-bold text-text dark:text-white">💬 {t('latest_chat_update', 'Latest Chat Update')}</h4>
-              <p className="text-[10px] text-text-muted mt-0.5 truncate font-bold">
+              <h4 className="text-xs font-bold text-[var(--text)]">Latest Chat Update</h4>
+              <p className="text-[10px] text-[var(--text-muted)] mt-0.5 truncate font-bold">
                 {latestMessage ? `[${latestMessage.senderName}]: "${latestMessage.text}"` : t('no_messages', 'No chat messages posted yet')}
               </p>
             </div>
           </div>
-          <ArrowRight className="w-5 h-5 text-text-muted" />
+          <ArrowRight className="w-5 h-5 text-[var(--text-muted)]" />
         </div>
 
         {/* Card 3: Workers Nearby */}
         <div 
           onClick={() => navigate('/workers')}
-          className="bg-surface dark:bg-slate-800 border-l-4 border-orange-500 rounded-2xl p-4 shadow-sm border border-border dark:border-slate-700 flex gap-4 items-center justify-between cursor-pointer hover:shadow"
+          className="bg-[var(--surface)] border-l-4 border-orange-500 rounded-2xl p-4 shadow-sm border border-[var(--border)] flex gap-4 items-center justify-between cursor-pointer hover:shadow"
         >
           <div className="flex items-center gap-3.5">
             <div className="w-12 h-12 bg-orange-100 dark:bg-orange-950/20 text-orange-500 rounded-xl flex items-center justify-center flex-shrink-0">
-              <Users className="w-6 h-6" />
+              <Briefcase className="w-6 h-6" />
             </div>
             <div>
-              <h4 className="text-xs font-bold text-text dark:text-white">👷 {t('available_workers', 'Available Workers')}</h4>
-              <p className="text-[10px] text-text-muted mt-0.5 font-bold">
+              <h4 className="text-xs font-bold text-[var(--text)]">Available Workers</h4>
+              <p className="text-[10px] text-[var(--text-muted)] mt-0.5 font-bold">
                 {availableWorkersCount > 0 
                   ? `${availableWorkersCount} ${t('workers_ready', 'skill providers ready to work nearby')}` 
                   : t('no_workers', 'No registered workers online')}
               </p>
             </div>
           </div>
-          <ArrowRight className="w-5 h-5 text-text-muted" />
+          <ArrowRight className="w-5 h-5 text-[var(--text-muted)]" />
         </div>
 
         {/* Card 4: AI Alert */}
         {latestAlert && (
           <div 
             onClick={() => navigate(`/issues/${latestAlert.id || ''}`)}
-            className="bg-surface dark:bg-slate-800 border-l-4 border-amber-500 rounded-2xl p-4 shadow-sm border border-border dark:border-slate-700 flex gap-4 items-center justify-between cursor-pointer hover:shadow animate-fadeIn"
+            className="bg-[var(--surface)] border-l-4 border-amber-500 rounded-2xl p-4 shadow-sm border border-[var(--border)] flex gap-4 items-center justify-between cursor-pointer hover:shadow animate-fadeIn"
           >
             <div className="flex items-center gap-3.5 flex-1 min-w-0">
               <div className="w-12 h-12 bg-amber-100 dark:bg-amber-950/20 text-amber-600 rounded-xl flex items-center justify-center flex-shrink-0">
                 <AlertTriangle className="w-6 h-6" />
               </div>
               <div className="min-w-0 flex-1">
-                <h4 className="text-xs font-bold text-text dark:text-white">🤖 {t('ai_prediction_alert', 'AI Prediction Alert')}</h4>
-                <p className="text-[10px] text-text-muted mt-0.5 truncate font-bold">
+                <h4 className="text-xs font-bold text-[var(--text)]">AI Prediction Alert</h4>
+                <p className="text-[10px] text-[var(--text-muted)] mt-0.5 truncate font-bold">
                   {latestAlert.riskSummary || latestAlert.title}
                 </p>
               </div>
             </div>
-            <ArrowRight className="w-5 h-5 text-text-muted" />
+            <ArrowRight className="w-5 h-5 text-[var(--text-muted)]" />
           </div>
         )}
       </div>

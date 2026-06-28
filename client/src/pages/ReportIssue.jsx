@@ -45,6 +45,7 @@ function ClickMapEvents({ setCoords, setAddress }) {
 }
 
 export default function ReportIssue() {
+  console.log('Gemini key loaded:', !!import.meta.env.VITE_GEMINI_API_KEY);
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { dbUser, user } = useAuth();

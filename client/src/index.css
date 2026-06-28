@@ -8,17 +8,17 @@
 @theme {
   --font-sans: 'Noto Sans', system-ui, -apple-system, sans-serif;
   
-  --color-primary: var(--color-primary);
-  --color-accent: var(--color-accent);
-  --color-accent-soft: var(--color-accent-soft);
-  --color-success: var(--color-success);
-  --color-warning: var(--color-warning);
-  --color-danger: var(--color-danger);
-  --color-surface: var(--color-surface);
-  --color-bg: var(--color-bg);
-  --color-text: var(--color-text);
-  --color-text-muted: var(--color-text-muted);
-  --color-border: var(--color-border);
+  --color-primary: var(--primary);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-surface: var(--surface);
+  --color-bg: var(--bg);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-border: var(--border);
   
   --color-sev-green: #16A34A;
   --color-sev-yellow: #EAB308;
@@ -27,36 +27,31 @@
 }
 
 :root {
-  --color-primary: #0F2B4E;
-  --color-accent: #1B6FD8;
-  --color-accent-soft: #E8F0FE;
-  --color-success: #1A7F4B;
-  --color-warning: #D97706;
-  --color-danger: #DC2626;
-  --color-surface: #FFFFFF;
-  --color-bg: #F4F6FB;
-  --color-text: #0F172A;
-  --color-text-muted: #64748B;
-  --color-border: #E2E8F0;
+  --bg: #F4F6FB;
+  --surface: #FFFFFF;
+  --text: #0F172A;
+  --text-muted: #64748B;
+  --border: #E2E8F0;
+  --primary: #0F2B4E;
+  --accent: #1B6FD8;
+  --accent-soft: #E8F0FE;
+  --success: #1A7F4B;
+  --warning: #D97706;
+  --danger: #DC2626;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-bg: #0A1628;
-    --color-surface: #142038;
-    --color-text: #F1F5F9;
-    --color-border: #1E3A5F;
-    --color-accent-soft: #1E3A5F;
-  }
-}
-
-/* Also support manual dark class if the user changes settings manually */
-.dark {
-  --color-bg: #0A1628;
-  --color-surface: #142038;
-  --color-text: #F1F5F9;
-  --color-border: #1E3A5F;
-  --color-accent-soft: #1E3A5F;
+[data-theme="dark"] {
+  --bg: #0A1628;
+  --surface: #142038;
+  --text: #F1F5F9;
+  --text-muted: #94A3B8;
+  --border: #1E3A5F;
+  --primary: #1B6FD8;
+  --accent: #3B82F6;
+  --accent-soft: #1E3A5F;
+  --success: #10B981;
+  --warning: #F59E0B;
+  --danger: #EF4444;
 }
 
 body {

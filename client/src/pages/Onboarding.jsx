@@ -63,6 +63,12 @@ export default function Onboarding() {
   const [authLoading, setAuthLoading] = useState(false)
   const [authError, setAuthError] = useState('')
   const [name, setName] = useState('')
+  const [stepError, setStepError] = useState('')
+  const [workerSkills, setWorkerSkills] = useState([])
+  const [workerExperience, setWorkerExperience] = useState('')
+  const [workerDailyRate, setWorkerDailyRate] = useState('')
+  const [officialDepartment, setOfficialDepartment] = useState('Ward Office')
+  const [officialDesignation, setOfficialDesignation] = useState('')
 
   // Redirect if already logged in
   useEffect(() => {
@@ -92,7 +98,7 @@ export default function Onboarding() {
   const saveProfile = async (firebaseUser) => {
     const profile = {
       uid: firebaseUser.uid,
-      name: firebaseUser.displayName || name || 'VANGUARD User',
+      name: name || firebaseUser.displayName || 'VANGUARD User',
       phone: firebaseUser.phoneNumber || '',
       email: firebaseUser.email || '',
       language,
@@ -105,6 +111,15 @@ export default function Onboarding() {
       lng: location.lng || null,
       createdAt: new Date().toISOString()
     }
+
+    if (role === 'worker') {
+      profile.skills = workerSkills.length > 0 ? workerSkills : ['General']
+      profile.experienceYears = Number(workerExperience) || 0
+      profile.dailyRate = Number(workerDailyRate) || 0
+    } else if (role === 'official') {
+      profile.department = officialDepartment
+      profile.designation = officialDesignation
+    }
     
     try {
       await setDoc(doc(db, 'users', firebaseUser.uid), profile, { merge: true })
@@ -114,12 +129,12 @@ export default function Onboarding() {
         await setDoc(doc(db, 'workers', firebaseUser.uid), {
           userId: firebaseUser.uid,
           name: profile.name,
-          skills: ['general'],
-          experienceYears: 1,
-          dailyRate: 400,
-          bio: 'Self-registered daily worker ready to help.',
+          skills: workerSkills.length > 0 ? workerSkills : ['General'],
+          experienceYears: Number(workerExperience) || 0,
+          dailyRate: Number(workerDailyRate) || 0,
+          bio: `Registered worker. Skills: ${(workerSkills.length > 0 ? workerSkills : ['General']).join(', ')}`,
           rating: 5.0,
-          reviewCount: 1,
+          reviewCount: 0,
           isAvailable: true,
           village: profile.village,
           ward: profile.ward,
@@ -491,16 +506,124 @@ export default function Onboarding() {
                 </button>
               ))}
             </div>
+            
             <input
               style={{...styles.input, marginTop: '16px'}}
-              placeholder="Your name (optional)"
+              placeholder="Your full name *"
               value={name}
-              onChange={e => setName(e.target.value)}
+              onChange={e => { setName(e.target.value); setStepError(''); }}
+              required
             />
-            <button style={styles.primaryBtn} onClick={() => setStep(3)}>
+
+            {/* If worker: show skills, experience, daily rate */}
+            {role === 'worker' && (
+              <div style={{ marginTop: '16px', borderTop: '1px solid #1E3A5F', paddingTop: '16px' }}>
+                <label style={{ color: '#94A3B8', fontSize: '12px', display: 'block', marginBottom: '8px', textAlign: 'left' }}>
+                  Skills (Select all that apply)
+                </label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
+                  {['Electrician', 'Plumber', 'Carpenter', 'Painter', 'Farmer', 'Construction', 'Driver', 'Cook', 'Other'].map(skill => {
+                    const selected = workerSkills.includes(skill);
+                    return (
+                      <button
+                        key={skill}
+                        type="button"
+                        onClick={() => {
+                          if (selected) {
+                            setWorkerSkills(workerSkills.filter(s => s !== skill));
+                          } else {
+                            setWorkerSkills([...workerSkills, skill]);
+                          }
+                        }}
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: '20px',
+                          fontSize: '11px',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          background: selected ? '#1B6FD8' : '#0F2B4E',
+                          border: selected ? '1px solid #1B6FD8' : '1px solid #1E3A5F',
+                          color: '#fff'
+                        }}
+                      >
+                        {skill}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <input
+                  type="number"
+                  style={styles.input}
+                  placeholder="Experience (years)"
+                  value={workerExperience}
+                  onChange={e => setWorkerExperience(e.target.value)}
+                />
+                <input
+                  type="number"
+                  style={styles.input}
+                  placeholder="Daily rate (₹)"
+                  value={workerDailyRate}
+                  onChange={e => setWorkerDailyRate(e.target.value)}
+                />
+              </div>
+            )}
+
+            {/* If official: show department, designation */}
+            {role === 'official' && (
+              <div style={{ marginTop: '16px', borderTop: '1px solid #1E3A5F', paddingTop: '16px' }}>
+                <label style={{ color: '#94A3B8', fontSize: '12px', display: 'block', marginBottom: '8px', textAlign: 'left' }}>
+                  Department
+                </label>
+                <select
+                  value={officialDepartment}
+                  onChange={e => setOfficialDepartment(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '14px 16px',
+                    borderRadius: '12px',
+                    background: '#0F2B4E',
+                    border: '1px solid #1E3A5F',
+                    color: '#F1F5F9',
+                    fontSize: '16px',
+                    outline: 'none',
+                    marginBottom: '12px'
+                  }}
+                >
+                  <option value="Ward Office">Ward Office</option>
+                  <option value="Police">Police</option>
+                  <option value="Municipality">Municipality</option>
+                  <option value="Electricity Board">Electricity Board</option>
+                  <option value="Water Dept">Water Dept</option>
+                  <option value="Health Dept">Health Dept</option>
+                </select>
+
+                <input
+                  type="text"
+                  style={styles.input}
+                  placeholder="Designation (e.g. Ward Officer, Inspector)"
+                  value={officialDesignation}
+                  onChange={e => setOfficialDesignation(e.target.value)}
+                />
+              </div>
+            )}
+
+            {stepError && <p style={styles.errorText}>⚠️ {stepError}</p>}
+
+            <button 
+              style={styles.primaryBtn} 
+              onClick={() => {
+                if (!name.trim()) {
+                  setStepError('Please enter your name');
+                  return;
+                }
+                setStepError('');
+                setStep(3);
+              }}
+            >
               Continue →
             </button>
-            <button style={styles.secondaryBtn} onClick={() => setStep(1)}>
+            <button style={styles.secondaryBtn} onClick={() => { setStepError(''); setStep(1); }}>
               ← Back
             </button>
           </div>
