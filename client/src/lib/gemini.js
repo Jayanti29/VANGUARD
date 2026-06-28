@@ -1,277 +1,112 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
-
-const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-
-// If we are in mock mode (no key), we simulate the AI analysis based on keywords in description.
-const simulateAIAnalysis = (description, language = 'en') => {
-  const descLower = (description || '').toLowerCase();
-  
-  let category = 'other';
-  let categoryLabel = 'Other Issue / अन्य';
-  let severity = 'yellow';
-  let severityLabel = 'Needs Attention';
-  let severityReason = 'This issue was reported by a community member and requires inspection.';
-  let riskType = 'environmental';
-  let riskPrediction = 'If left unaddressed, this could lead to minor accidents or health concerns.';
-  let recommendedAuthority = 'Ward Development Officer';
-  let escalationLevel = 'ward';
-  let reportText = `This report is submitted regarding the civic issue: "${description || 'No description provided'}". Prompt action is requested to resolve this for community safety.`;
-  let suggestedAction = 'Keep community members advised and submit a report to the municipal office.';
-  let isEmergency = false;
-  let impactScore = 45;
-  let impactFactors = ['Community feedback', 'Pending verification'];
-
-  if (descLower.includes('wire') || descLower.includes('electric') || descLower.includes('current') || descLower.includes('bijli')) {
-    category = 'electrical_wire';
-    categoryLabel = 'Electrical Wire / बिजली का तार';
-    severity = 'red';
-    severityLabel = 'Dangerous';
-    severityReason = 'Exposed or hanging live wires represent an immediate threat of electrocution.';
-    riskType = 'accident';
-    riskPrediction = 'High risk of electrocution for pedestrians. Children\'s school is located nearby.';
-    recommendedAuthority = 'State Electricity Board';
-    escalationLevel = 'emergency';
-    reportText = `Urgent alert regarding hanging and exposed electrical wires in the neighborhood. This creates a highly hazardous situation for pedestrians, particularly children. Immediate intervention is required to secure the cables.`;
-    suggestedAction = 'Keep away from the wire and warn others not to go near.';
-    isEmergency = true;
-    impactScore = 84;
-    impactFactors = ['High danger level', 'Close proximity to public paths', 'Electrocution threat'];
-  } else if (descLower.includes('garbage') || descLower.includes('trash') || descLower.includes('kachra') || descLower.includes('dump')) {
-    category = 'garbage';
-    categoryLabel = 'Garbage / कचरा';
-    severity = 'yellow';
-    severityLabel = 'Needs Attention';
-    severityReason = 'Accumulated waste attracts pests and poses health risks over time.';
-    riskType = 'environmental';
-    riskPrediction = 'Stagnant garbage piles could result in vector-borne diseases and bad odor.';
-    recommendedAuthority = 'Sanitation & Waste Management Department';
-    escalationLevel = 'community';
-    reportText = `Public concern regarding uncollected solid waste and garbage accumulating on the road. The waste is emitting foul odors and attracting stray animals. Requesting regular cleanup schedule.`;
-    suggestedAction = 'Ensure waste is covered and notify local waste disposal truck.';
-    isEmergency = false;
-    impactScore = 35;
-    impactFactors = ['Hygiene risks', 'Stray animals attraction'];
-  } else if (descLower.includes('pothole') || descLower.includes('road') || descLower.includes('gadha') || descLower.includes('broken')) {
-    category = 'pothole';
-    categoryLabel = 'Pothole / गड्ढा';
-    severity = 'orange';
-    severityLabel = 'Urgent';
-    severityReason = 'Large potholes on main roads can cause sudden vehicle damage and road accidents.';
-    riskType = 'accident';
-    riskPrediction = 'Could cause two-wheeler riders to lose control, especially at night or during rain.';
-    recommendedAuthority = 'Public Works Department (PWD)';
-    escalationLevel = 'district';
-    reportText = `Serious pothole detected on the main road stretch. Vehicles are frequently swerving to avoid it, posing a collision risk. Prompt road repairing is requested.`;
-    suggestedAction = 'Slow down vehicles and mark with a temporary barrier or warning sign.';
-    isEmergency = false;
-    impactScore = 65;
-    impactFactors = ['Vehicle damage risk', 'Accident prone location', 'Poor visibility at night'];
-  } else if (descLower.includes('water') || descLower.includes('leak') || descLower.includes('drain') || descLower.includes('paani')) {
-    category = 'water_leakage';
-    categoryLabel = 'Water Leakage / पानी का रिसाव';
-    severity = 'yellow';
-    severityLabel = 'Needs Attention';
-    severityReason = 'Continuous water leakage wastes clean drinking water and degrades road quality.';
-    riskType = 'environmental';
-    riskPrediction = 'Wastage of precious water resources and water-logging leading to road damage.';
-    recommendedAuthority = 'Water Supply and Sewerage Board';
-    escalationLevel = 'ward';
-    reportText = `Clean drinking water is leaking from a main pipe joint, flooding the adjoining footpath. The wastage has been ongoing for over 24 hours. Requesting immediate repair.`;
-    suggestedAction = 'Shut down nearby supply valve if possible and report to ward line-man.';
-    isEmergency = false;
-    impactScore = 50;
-    impactFactors = ['Resource waste', 'Footpath flooding'];
+export async function analyzeIssueImage(base64Image, description = '', language = 'en') {
+  const languageNames = {
+    en: 'English', hi: 'Hindi', kn: 'Kannada',
+    ta: 'Tamil', te: 'Telugu', ml: 'Malayalam',
+    bn: 'Bengali', mr: 'Marathi', gu: 'Gujarati', pa: 'Punjabi'
   }
+  const langName = languageNames[language] || 'English'
 
-  // Adjust score based on severity
-  let finalScore = impactScore;
-  if (severity === 'red') finalScore += 10;
-  else if (severity === 'orange') finalScore += 5;
-  finalScore = Math.min(100, finalScore);
-
-  return {
-    category,
-    categoryLabel,
-    severity,
-    severityLabel,
-    severityReason,
-    riskType,
-    riskPrediction,
-    impactScore: finalScore,
-    impactFactors,
-    recommendedAuthority,
-    escalationLevel,
-    reportText,
-    suggestedAction,
-    isEmergency
-  };
-};
-
-export const analyzeIssueImage = async (base64Image, description, language = 'en') => {
-  // If API key is not valid, fallback to simulated analysis
-  if (!apiKey || apiKey === 'your_gemini_api_key') {
-    console.log("[Gemini API] Running in simulated mode due to missing key");
-    // Simulate latency
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    return simulateAIAnalysis(description, language);
-  }
-
-  try {
-    const ai = new GoogleGenerativeAI(apiKey);
-    const model = ai.getGenerativeModel({ model: 'gemini-1.5-flash' });
-
-    const systemPrompt = `
-You are an AI civic safety analyzer for India. Analyze this image of a 
-community issue and return ONLY a valid JSON object with no extra text, 
-no markdown, no backticks.
+  const prompt = `You are an AI civic safety analyzer for India.
+Analyze this image of a community issue.
+Respond ONLY in ${langName} language for text fields.
+Return ONLY a valid JSON object, no markdown, no backticks:
 
 {
-  "category": "pothole" | "garbage" | "water_leakage" | "broken_road" | "illegal_dumping" | "fallen_tree" | "open_drain" | "broken_streetlight" | "electrical_wire" | "sewage" | "fire_hazard" | "illegal_activity" | "other",
-  "categoryLabel": "human-readable category name in user's language",
-  "severity": "green" | "yellow" | "orange" | "red",
-  "severityLabel": "Minor" | "Needs Attention" | "Urgent" | "Dangerous",
-  "severityReason": "one sentence explaining why this severity was chosen",
-  "riskType": "accident" | "health" | "environmental" | "crime" | "fire" | "none",
-  "riskPrediction": "one sentence predicting what happens if this is not fixed",
-  "impactScore": 0-100 (integer),
+  "category": "pothole|garbage|water_leakage|broken_road|illegal_dumping|fallen_tree|open_drain|broken_streetlight|electrical_wire|sewage|fire_hazard|illegal_activity|other",
+  "categoryLabel": "human readable name in ${langName}",
+  "severity": "green|yellow|orange|red",
+  "severityLabel": "Minor|Needs Attention|Urgent|Dangerous in ${langName}",
+  "severityReason": "one sentence why in ${langName}",
+  "riskType": "accident|health|environmental|crime|fire|none",
+  "riskPrediction": "what happens if not fixed, in ${langName}",
+  "impactScore": <0-100>,
   "impactFactors": ["factor1", "factor2"],
   "recommendedAuthority": "exact department name",
-  "escalationLevel": "community" | "ward" | "district" | "emergency",
-  "reportText": "2-3 sentence professional complaint paragraph",
-  "suggestedAction": "one sentence immediate action recommendation",
-  "isEmergency": true | false
+  "escalationLevel": "community|ward|district|emergency",
+  "reportText": "2-3 sentence professional complaint in ${langName}",
+  "suggestedAction": "immediate action in ${langName}",
+  "isEmergency": <true|false>
 }
 
-Severity guide:
-  green  = cosmetic, no safety risk
-  yellow = inconvenient, minor safety risk
-  orange = significant risk, needs action within 24 hours  
-  red    = immediate danger to life, property, or health
-
-If the image is not a civic issue, return severity: "green" 
-and category: "other" with appropriate explanation.
-
-User provided description: "${description || 'No description'}"
-Output language: "${language}" (Translate categoryLabel, severityLabel, severityReason, riskPrediction, reportText, and suggestedAction to this language).
-`;
-
-    // Process base64 image data
-    // base64Image comes as "data:image/jpeg;base64,..." - split by comma
-    const base64Data = base64Image.split(',')[1] || base64Image;
-    const mimeType = base64Image.split(';')[0].split(':')[1] || 'image/jpeg';
-
-    const response = await model.generateContent({
-      contents: [
-        {
-          role: 'user',
-          parts: [
-            { text: systemPrompt },
-            {
-              inlineData: {
-                data: base64Data,
-                mimeType: mimeType
-              }
-            }
-          ]
-        }
-      ]
-    });
-
-    const responseText = response.text || '';
-    // Strip markdown JSON wrappers if any
-    const cleanText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
-    
-    const parsedData = JSON.parse(cleanText);
-
-    // Calculate final impactScore: base score + 10 if red, + 5 if orange, cap at 100
-    let impactScore = parsedData.impactScore || 50;
-    if (parsedData.severity === 'red') {
-      impactScore += 10;
-    } else if (parsedData.severity === 'orange') {
-      impactScore += 5;
-    }
-    parsedData.impactScore = Math.min(100, impactScore);
-
-    return parsedData;
-  } catch (err) {
-    console.error("Gemini API call failed, falling back to simulation:", err);
-    return simulateAIAnalysis(description, language);
-  }
-};
-
-export const askAIAssistant = async (promptText, chatHistory = [], userInfo = {}) => {
-  const { village, ward, district, state, language = 'en' } = userInfo;
-
-  // Local simulated responder for offline/fallback modes
-  const simulateAssistant = (query) => {
-    const q = query.toLowerCase();
-    let text = "I am VANGUARD AI, your civic protection assistant. I can help you report safety hazards, contact local departments, and assess public risks.";
-    let recommendedAuthority = "";
-    let riskLevel = "green";
-    let suggestedAction = "Check the live map for active complaints in your area.";
-
-    if (q.includes('water') || q.includes('overflow') || q.includes('leak') || q.includes('paani')) {
-      text = `Regarding the water issue in ${village}, water leakage represents an environmental and safety hazard. Stagnant water can lead to public health concerns (dengue, malaria) and degrade road foundations.`;
-      recommendedAuthority = "Water Supply & Sewerage Board";
-      riskLevel = "yellow";
-      suggestedAction = "Record a photo and report it to the Water Board under '/report'.";
-    } else if (q.includes('electric') || q.includes('wire') || q.includes('light') || q.includes('bijli')) {
-      text = `Exposed electrical wiring or broken streetlights in ${ward} present a critical safety danger of fire or electrocution. Immediate municipal attention is required.`;
-      recommendedAuthority = "Electricity Board (Helpline: 1912)";
-      riskLevel = "red";
-      suggestedAction = "Maintain distance from the wire, notify neighbors, and submit a RED-level hazard report immediately.";
-    } else if (q.includes('garbage') || q.includes('kachra') || q.includes('trash')) {
-      text = `Solid waste dump pile-up in ${village} leads to immediate sanitary health hazards. The municipal sanitation board is responsible for trash clearance schedules.`;
-      recommendedAuthority = "Sanitation & Waste Management Department";
-      riskLevel = "yellow";
-      suggestedAction = "Submit a community cleanup request on the dashboard and share with volunteers.";
-    } else if (q.includes('pothole') || q.includes('road') || q.includes('sadak')) {
-      text = `Large potholes on public streets cause major automobile collisions and rider injuries, especially for two-wheelers during rainy seasons.`;
-      recommendedAuthority = "Public Works Department (PWD)";
-      riskLevel = "orange";
-      suggestedAction = "Slow down vehicles around the sector and lodge a formal complaint PDF report.";
-    }
-
-    return {
-      text,
-      recommendedAuthority,
-      riskLevel,
-      suggestedAction
-    };
-  };
-
-  if (!apiKey || apiKey === 'your_gemini_api_key') {
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    return simulateAssistant(promptText);
-  }
+Additional context from user: "${description}"
+Severity guide: green=no risk, yellow=minor risk, orange=urgent, red=immediate danger`
 
   try {
-    const ai = new GoogleGenerativeAI(apiKey);
-    const model = ai.getGenerativeModel({ model: 'gemini-1.5-flash' });
-
-    const assistantPrompt = `
-You are VANGUARD AI. The user speaks ${language}.
-Always respond in ${language} language only.
-Keep responses simple and clear.
-
-User's Location: ${village || 'Ramanagara'}, ${ward || 'Ward 6'}, ${district || 'Ramanagara'}, ${state || 'Karnataka'}.
-
-Format your output strictly as a JSON object containing these keys (do not wrap in markdown or backticks):
-{
-  "text": "2-3 sentences concise, action-oriented assistant response",
-  "recommendedAuthority": "exact local board or department responsible",
-  "riskLevel": "green" | "yellow" | "orange" | "red",
-  "suggestedAction": "one sentence immediate action recommendation"
-}
-User Query: "${promptText}"
-`;
-
-    const response = await model.generateContent(assistantPrompt);
-    const responseText = response.text || '';
-    const cleanText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
-    return JSON.parse(cleanText);
-  } catch (err) {
-    console.error("AI Assistant query failed, falling back:", err);
-    return simulateAssistant(promptText);
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${import.meta.env.VITE_GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              { text: prompt },
+              { inline_data: { mime_type: 'image/jpeg', data: base64Image } }
+            ]
+          }],
+          generationConfig: { temperature: 0.1, maxOutputTokens: 1024 }
+        })
+      }
+    )
+    const data = await response.json()
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || ''
+    const cleaned = text.replace(/```json|```/g, '').trim()
+    const result = JSON.parse(cleaned)
+    result.impactScore = Math.min(100, (result.impactScore || 50) + 
+      (result.severity === 'red' ? 10 : result.severity === 'orange' ? 5 : 0))
+    return result
+  } catch (error) {
+    console.error('Gemini error:', error)
+    return {
+      category: 'other',
+      categoryLabel: 'Community Issue',
+      severity: 'yellow',
+      severityLabel: 'Needs Attention',
+      severityReason: 'Unable to analyze image automatically',
+      riskType: 'none',
+      riskPrediction: 'Please describe the issue manually',
+      impactScore: 50,
+      impactFactors: ['Community area'],
+      recommendedAuthority: 'Local Municipality',
+      escalationLevel: 'ward',
+      reportText: description || 'A community issue has been reported and requires attention.',
+      suggestedAction: 'Contact local ward office',
+      isEmergency: false
+    }
   }
-};
+}
+
+export async function chatWithAI(message, userLocation, language = 'en') {
+  const languageNames = {
+    en: 'English', hi: 'Hindi', kn: 'Kannada',
+    ta: 'Tamil', te: 'Telugu', ml: 'Malayalam',
+    bn: 'Bengali', mr: 'Marathi', gu: 'Gujarati', pa: 'Punjabi'
+  }
+  const langName = languageNames[language] || 'English'
+
+  const prompt = `You are VANGUARD AI, a civic assistant for Indian communities.
+User location: ${userLocation || 'India'}
+Always respond in ${langName} language only.
+Be concise, helpful, and action-oriented.
+Help with: reporting issues, finding authorities, understanding risks.
+User message: ${message}`
+
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${import.meta.env.VITE_GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.7, maxOutputTokens: 512 }
+        })
+      }
+    )
+    const data = await response.json()
+    return data.candidates?.[0]?.content?.parts?.[0]?.text || 
+           'I am here to help. Please describe your community issue.'
+  } catch (error) {
+    return 'Unable to connect to AI. Please try again.'
+  }
+}
