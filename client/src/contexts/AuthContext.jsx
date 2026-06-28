@@ -1,16 +1,13 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { auth, db } from '../lib/firebase';
 import { 
-  auth, 
-  db,
-  doc,
-  setDoc,
-  getDoc,
   onAuthStateChanged,
   signOut,
   signInWithPhoneNumber,
   GoogleAuthProvider,
   signInWithCredential
-} from '../lib/firebase';
+} from 'firebase/auth';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 
 const AuthContext = createContext();
 

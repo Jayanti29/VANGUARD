@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Search, ShieldAlert, Award, SlidersHorizontal, Loader2 } from 'lucide-react';
-import { db, collection, onSnapshot } from '../lib/firebase';
+import { db } from '../lib/firebase';
+import { collection, onSnapshot } from 'firebase/firestore';
 import OfficialCard from '../components/ui/OfficialCard';
 
 export default function Officials() {

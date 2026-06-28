@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
+import { db } from '../lib/firebase';
 import { 
-  db, 
   collection, 
   addDoc, 
   doc, 
@@ -10,7 +10,7 @@ import {
   where, 
   orderBy,
   onSnapshot 
-} from '../lib/firebase';
+} from 'firebase/firestore';
 import useAuth from './useAuth';
 
 export const useIssues = () => {

@@ -17,7 +17,8 @@ import {
 } from 'lucide-react';
 import useIssues from '../hooks/useIssues';
 import SeverityBadge from '../components/ui/SeverityBadge';
-import { db, doc, updateDoc } from '../lib/firebase';
+import { db } from '../lib/firebase';
+import { doc, updateDoc } from 'firebase/firestore';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
