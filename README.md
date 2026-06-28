@@ -246,6 +246,18 @@ npx vercel --prod
 
 ---
 
+## ⚙️ Resource Constraints & Future Improvements
+
+Vanguard has been developed by a student with limited access to paid cloud infrastructure and commercial AI services.
+
+The current prototype utilizes free-tier AI APIs and cloud resources to ensure accessibility during development and evaluation. Under heavy usage or free-tier limitations, certain AI-powered features such as image analysis, risk prediction, or report generation may experience temporary delays or service restrictions.
+
+These limitations do not reflect the intended production capabilities of Vanguard. With scalable cloud resources and production AI infrastructure, Vanguard can support real-time analysis, larger communities, and continuous monitoring.
+
+The goal of this project is to demonstrate the impact that accessible AI can create for underserved communities, even with limited resources.
+
+---
+
 ## 🤝 Social Impact
 
 Vanguard aims to directly impact rural sustainable development targets (SDGs):
