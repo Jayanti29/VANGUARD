@@ -198,3 +198,80 @@ Output language: "${language}" (Translate categoryLabel, severityLabel, severity
     return simulateAIAnalysis(description, language);
   }
 };
+
+export const askAIAssistant = async (promptText, chatHistory = [], userInfo = {}) => {
+  const { village, ward, district, state, language = 'en' } = userInfo;
+
+  // Local simulated responder for offline/fallback modes
+  const simulateAssistant = (query) => {
+    const q = query.toLowerCase();
+    let text = "I am VANGUARD AI, your civic protection assistant. I can help you report safety hazards, contact local departments, and assess public risks.";
+    let recommendedAuthority = "";
+    let riskLevel = "green";
+    let suggestedAction = "Check the live map for active complaints in your area.";
+
+    if (q.includes('water') || q.includes('overflow') || q.includes('leak') || q.includes('paani')) {
+      text = `Regarding the water issue in ${village}, water leakage represents an environmental and safety hazard. Stagnant water can lead to public health concerns (dengue, malaria) and degrade road foundations.`;
+      recommendedAuthority = "Water Supply & Sewerage Board";
+      riskLevel = "yellow";
+      suggestedAction = "Record a photo and report it to the Water Board under '/report'.";
+    } else if (q.includes('electric') || q.includes('wire') || q.includes('light') || q.includes('bijli')) {
+      text = `Exposed electrical wiring or broken streetlights in ${ward} present a critical safety danger of fire or electrocution. Immediate municipal attention is required.`;
+      recommendedAuthority = "Electricity Board (Helpline: 1912)";
+      riskLevel = "red";
+      suggestedAction = "Maintain distance from the wire, notify neighbors, and submit a RED-level hazard report immediately.";
+    } else if (q.includes('garbage') || q.includes('kachra') || q.includes('trash')) {
+      text = `Solid waste dump pile-up in ${village} leads to immediate sanitary health hazards. The municipal sanitation board is responsible for trash clearance schedules.`;
+      recommendedAuthority = "Sanitation & Waste Management Department";
+      riskLevel = "yellow";
+      suggestedAction = "Submit a community cleanup request on the dashboard and share with volunteers.";
+    } else if (q.includes('pothole') || q.includes('road') || q.includes('sadak')) {
+      text = `Large potholes on public streets cause major automobile collisions and rider injuries, especially for two-wheelers during rainy seasons.`;
+      recommendedAuthority = "Public Works Department (PWD)";
+      riskLevel = "orange";
+      suggestedAction = "Slow down vehicles around the sector and lodge a formal complaint PDF report.";
+    }
+
+    return {
+      text,
+      recommendedAuthority,
+      riskLevel,
+      suggestedAction
+    };
+  };
+
+  if (!apiKey || apiKey === 'your_gemini_api_key') {
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    return simulateAssistant(promptText);
+  }
+
+  try {
+    const ai = new GoogleGenerativeAI(apiKey);
+    const model = ai.getGenerativeModel({ model: 'gemini-1.5-flash' });
+
+    const assistantPrompt = `
+You are VANGUARD AI, a professional civic safety agent for Indian communities.
+Help the citizen understand how to address their problem, who to contact, and what the risks are.
+
+User's Location: ${village || 'Ramanagara'}, ${ward || 'Ward 6'}, ${district || 'Ramanagara'}, ${state || 'Karnataka'}.
+User's Language: ${language} (Provide the entire response in this language).
+
+Format your output strictly as a JSON object containing these keys (do not wrap in markdown or backticks):
+{
+  "text": "2-3 sentences concise, action-oriented assistant response",
+  "recommendedAuthority": "exact local board or department responsible",
+  "riskLevel": "green" | "yellow" | "orange" | "red",
+  "suggestedAction": "one sentence immediate action recommendation"
+}
+User Query: "${promptText}"
+`;
+
+    const response = await model.generateContent(assistantPrompt);
+    const responseText = response.text || '';
+    const cleanText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+    return JSON.parse(cleanText);
+  } catch (err) {
+    console.error("AI Assistant query failed, falling back:", err);
+    return simulateAssistant(promptText);
+  }
+};
