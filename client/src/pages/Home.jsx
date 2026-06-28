@@ -35,10 +35,10 @@ export default function Home() {
   // Time-aware greeting
   const getGreeting = () => {
     const hour = new Date().getHours();
-    if (hour >= 5 && hour < 12) return t('greeting.morning', 'Good morning');
-    if (hour >= 12 && hour < 17) return t('greeting.afternoon', 'Good afternoon');
-    if (hour >= 17 && hour < 21) return t('greeting.evening', 'Good evening');
-    return t('greeting.night', 'Good night');
+    if (hour >= 5 && hour < 12) return t('greeting_morning', 'Good morning');
+    if (hour >= 12 && hour < 17) return t('greeting_afternoon', 'Good afternoon');
+    if (hour >= 17 && hour < 21) return t('greeting_evening', 'Good evening');
+    return t('greeting_night', 'Good night');
   };
 
   const communityId = `${dbUser?.district || 'bangalore'}_${dbUser?.village || 'ward6'}`.toLowerCase().replace(/\s+/g, '');
@@ -96,12 +96,12 @@ export default function Home() {
   }, [dbUser, communityId]);
 
   const quickActions = [
-    { label: 'Report Issue', icon: PlusCircle, path: '/report', color: 'bg-accent text-white' },
-    { label: 'Community Chat', icon: MessageSquare, path: '/community', color: 'bg-green-600 text-white' },
-    { label: 'Hire Workers', icon: Wrench, path: '/workers', color: 'bg-orange-500 text-white' },
-    { label: 'Emergency Alert', icon: AlertOctagon, path: '/emergency', color: 'bg-red-650 text-white' },
-    { label: 'Issue Map', icon: Map, path: '/map', color: 'bg-blue-650 text-white' },
-    { label: 'AI Assistant', icon: Bot, path: '/ai', color: 'bg-slate-700 text-white' }
+    { label: t('report_issue', 'Report Issue'), icon: PlusCircle, path: '/report', color: 'bg-accent text-white' },
+    { label: t('common.community', 'Community Chat'), icon: MessageSquare, path: '/community', color: 'bg-green-600 text-white' },
+    { label: t('common.workers', 'Worker Market'), icon: Users, path: '/workers', color: 'bg-orange-500 text-white' },
+    { label: t('common.emergency', 'Emergency Alert'), icon: AlertOctagon, path: '/emergency', color: 'bg-red-650 text-white' },
+    { label: t('common.map', 'Issue Map'), icon: Map, path: '/map', color: 'bg-blue-650 text-white' },
+    { label: t('common.ai', 'AI Assistant'), icon: Bot, path: '/ai', color: 'bg-slate-700 text-white' }
   ];
 
   return (
@@ -142,7 +142,7 @@ export default function Home() {
       {/* Real-time Dashboard cards */}
       <div className="space-y-4 pt-2">
         <h3 className="text-sm font-black text-text dark:text-white uppercase tracking-wider">
-          Community Updates
+          {t('community_updates', 'Community Updates')}
         </h3>
 
         {/* Card 1: Critical Alerts */}
@@ -155,9 +155,11 @@ export default function Home() {
               <ShieldAlert className="w-6 h-6 animate-pulse" />
             </div>
             <div>
-              <h4 className="text-xs font-bold text-text dark:text-white">🚨 Local Critical Issues</h4>
+              <h4 className="text-xs font-bold text-text dark:text-white">🚨 {t('critical_issues', 'Local Critical Issues')}</h4>
               <p className="text-[10px] text-text-muted mt-0.5 font-bold">
-                {criticalCount > 0 ? `${criticalCount} Urgent hazards need attention` : "All clear! No critical issues reported"}
+                {criticalCount > 0 
+                  ? `${criticalCount} ${t('urgent_hazards', 'Urgent hazards need attention')}` 
+                  : t('all_clear', 'All clear! No critical issues reported')}
               </p>
             </div>
           </div>
@@ -174,9 +176,9 @@ export default function Home() {
               <MessageSquare className="w-6 h-6" />
             </div>
             <div className="min-w-0 flex-1">
-              <h4 className="text-xs font-bold text-text dark:text-white">💬 Latest Chat Update</h4>
+              <h4 className="text-xs font-bold text-text dark:text-white">💬 {t('latest_chat_update', 'Latest Chat Update')}</h4>
               <p className="text-[10px] text-text-muted mt-0.5 truncate font-bold">
-                {latestMessage ? `[${latestMessage.senderName}]: "${latestMessage.text}"` : "No chat messages posted yet"}
+                {latestMessage ? `[${latestMessage.senderName}]: "${latestMessage.text}"` : t('no_messages', 'No chat messages posted yet')}
               </p>
             </div>
           </div>
@@ -193,9 +195,11 @@ export default function Home() {
               <Users className="w-6 h-6" />
             </div>
             <div>
-              <h4 className="text-xs font-bold text-text dark:text-white">👷 Available Workers</h4>
+              <h4 className="text-xs font-bold text-text dark:text-white">👷 {t('available_workers', 'Available Workers')}</h4>
               <p className="text-[10px] text-text-muted mt-0.5 font-bold">
-                {availableWorkersCount > 0 ? `${availableWorkersCount} skill providers ready to work nearby` : "No registered workers online"}
+                {availableWorkersCount > 0 
+                  ? `${availableWorkersCount} ${t('workers_ready', 'skill providers ready to work nearby')}` 
+                  : t('no_workers', 'No registered workers online')}
               </p>
             </div>
           </div>
@@ -213,7 +217,7 @@ export default function Home() {
                 <AlertTriangle className="w-6 h-6" />
               </div>
               <div className="min-w-0 flex-1">
-                <h4 className="text-xs font-bold text-text dark:text-white">🤖 AI Prediction Alert</h4>
+                <h4 className="text-xs font-bold text-text dark:text-white">🤖 {t('ai_prediction_alert', 'AI Prediction Alert')}</h4>
                 <p className="text-[10px] text-text-muted mt-0.5 truncate font-bold">
                   {latestAlert.riskSummary || latestAlert.title}
                 </p>
