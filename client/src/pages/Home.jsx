@@ -18,11 +18,13 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
-  Star
+  Star,
+  Search,
+  Eye
 } from 'lucide-react';
 import useAuth from '../hooks/useAuth';
 import { db } from '../lib/firebase';
-import { collection, query, where, limit, onSnapshot, getDocs, doc, setDoc, addDoc } from 'firebase/firestore';
+import { collection, query, where, limit, onSnapshot, getDocs, doc, setDoc, addDoc, updateDoc } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 
 export default function Home() {
@@ -48,6 +50,15 @@ export default function Home() {
     if (hour >= 12 && hour < 17) return t('greeting_afternoon', 'Good afternoon');
     if (hour >= 17 && hour < 21) return t('greeting_evening', 'Good evening');
     return t('greeting_night', 'Good night');
+  };
+
+  const getSeverityStyle = (severity) => {
+    switch (severity) {
+      case 'red': return { background: '#FEF2F2', color: '#DC2626', border: '1px solid #FECACA' };
+      case 'orange': return { background: '#FFF7ED', color: '#EA580C', border: '1px solid #FED7AA' };
+      case 'yellow': return { background: '#FFFBEB', color: '#D97706', border: '1px solid #FDE68A' };
+      default: return { background: '#F0FDF4', color: '#16A34A', border: '1px solid #BBF7D0' };
+    }
   };
 
   // ─────────────────────────────────────────────────────────────────
@@ -107,15 +118,6 @@ export default function Home() {
         unsubRecent();
       };
     }, [dbUser]);
-
-    const getSeverityStyle = (severity) => {
-      switch (severity) {
-        case 'red': return { background: '#FEF2F2', color: '#DC2626', border: '1px solid #FECACA' };
-        case 'orange': return { background: '#FFF7ED', color: '#EA580C', border: '1px solid #FED7AA' };
-        case 'yellow': return { background: '#FFFBEB', color: '#D97706', border: '1px solid #FDE68A' };
-        default: return { background: '#F0FDF4', color: '#16A34A', border: '1px solid #BBF7D0' };
-      }
-    };
 
     return (
       <div className="space-y-6" style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px' }}>
@@ -244,7 +246,6 @@ export default function Home() {
       );
       const unsubJobs = onSnapshot(jobsQ, (snap) => {
         const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        // Filter jobs matches skills required
         const workerSkills = dbUser.skills || ['General'];
         const matched = docs.filter(j => 
           workerSkills.some(s => s.toLowerCase() === (j.skillRequired || '').toLowerCase())
@@ -262,7 +263,6 @@ export default function Home() {
         setMyApplications(docs);
         setAppliedCount(docs.length);
         
-        // Mock completed jobs count
         const completed = docs.filter(a => a.status === 'accepted').length;
         setCompletedCount(completed);
       });
@@ -327,7 +327,6 @@ export default function Home() {
                   Worker
                 </span>
               </h2>
-              {/* Skills chips */}
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
                 {(dbUser?.skills || ['General']).map(s => (
                   <span key={s} style={{ background: theme.surface2, color: theme.text, border: '1px solid ' + theme.border, fontSize: '10px', fontWeight: 700, padding: '2px 6px', borderRadius: '4px' }}>
@@ -335,13 +334,11 @@ export default function Home() {
                   </span>
                 ))}
               </div>
-              {/* Rating */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '8px', color: '#FBBF24', fontSize: '13px', fontWeight: 'bold' }}>
                 <Star size={16} fill="#FBBF24" /> {avgRating.toFixed(1)}
               </div>
             </div>
             
-            {/* Availability Toggle */}
             <div style={{ display: 'flex', itemsCenter: 'center', gap: '12px', background: theme.surface2, padding: '12px 16px', borderRadius: '12px', border: '1px solid ' + theme.border }}>
               <div>
                 <span style={{ fontSize: '12px', fontWeight: 800, color: theme.text, display: 'block' }}>Available for Work</span>
@@ -467,7 +464,7 @@ export default function Home() {
         {selectedJob && (
           <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '20px' }}>
             <div style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '24px', maxWidth: '440px', width: '100%', boxShadow: 'var(--shadow)', boxSizing: 'border-box' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', justify: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                 <h3 style={{ fontSize: '16px', fontWeight: 800, color: theme.text, margin: 0 }}>Apply for {selectedJob.title}</h3>
                 <button onClick={() => setSelectedJob(null)} style={{ background: 'none', border: 'none', color: theme.muted, cursor: 'pointer', fontSize: '18px' }}>&times;</button>
               </div>
@@ -498,6 +495,492 @@ export default function Home() {
                   style={{ width: '100%', padding: '14px', background: theme.accent, border: 'none', color: '#fff', fontWeight: 800, borderRadius: '8px', cursor: submittingApp ? 'not-allowed' : 'pointer' }}
                 >
                   {submittingApp ? 'Submitting...' : 'Submit Application'}
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // OFFICIAL DASHBOARD
+  // ─────────────────────────────────────────────────────────────────
+  if (role === 'official') {
+    const [criticalCount, setCriticalCount] = useState(0);
+    const [pendingCount, setPendingCount] = useState(0);
+    const [resolvedToday, setResolvedToday] = useState(0);
+    const [totalReportsThisWeek, setTotalReportsThisWeek] = useState(0);
+    
+    const [issues, setIssues] = useState([]);
+    const [filter, setFilter] = useState('all'); // all | critical | open | in_progress | resolved
+    const [searchQuery, setSearchQuery] = useState('');
+    
+    // Detailed modal state (TASK 6)
+    const [selectedIssue, setSelectedIssue] = useState(null);
+    const [officialNote, setOfficialNote] = useState('');
+    const [updateStatus, setUpdateStatus] = useState('open');
+    const [submittingStatus, setSubmittingStatus] = useState(false);
+
+    useEffect(() => {
+      if (!dbUser) return;
+
+      // 1. Fetch ALL issues in official's district
+      const qIssues = query(
+        collection(db, 'issues'),
+        where('district', '==', dbUser.district || 'Ramanagara')
+      );
+      
+      const unsub = onSnapshot(qIssues, (snap) => {
+        const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        
+        // Sort: newest first
+        const sorted = docs.sort((a,b) => {
+          const tA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const tB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return tB - tA;
+        });
+        setIssues(sorted);
+        
+        // Compute stats
+        const criticals = docs.filter(i => i.severity === 'red' && i.status === 'open').length;
+        setCriticalCount(criticals);
+
+        const openPending = docs.filter(i => i.status === 'open').length;
+        setPendingCount(openPending);
+
+        // Resolved today (last 24 hours)
+        const dayAgo = Date.now() - 24 * 60 * 60 * 1000;
+        const resolved = docs.filter(i => i.status === 'resolved' && i.resolvedAt && new Date(i.resolvedAt).getTime() > dayAgo).length;
+        setResolvedToday(resolved);
+
+        // This week
+        const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+        const weekly = docs.filter(i => i.createdAt && new Date(i.createdAt).getTime() > weekAgo).length;
+        setTotalReportsThisWeek(weekly);
+      });
+
+      return () => unsub();
+    }, [dbUser]);
+
+    // Handle status update (TASK 6)
+    const handleStatusUpdate = async (e) => {
+      e.preventDefault();
+      if (!selectedIssue) return;
+      setSubmittingStatus(true);
+
+      try {
+        await updateDoc(doc(db, 'issues', selectedIssue.id), {
+          status: updateStatus,
+          officialNote: officialNote,
+          officialId: dbUser.uid,
+          officialName: dbUser.name,
+          updatedAt: new Date().toISOString(),
+          ...(updateStatus === 'resolved' ? { resolvedAt: new Date().toISOString() } : {})
+        });
+        toast.success("Issue status updated successfully!");
+        setSelectedIssue(null);
+        setOfficialNote('');
+      } catch (err) {
+        console.error(err);
+        toast.error("Failed to update status");
+      } finally {
+        setSubmittingStatus(false);
+      }
+    };
+
+    // Quick Action button shortcuts for updating status directly
+    const quickUpdateStatus = async (issueId, newStatus) => {
+      try {
+        await updateDoc(doc(db, 'issues', issueId), {
+          status: newStatus,
+          updatedAt: new Date().toISOString(),
+          ...(newStatus === 'resolved' ? { resolvedAt: new Date().toISOString() } : {})
+        });
+        toast.success(`Marked issue as ${newStatus.replace('_', ' ')}`);
+      } catch (err) {
+        console.error(err);
+        toast.error("Failed to update status");
+      }
+    };
+
+    // Filtered Issues logic
+    const filteredIssues = issues.filter(issue => {
+      // 1. Filter by tabs
+      if (filter === 'critical' && issue.severity !== 'red') return false;
+      if (filter === 'open' && issue.status !== 'open') return false;
+      if (filter === 'in_progress' && issue.status !== 'in_progress') return false;
+      if (filter === 'resolved' && issue.status !== 'resolved') return false;
+
+      // 2. Filter by search query (category or village or description)
+      if (searchQuery.trim()) {
+        const queryStr = searchQuery.toLowerCase();
+        const categoryMatch = (issue.categoryLabel || issue.category || '').toLowerCase().includes(queryStr);
+        const villageMatch = (issue.village || '').toLowerCase().includes(queryStr);
+        const descMatch = (issue.description || '').toLowerCase().includes(queryStr);
+        return categoryMatch || villageMatch || descMatch;
+      }
+
+      return true;
+    });
+
+    // Recent Reporters client-side grouping
+    const reportersToday = [];
+    const dayAgo = Date.now() - 24 * 60 * 60 * 1000;
+    const todayIssues = issues.filter(i => i.createdAt && new Date(i.createdAt).getTime() > dayAgo);
+    
+    // Group by reporterId
+    const grouped = {};
+    todayIssues.forEach(issue => {
+      if (!issue.reporterId) return;
+      if (!grouped[issue.reporterId]) {
+        grouped[issue.reporterId] = {
+          name: issue.reporterName || 'Citizen',
+          village: issue.village || 'Ramanagara',
+          ward: issue.ward || '6',
+          count: 0
+        };
+      }
+      grouped[issue.reporterId].count += 1;
+    });
+
+    Object.keys(grouped).forEach(k => reportersToday.push(grouped[k]));
+
+    return (
+      <div className="space-y-6" style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px' }}>
+        {/* Header */}
+        <div style={{ background: theme.surface, border: '1px solid ' + theme.border, padding: '20px', borderRadius: '16px', boxShadow: 'var(--shadow)' }}>
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 style={{ fontSize: '18px', fontWeight: 800, color: theme.text, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {dbUser?.name}
+                <span style={{ background: '#F5F3FF', color: '#6D28D9', border: '1px solid #DDD6FE', fontSize: '10px', fontWeight: 700, padding: '2px 8px', borderRadius: '12px' }}>
+                  Official
+                </span>
+              </h2>
+              <p style={{ fontSize: '12px', color: theme.muted, marginTop: '4px' }}>
+                Department: {dbUser?.department || 'Municipality'} &bull; Designation: {dbUser?.designation || 'Ward Officer'}
+              </p>
+            </div>
+            <img src={dbUser?.profileImageUrl || 'https://api.dicebear.com/7.x/bottts/svg?seed=official'} alt="avatar" style={{ width: '48px', height: '48px', borderRadius: '50%', border: '1px solid ' + theme.border }} />
+          </div>
+        </div>
+
+        {/* Stats Row (4 Prominent Cards) */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div 
+            onClick={() => setFilter('critical')}
+            style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '16px', padding: '20px', textAlign: 'center', cursor: 'pointer', boxShadow: 'var(--shadow)', transition: 'transform 0.2s' }}
+            className="hover:scale-102"
+          >
+            <span style={{ fontSize: '28px', fontWeight: 800, color: '#DC2626', display: 'block' }}>{criticalCount}</span>
+            <span style={{ fontSize: '11px', color: '#B91C1C', fontWeight: 800, display: 'block', marginTop: '4px', textTransform: 'uppercase' }}>Critical Issues</span>
+          </div>
+          <div 
+            onClick={() => setFilter('open')}
+            style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '16px', padding: '20px', textAlign: 'center', cursor: 'pointer', boxShadow: 'var(--shadow)', transition: 'transform 0.2s' }}
+            className="hover:scale-102"
+          >
+            <span style={{ fontSize: '28px', fontWeight: 800, color: '#D97706', display: 'block' }}>{pendingCount}</span>
+            <span style={{ fontSize: '11px', color: '#B45309', fontWeight: 800, display: 'block', marginTop: '4px', textTransform: 'uppercase' }}>Pending Open</span>
+          </div>
+          <div 
+            onClick={() => setFilter('resolved')}
+            style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '16px', padding: '20px', textAlign: 'center', cursor: 'pointer', boxShadow: 'var(--shadow)', transition: 'transform 0.2s' }}
+            className="hover:scale-102"
+          >
+            <span style={{ fontSize: '28px', fontWeight: 800, color: '#16A34A', display: 'block' }}>{resolvedToday}</span>
+            <span style={{ fontSize: '11px', color: '#15803D', fontWeight: 800, display: 'block', marginTop: '4px', textTransform: 'uppercase' }}>Resolved Today</span>
+          </div>
+          <div 
+            onClick={() => setFilter('all')}
+            style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '16px', padding: '20px', textAlign: 'center', cursor: 'pointer', boxShadow: 'var(--shadow)', transition: 'transform 0.2s' }}
+            className="hover:scale-102"
+          >
+            <span style={{ fontSize: '28px', fontWeight: 800, color: '#1D4ED8', display: 'block' }}>{totalReportsThisWeek}</span>
+            <span style={{ fontSize: '11px', color: '#1E40AF', fontWeight: 800, display: 'block', marginTop: '4px', textTransform: 'uppercase' }}>Reports This Week</span>
+          </div>
+        </div>
+
+        {/* Issue Management Panel */}
+        <div style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '20px', boxShadow: 'var(--shadow)' }}>
+          {/* Title & Filter bar */}
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+            <h3 style={{ fontSize: '14px', fontWeight: 800, color: theme.text, textTransform: 'uppercase', tracking: 'wide', margin: 0 }}>
+              Issue Management Panel
+            </h3>
+            
+            {/* Filter Buttons */}
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+              {['all', 'critical', 'open', 'in_progress', 'resolved'].map(f => (
+                <button
+                  key={f}
+                  onClick={() => setFilter(f)}
+                  style={{
+                    background: filter === f ? theme.accent : theme.surface2,
+                    border: '1px solid ' + theme.border,
+                    color: filter === f ? '#fff' : theme.text,
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    padding: '6px 12px',
+                    borderRadius: '20px',
+                    cursor: 'pointer',
+                    textTransform: 'capitalize'
+                  }}
+                >
+                  {f.replace('_', ' ')}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Search Bar */}
+          <div style={{ position: 'relative', marginBottom: '16px' }}>
+            <Search size={18} style={{ position: 'absolute', left: '14px', top: '13px', color: theme.muted }} />
+            <input 
+              type="text" 
+              placeholder="Search by category, village or description..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '12px 16px 12px 42px',
+                borderRadius: '12px',
+                background: theme.surface2,
+                border: '1px solid ' + theme.border,
+                color: theme.text,
+                fontSize: '13px',
+                outline: 'none'
+              }}
+            />
+          </div>
+
+          {/* Issue Table */}
+          <div className="overflow-x-auto">
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '600px' }}>
+              <thead>
+                <tr style={{ borderBottom: '2px solid ' + theme.border }}>
+                  <th style={{ padding: '12px', fontSize: '11px', fontWeight: 800, color: theme.muted, textTransform: 'uppercase' }}>Reporter</th>
+                  <th style={{ padding: '12px', fontSize: '11px', fontWeight: 800, color: theme.muted, textTransform: 'uppercase' }}>Category</th>
+                  <th style={{ padding: '12px', fontSize: '11px', fontWeight: 800, color: theme.muted, textTransform: 'uppercase' }}>Severity</th>
+                  <th style={{ padding: '12px', fontSize: '11px', fontWeight: 800, color: theme.muted, textTransform: 'uppercase' }}>Location</th>
+                  <th style={{ padding: '12px', fontSize: '11px', fontWeight: 800, color: theme.muted, textTransform: 'uppercase' }}>Status</th>
+                  <th style={{ padding: '12px', fontSize: '11px', fontWeight: 800, color: theme.muted, textTransform: 'uppercase', textAlign: 'center' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredIssues.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} style={{ padding: '24px', textAlign: 'center', fontSize: '12px', color: theme.muted }}>
+                      No complaints match this criteria.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredIssues.map(issue => (
+                    <tr key={issue.id} style={{ borderBottom: '1px solid ' + theme.border }}>
+                      <td style={{ padding: '12px', fontSize: '12px', fontWeight: 700, color: theme.text }}>
+                        {issue.reporterName || 'Citizen'}
+                      </td>
+                      <td style={{ padding: '12px', fontSize: '12px', fontWeight: 600, color: theme.text }}>
+                        {issue.categoryLabel || issue.category}
+                      </td>
+                      <td style={{ padding: '12px' }}>
+                        <span style={{ ...getSeverityStyle(issue.severity), fontSize: '9px', fontWeight: 800, padding: '3px 6px', borderRadius: '4px', textTransform: 'uppercase' }}>
+                          {issue.severity}
+                        </span>
+                      </td>
+                      <td style={{ padding: '12px', fontSize: '12px', color: theme.muted }}>
+                        {issue.village}, Ward {issue.ward}
+                      </td>
+                      <td style={{ padding: '12px', fontSize: '12px', fontWeight: 700, color: theme.text, textTransform: 'capitalize' }}>
+                        {issue.status}
+                      </td>
+                      <td style={{ padding: '12px' }}>
+                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                          <button 
+                            onClick={() => {
+                              setSelectedIssue(issue);
+                              setUpdateStatus(issue.status || 'open');
+                              setOfficialNote(issue.officialNote || '');
+                            }}
+                            className="bg-accent hover:opacity-90 transition p-2 rounded-lg text-white cursor-pointer"
+                            title="View Details"
+                          >
+                            <Eye size={14} />
+                          </button>
+                          {issue.status === 'open' && (
+                            <button 
+                              onClick={() => quickUpdateStatus(issue.id, 'in_progress')}
+                              style={{ background: 'var(--warning)', color: '#fff', fontSize: '10px', fontWeight: 800, padding: '6px 10px', borderRadius: '6px', border: 'none', cursor: 'pointer' }}
+                            >
+                              In Progress
+                            </button>
+                          )}
+                          {issue.status !== 'resolved' && (
+                            <button 
+                              onClick={() => quickUpdateStatus(issue.id, 'resolved')}
+                              style={{ background: 'var(--success)', color: '#fff', fontSize: '10px', fontWeight: 800, padding: '6px 10px', borderRadius: '6px', border: 'none', cursor: 'pointer' }}
+                            >
+                              Resolve
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Recent Reporters Section */}
+        <div style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '20px', boxShadow: 'var(--shadow)' }}>
+          <h3 style={{ fontSize: '14px', fontWeight: 800, color: theme.text, textTransform: 'uppercase', marginBottom: '16px', tracking: 'wide' }}>
+            Active Reporters Today
+          </h3>
+          {reportersToday.length === 0 ? (
+            <p style={{ fontSize: '12px', color: theme.muted }}>No complaints filed today yet.</p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              {reportersToday.map(r => (
+                <div key={r.name} style={{ background: theme.surface2, border: '1px solid ' + theme.border, padding: '16px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <span style={{ fontSize: '12px', fontWeight: 800, color: theme.text, display: 'block' }}>{r.name}</span>
+                    <span style={{ fontSize: '10px', color: theme.muted }}>Village: {r.village} &bull; Ward {r.ward}</span>
+                  </div>
+                  <span style={{ background: 'var(--accent)', color: '#fff', fontSize: '11px', fontWeight: 800, padding: '4px 8px', borderRadius: '20px' }}>
+                    {r.count} reports
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* TASK 6: Official Issue Detail Slide-Over Modal */}
+        {selectedIssue && (
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', justify: 'flex-end', zIndex: 100 }}>
+            <div style={{ background: theme.surface, width: '100%', maxWidth: '520px', height: '100%', overflowY: 'auto', padding: '32px 24px', boxShadow: 'var(--shadow)', boxSizing: 'border-box', borderLeft: '1px solid ' + theme.border, display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              {/* Header */}
+              <div style={{ display: 'flex', justify: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ fontSize: '16px', fontWeight: 800, color: theme.text, margin: 0 }}>Civic Complaint Report</h3>
+                <button onClick={() => setSelectedIssue(null)} style={{ background: 'none', border: 'none', color: theme.muted, cursor: 'pointer', fontSize: '24px' }}>&times;</button>
+              </div>
+
+              {/* Photo or Category Image */}
+              <div style={{ width: '100%', height: '200px', borderRadius: '12px', overflow: 'hidden', background: theme.surface2, border: '1px solid ' + theme.border }}>
+                <img 
+                  src={selectedIssue.imageUrl || 'https://images.unsplash.com/photo-1590674899484-d5640e854abe?q=80&w=400&auto=format&fit=crop'} 
+                  alt="Civic Issue" 
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                />
+              </div>
+
+              {/* AI Analysis Box */}
+              <div style={{ background: theme.surface2, padding: '16px', borderRadius: '12px', border: '1px solid ' + theme.border, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ display: 'flex', justify: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 800, color: theme.muted, textTransform: 'uppercase' }}>AI Analysis Verdict</span>
+                  <span style={{ ...getSeverityStyle(selectedIssue.severity), fontSize: '9px', fontWeight: 850, padding: '3px 8px', borderRadius: '4px', textTransform: 'uppercase' }}>
+                    {selectedIssue.severityLabel || selectedIssue.severity}
+                  </span>
+                </div>
+                
+                {/* Circular Gauge / Impact Score */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '8px 0' }}>
+                  <div style={{
+                    width: '54px', height: '54px', borderRadius: '50%',
+                    border: '4px solid ' + theme.accent, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '14px', fontWeight: 800, color: theme.text
+                  }}>
+                    {selectedIssue.impactScore || selectedIssue.analysis?.impactScore || 65}
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '12px', fontWeight: 800, color: theme.text, display: 'block' }}>Civic Impact Score</span>
+                    <span style={{ fontSize: '10px', color: theme.muted }}>Calculated risk factors to residents</span>
+                  </div>
+                </div>
+
+                <div style={{ fontSize: '11px', color: theme.text, lineHeight: '1.5' }}>
+                  <strong>Risk:</strong> {selectedIssue.riskPrediction || selectedIssue.analysis?.riskPrediction || 'No immediate emergency predicted.'}
+                </div>
+                <div style={{ fontSize: '11px', color: theme.text }}>
+                  <strong>Authority:</strong> {selectedIssue.recommendedAuthority || selectedIssue.analysis?.recommendedAuthority || 'Local Ward Committee'}
+                </div>
+              </div>
+
+              {/* AI Report Blockquote */}
+              <div style={{ borderLeft: '4px solid ' + theme.accent, paddingLeft: '16px', fontStyle: 'italic', fontSize: '12px', color: theme.muted, lineHeight: '1.6' }}>
+                {selectedIssue.reportText || selectedIssue.analysis?.reportText || selectedIssue.description || 'No detailed analysis report generated.'}
+              </div>
+
+              {/* Reporter Info */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', background: theme.surface2, padding: '12px', borderRadius: '8px', border: '1px solid ' + theme.border, fontSize: '11px' }}>
+                <span style={{ color: theme.muted }}><strong>Reporter:</strong> {selectedIssue.reporterName || 'Citizen'}</span>
+                <span style={{ color: theme.muted }}><strong>Location:</strong> {selectedIssue.village}, Ward {selectedIssue.ward}</span>
+                <span style={{ color: theme.muted }}><strong>Reported At:</strong> {selectedIssue.createdAt ? new Date(selectedIssue.createdAt).toLocaleString() : 'Just now'}</span>
+              </div>
+
+              {/* Community Confirmations */}
+              <div style={{ fontSize: '12px', color: theme.text }}>
+                <strong>Confirmations:</strong> {selectedIssue.confirmations?.length || 0} community members verified this hazard.
+              </div>
+
+              {/* Status Update Section */}
+              <form onSubmit={handleStatusUpdate} style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', borderTop: '1px solid ' + theme.border, paddingTop: '16px' }}>
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: 700, color: theme.muted, display: 'block', marginBottom: '6px' }}>Current Status badge</label>
+                  <select
+                    value={updateStatus}
+                    onChange={e => setUpdateStatus(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      borderRadius: '8px',
+                      background: theme.surface2,
+                      border: '1px solid ' + theme.border,
+                      color: theme.text,
+                      fontSize: '13px',
+                      outline: 'none'
+                    }}
+                  >
+                    <option value="open">Open</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="resolved">Resolved</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: 700, color: theme.muted, display: 'block', marginBottom: '6px' }}>Add Official Response Note</label>
+                  <textarea
+                    rows={3}
+                    placeholder="Provide details about the action taken..."
+                    value={officialNote}
+                    onChange={e => setOfficialNote(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      borderRadius: '8px',
+                      background: theme.surface2,
+                      border: '1px solid ' + theme.border,
+                      color: theme.text,
+                      fontSize: '13px',
+                      outline: 'none',
+                      resize: 'none'
+                    }}
+                  />
+                </div>
+
+                <button 
+                  type="submit" 
+                  disabled={submittingStatus}
+                  style={{
+                    background: theme.accent, border: 'none', color: '#fff', fontWeight: 800,
+                    fontSize: '13px', padding: '14px', borderRadius: '8px', cursor: submittingStatus ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  {submittingStatus ? 'Updating...' : 'Update Status'}
                 </button>
               </form>
             </div>
