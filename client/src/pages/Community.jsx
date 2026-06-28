@@ -47,6 +47,18 @@ export default function Community() {
   const chatEndRef = useRef(null);
   const fileInputRef = useRef(null);
 
+  // Theme object for clean Dark/Light mode compliance
+  const theme = {
+    bg: 'var(--bg)',
+    surface: 'var(--surface)',
+    surface2: 'var(--surface-2)',
+    text: 'var(--text)',
+    muted: 'var(--text-muted)',
+    border: 'var(--border)',
+    accent: 'var(--accent)',
+    accentSoft: 'var(--accent-soft)',
+  };
+
   // Compute community id from user district & village
   const communityId = `${dbUser?.district || 'bangalore'}_${dbUser?.village || 'ward6'}`.toLowerCase().replace(/\s+/g, '');
 
@@ -87,7 +99,6 @@ export default function Community() {
 
   const startRecording = async () => {
     try {
-      // Request mic permission
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
           echoCancellation: true,
@@ -99,7 +110,6 @@ export default function Community() {
       streamRef.current = stream;
       chunksRef.current = [];
       
-      // Use supported mime type
       const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
         ? 'audio/webm;codecs=opus'
         : MediaRecorder.isTypeSupported('audio/webm')
@@ -116,14 +126,12 @@ export default function Community() {
       };
       
       mediaRecorder.onstop = () => {
-        // Create blob from chunks
         const blob = new Blob(chunksRef.current, { type: mimeType });
         const url = URL.createObjectURL(blob);
         setAudioBlob(blob);
         setAudioUrl(url);
         chunksRef.current = [];
         
-        // CRITICAL: Stop all tracks to turn off mic
         if (streamRef.current) {
           streamRef.current.getTracks().forEach(track => {
             track.stop();
@@ -133,7 +141,7 @@ export default function Community() {
         }
       };
       
-      mediaRecorder.start(100); // collect data every 100ms
+      mediaRecorder.start(100);
       setIsRecording(true);
       
     } catch (err) {
@@ -156,7 +164,6 @@ export default function Community() {
     if (!audioBlob) return;
     
     const uploadToast = toast.loading("Sending voice note...");
-    // Convert blob to base64 for Firestore storage
     const reader = new FileReader();
     reader.readAsDataURL(audioBlob);
     reader.onload = async () => {
@@ -167,7 +174,7 @@ export default function Community() {
           senderId: currentUser.uid,
           senderName: dbUser?.name || userProfile?.name || 'User',
           senderRole: dbUser?.role || userProfile?.role || 'citizen',
-          audioData: base64Audio, // store as base64
+          audioData: base64Audio,
           type: 'audio',
           channel: activeChannel,
           timestamp: serverTimestamp()
@@ -180,7 +187,6 @@ export default function Community() {
         toast.error("Failed to send voice note.");
       }
       
-      // Reset recording state
       setAudioBlob(null);
       if (audioUrl) URL.revokeObjectURL(audioUrl);
       setAudioUrl(null);
@@ -249,21 +255,6 @@ export default function Community() {
     { id: 'Agriculture', label: 'Agriculture' }
   ];
 
-  // Helper function for message alignment and backgrounds
-  const getMessageBubbleStyle = (senderId, type) => {
-    const isOwn = senderId === currentUser?.uid;
-    if (isOwn) {
-      return {
-        containerClass: "justify-end",
-        bubbleClass: "bg-accent text-white rounded-2xl rounded-tr-none shadow-sm"
-      };
-    }
-    return {
-      containerClass: "justify-start",
-      bubbleClass: "bg-white dark:bg-slate-800 text-text dark:text-white rounded-2xl rounded-tl-none shadow-sm border border-border dark:border-slate-700"
-    };
-  };
-
   const getRoleBadge = (role) => {
     switch (role?.toLowerCase()) {
       case 'official': return <span className="bg-purple-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded uppercase">Official</span>;
@@ -276,15 +267,20 @@ export default function Community() {
   const filteredMessages = messages.filter(m => m.channel === activeChannel);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-140px)] md:h-[calc(100vh-100px)] rounded-2xl border border-border dark:border-slate-700 bg-slate-50 dark:bg-slate-900 overflow-hidden shadow-sm">
-      
+    <div 
+      className="flex flex-col h-[calc(100vh-140px)] md:h-[calc(100vh-100px)] rounded-2xl border overflow-hidden shadow-sm"
+      style={{ background: theme.bg, borderColor: theme.border }}
+    >
       {/* Community Header */}
-      <div className="bg-white dark:bg-slate-800 border-b border-border dark:border-slate-700 px-6 py-4 flex items-center justify-between z-10">
+      <div 
+        className="px-6 py-4 flex items-center justify-between z-10"
+        style={{ background: theme.surface, borderBottom: '1px solid ' + theme.border }}
+      >
         <div>
-          <h2 className="text-sm font-black text-text dark:text-white capitalize">
+          <h2 className="text-sm font-black capitalize" style={{ color: theme.text }}>
             {dbUser?.village || 'Our Village'} Community Hub
           </h2>
-          <span className="text-[10px] text-text-muted font-bold block mt-0.5">
+          <span className="text-[10px] font-bold block mt-0.5" style={{ color: theme.muted }}>
             {dbUser?.district || 'District'} District &bull; {activeChannel} Room
           </span>
         </div>
@@ -324,7 +320,7 @@ export default function Community() {
               onMouseUp={() => setPttSpeaking(false)}
               className="px-6 py-3 bg-white text-red-600 text-xs font-bold rounded-xl shadow-lg cursor-pointer flex items-center gap-1 active:scale-95 transition"
             >
-              🎤 Hold to Speak
+              Hold to Speak
             </button>
             <button
               onClick={() => { setShowVoiceRoom(false); setPttSpeaking(false); }}
@@ -338,16 +334,20 @@ export default function Community() {
       )}
 
       {/* Horizontal Scrollable Channel Tabs */}
-      <div className="bg-white dark:bg-slate-800 border-b border-border dark:border-slate-700 px-4 py-2 flex gap-2 overflow-x-auto scrollbar-none z-10">
+      <div 
+        className="px-4 py-2 flex gap-2 overflow-x-auto scrollbar-none z-10"
+        style={{ background: theme.surface, borderBottom: '1px solid ' + theme.border }}
+      >
         {channelsList.map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveChannel(tab.id)}
-            className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-black transition cursor-pointer ${
-              activeChannel === tab.id
-                ? 'bg-accent text-white shadow-sm'
-                : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 text-text-muted hover:text-text'
-            }`}
+            style={{
+              background: activeChannel === tab.id ? theme.accent : theme.surface2,
+              color: activeChannel === tab.id ? '#fff' : theme.text,
+              border: '1px solid ' + theme.border
+            }}
+            className="flex-shrink-0 px-4 py-2 rounded-full text-xs font-black transition cursor-pointer"
           >
             {tab.label}
           </button>
@@ -362,22 +362,30 @@ export default function Community() {
             <p className="text-xs mt-2 font-bold">Synchronizing community logs...</p>
           </div>
         ) : filteredMessages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-slate-400 p-6 text-center">
-            <Users className="w-12 h-12 text-slate-300" />
-            <p className="text-xs font-bold mt-2 text-text dark:text-white">No discussions here yet</p>
-            <p className="text-[10px] text-text-muted mt-1">Be the first to start the conversation in #{activeChannel}!</p>
+          <div className="flex flex-col items-center justify-center h-full p-6 text-center" style={{ color: theme.muted }}>
+            <Users className="w-12 h-12 text-slate-300 mx-auto" />
+            <p className="text-xs font-bold mt-2" style={{ color: theme.text }}>No discussions here yet</p>
+            <p className="text-[10px] mt-1">Be the first to start the conversation in #{activeChannel}!</p>
           </div>
         ) : (
           filteredMessages.map(msg => {
             const isOwn = msg.senderId === currentUser?.uid;
-            const bubbleStyle = getMessageBubbleStyle(msg.senderId, msg.type);
             const timeStr = msg.timestamp ? new Date(msg.timestamp.toDate()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now';
 
             return (
-              <div key={msg.id} className={`flex ${bubbleStyle.containerClass} animate-fadeIn`}>
-                <div className={`max-w-[75%] p-3.5 ${bubbleStyle.bubbleClass} space-y-1`}>
+              <div key={msg.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'} animate-fadeIn`}>
+                <div 
+                  className="max-w-[75%] p-3.5 space-y-1"
+                  style={{
+                    background: isOwn ? theme.accent : theme.surface,
+                    color: isOwn ? '#fff' : theme.text,
+                    borderRadius: isOwn ? '16px 16px 0 16px' : '16px 16px 16px 0',
+                    border: isOwn ? 'none' : '1px solid ' + theme.border,
+                    boxShadow: 'var(--shadow)'
+                  }}
+                >
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="text-[10px] font-black tracking-wide text-accent-soft block">
+                    <span className="text-[10px] font-black tracking-wide block" style={{ color: isOwn ? '#EFF6FF' : theme.accent }}>
                       {isOwn ? "You" : msg.senderName}
                     </span>
                     {getRoleBadge(msg.senderRole)}
@@ -421,8 +429,8 @@ export default function Community() {
                     />
                   )}
 
-                  <span className="text-[8px] text-white/70 block text-right font-black mt-1">
-                    ⏰ {timeStr}
+                  <span className="text-[8px] block text-right font-black mt-1" style={{ color: isOwn ? '#EFF6FF' : theme.muted }}>
+                    {timeStr}
                   </span>
                 </div>
               </div>
@@ -434,8 +442,11 @@ export default function Community() {
 
       {/* Attachment panel overlay */}
       {showAttachments && (
-        <div className="bg-white dark:bg-slate-800 border-t border-border dark:border-slate-700 p-4 grid grid-cols-2 gap-3 animate-slideUp">
-          <label className="flex items-center justify-center gap-2 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 p-3 rounded-xl border border-border dark:border-slate-700 text-xs font-bold cursor-pointer text-text dark:text-white">
+        <div 
+          className="p-4 grid grid-cols-2 gap-3 animate-slideUp"
+          style={{ background: theme.surface, borderTop: '1px solid ' + theme.border }}
+        >
+          <label className="flex items-center justify-center gap-2 hover:bg-slate-150 dark:hover:bg-slate-750 p-3 rounded-xl border text-xs font-bold cursor-pointer" style={{ background: theme.surface2, borderColor: theme.border, color: theme.text }}>
             <ImageIcon className="w-4 h-4 text-accent" /> Share Photo
             <input 
               type="file" 
@@ -444,7 +455,7 @@ export default function Community() {
               className="hidden"
             />
           </label>
-          <label className="flex items-center justify-center gap-2 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 p-3 rounded-xl border border-border dark:border-slate-700 text-xs font-bold cursor-pointer text-text dark:text-white">
+          <label className="flex items-center justify-center gap-2 hover:bg-slate-150 dark:hover:bg-slate-750 p-3 rounded-xl border text-xs font-bold cursor-pointer" style={{ background: theme.surface2, borderColor: theme.border, color: theme.text }}>
             <FileUp className="w-4 h-4 text-orange-500" /> Share PDF File
             <input 
               type="file" 
@@ -458,7 +469,10 @@ export default function Community() {
 
       {/* Show audio preview before sending */}
       {audioUrl && !isRecording && (
-        <div className="bg-white dark:bg-slate-800 border-t border-border dark:border-slate-700 p-4 flex gap-3 items-center justify-between">
+        <div 
+          className="p-4 flex gap-3 items-center justify-between"
+          style={{ background: theme.surface, borderTop: '1px solid ' + theme.border }}
+        >
           <audio controls src={audioUrl} style={{height:'32px', flex:1}} />
           <div className="flex gap-2">
             <button 
@@ -469,7 +483,8 @@ export default function Community() {
             </button>
             <button 
               onClick={() => { setAudioUrl(null); setAudioBlob(null); }}
-              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 text-text dark:text-white font-bold text-xs rounded-xl transition cursor-pointer"
+              className="px-4 py-2 font-bold text-xs rounded-xl transition cursor-pointer"
+              style={{ background: theme.surface2, color: theme.text }}
             >
               Cancel
             </button>
@@ -478,20 +493,24 @@ export default function Community() {
       )}
 
       {/* Bottom Message Input Bar */}
-      <div className="bg-white dark:bg-slate-800 border-t border-border dark:border-slate-700 p-4 flex items-center gap-3">
+      <div 
+        className="p-4 flex items-center gap-3"
+        style={{ background: theme.surface, borderTop: '1px solid ' + theme.border }}
+      >
         <button
           type="button"
           onClick={() => setShowAttachments(!showAttachments)}
-          className="w-11 h-11 bg-slate-100 dark:bg-slate-700 rounded-xl flex items-center justify-center text-text-muted hover:text-text cursor-pointer border border-border dark:border-slate-650"
+          style={{ background: theme.surface2, borderColor: theme.border }}
+          className="w-11 h-11 rounded-xl flex items-center justify-center text-text-muted hover:text-text cursor-pointer border"
           title="Attach files"
         >
           <Paperclip className="w-5 h-5 text-accent" />
         </button>
 
         <button
-          onMouseDown={startRecording}   // desktop: hold to record
+          onMouseDown={startRecording}
           onMouseUp={stopRecording}
-          onTouchStart={startRecording}  // mobile: touch to record
+          onTouchStart={startRecording}
           onTouchEnd={stopRecording}
           style={{
             background: isRecording ? '#DC2626' : '#1B6FD8',
@@ -515,7 +534,8 @@ export default function Community() {
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             placeholder={`Message #${activeChannel}...`}
-            className="flex-1 h-11 px-4 bg-slate-50 dark:bg-slate-900 border border-border dark:border-slate-700 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-accent dark:text-white"
+            style={{ background: theme.surface2, borderColor: theme.border, color: theme.text }}
+            className="flex-1 h-11 px-4 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-accent"
           />
 
           <button
