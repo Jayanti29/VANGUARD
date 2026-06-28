@@ -16,6 +16,7 @@ import {
 import { auth, db } from '../lib/firebase';
 import { doc, setDoc } from 'firebase/firestore';
 import { RecaptchaVerifier, signInWithPhoneNumber, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import useAuth from '../hooks/useAuth';
 import toast from 'react-hot-toast';
 
 const indianStates = {
@@ -29,6 +30,7 @@ const indianStates = {
 export default function Onboarding() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const { loginAsGuest } = useAuth();
 
   const [step, setStep] = useState(1);
   const [selectedLanguage, setSelectedLanguage] = useState(localStorage.getItem('vanguard_language') || 'en');
@@ -282,6 +284,77 @@ export default function Onboarding() {
     }
   };
 
+  // Guest Onboarding completes setup instantly
+  const handleGuestOnboard = async () => {
+    const guestToast = toast.loading("Setting up Guest profile...");
+    try {
+      const guestId = `guest_${Date.now()}`;
+      const guestUser = {
+        uid: guestId,
+        displayName: `Guest ${selectedRole}`,
+        phoneNumber: '+91-9999999999',
+        email: 'guest@vanguard.org',
+        isAnonymous: true
+      };
+
+      const guestDbUser = {
+        uid: guestId,
+        name: `Guest ${selectedRole}`,
+        phone: '+91-9999999999',
+        language: selectedLanguage,
+        role: selectedRole,
+        state: locForm.state,
+        district: locForm.district,
+        village: locForm.village || 'Rajajinagar',
+        ward: locForm.ward || '6',
+        houseNo: locForm.houseNo || 'N/A',
+        lat: coords[0],
+        lng: coords[1],
+        profileImageUrl: `https://api.dicebear.com/7.x/bottts/svg?seed=${guestId}`,
+        createdAt: new Date().toISOString()
+      };
+
+      // Set firestore user doc
+      try {
+        await setDoc(doc(db, 'users', guestId), guestDbUser);
+        if (selectedRole === 'Worker') {
+          await setDoc(doc(db, 'workers', guestId), {
+            userId: guestId,
+            name: guestDbUser.name,
+            skills: ['general'],
+            experienceYears: 1,
+            dailyRate: 400,
+            bio: 'Self-registered daily worker ready to help.',
+            rating: 5.0,
+            reviewCount: 1,
+            isAvailable: true,
+            village: guestDbUser.village,
+            ward: guestDbUser.ward,
+            district: guestDbUser.district,
+            lat: coords[0],
+            lng: coords[1]
+          });
+        }
+      } catch (err) {
+        console.warn("Could not save onboarding guest to Firestore. Bypassing silently:", err);
+      }
+
+      // Sync mock state in localStorage and reload session
+      localStorage.setItem('vanguard_session_user', JSON.stringify(guestUser));
+      localStorage.setItem('vanguard_session_dbuser', JSON.stringify(guestDbUser));
+
+      toast.dismiss(guestToast);
+      toast.success("Guest Onboarding successfully complete!");
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 1000);
+    } catch (e) {
+      console.error(e);
+      toast.dismiss(guestToast);
+      toast.error("Guest setup failed.");
+    }
+  };
+
   return (
     <div className="max-w-md mx-auto bg-surface dark:bg-slate-800 border border-border dark:border-slate-700 rounded-3xl p-6 shadow-xl space-y-6">
       
@@ -497,6 +570,23 @@ export default function Onboarding() {
             <PhoneCall className="w-5 h-5 text-accent" /> Phone Verification
           </h2>
 
+          {/* Immediate Guest Setup Option Button at the top */}
+          <button
+            onClick={handleGuestOnboard}
+            className="w-full h-12 bg-green-600 hover:bg-green-700 text-white text-xs font-black rounded-xl flex items-center justify-center gap-1 cursor-pointer transition shadow-md"
+          >
+            ⚡ Complete Setup instantly as Guest ({selectedRole})
+          </button>
+
+          <div className="relative flex items-center justify-center my-2">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-border dark:border-slate-700"></div>
+            </div>
+            <span className="relative px-3 bg-surface dark:bg-slate-800 text-[9px] font-bold text-text-muted uppercase">
+              Or Verify Account
+            </span>
+          </div>
+
           <div className="space-y-4">
             {!otpSent ? (
               <div className="space-y-2">
@@ -584,7 +674,11 @@ export default function Onboarding() {
 
           <div className="flex gap-2 pt-2 border-t border-slate-100 dark:border-slate-700 mt-4">
             <button
-              onClick={() => { setOtpSent(false); setOtp(''); }}
+              onClick={() => {
+                setOtpSent(false);
+                setOtp('');
+                setStep(3); // Go back to location step!
+              }}
               className="flex-1 h-12 bg-slate-100 dark:bg-slate-750 text-text dark:text-white text-xs font-bold rounded-xl cursor-pointer"
             >
               Modify Details
