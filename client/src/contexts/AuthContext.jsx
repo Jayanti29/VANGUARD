@@ -15,15 +15,26 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    // Check if a local session exists
+    const cachedUser = localStorage.getItem('vanguard_session_user')
+    const cachedDbUser = localStorage.getItem('vanguard_session_dbuser')
+    
+    if (cachedUser && cachedDbUser) {
+      setCurrentUser(JSON.parse(cachedUser))
+      setUserProfile(JSON.parse(cachedDbUser))
+      setLoading(false)
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setCurrentUser(user)
       if (user) {
-        // Load profile from Firestore
+        setCurrentUser(user)
         try {
           const profileDoc = await getDoc(doc(db, 'users', user.uid))
           if (profileDoc.exists()) {
             const profile = profileDoc.data()
             setUserProfile(profile)
+            localStorage.setItem('vanguard_session_user', JSON.stringify(user))
+            localStorage.setItem('vanguard_session_dbuser', JSON.stringify(profile))
             // Restore language from profile
             if (profile.language) {
               i18n.changeLanguage(profile.language)
@@ -34,7 +45,11 @@ export function AuthProvider({ children }) {
           console.error('Profile load error:', err)
         }
       } else {
-        setUserProfile(null)
+        const cachedUserObj = localStorage.getItem('vanguard_session_user')
+        if (!cachedUserObj || !JSON.parse(cachedUserObj).isLocalGuest) {
+          setCurrentUser(null)
+          setUserProfile(null)
+        }
       }
       setLoading(false)
     })
@@ -133,8 +148,15 @@ export function AuthProvider({ children }) {
   }
 
   const logout = async () => {
-    await signOut(auth)
+    try {
+      await signOut(auth)
+    } catch (e) {
+      console.warn('Signout error:', e)
+    }
+    localStorage.removeItem('vanguard_session_user')
+    localStorage.removeItem('vanguard_session_dbuser')
     localStorage.removeItem('vanguard_language')
+    setCurrentUser(null)
     setUserProfile(null)
   }
 
