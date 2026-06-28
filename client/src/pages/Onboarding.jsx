@@ -1,645 +1,496 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { useLanguage } from '../contexts/LanguageContext';
-import useAuth from '../hooks/useAuth';
-import useLocation from '../hooks/useLocation';
 import { 
   Languages, 
   UserCheck, 
   MapPin, 
   PhoneCall, 
   Check, 
-  Map, 
   Navigation,
   Loader2,
   Lock,
   ArrowRight,
   ShieldCheck
 } from 'lucide-react';
+import { auth, db } from '../lib/firebase';
+import { doc, setDoc } from 'firebase/firestore';
+import { RecaptchaVerifier, signInWithPhoneNumber } from 'firebase/auth';
+import toast from 'react-hot-toast';
 
 const indianStates = {
-  'Karnataka': ['Ramanagara', 'Bangalore Rural', 'Bangalore Urban', 'Mysuru', 'Mandya', 'Tumakuru'],
-  'Maharashtra': ['Mumbai City', 'Pune', 'Nagpur', 'Thane', 'Nashik'],
-  'Uttar Pradesh': ['Lucknow', 'Varanasi', 'Kanpur Nagar', 'Noida', 'Prayagraj'],
-  'Tamil Nadu': ['Chennai', 'Coimbatore', 'Madurai', 'Kanchipuram'],
-  'West Bengal': ['Kolkata', 'Howrah', 'Darjeeling', 'North 24 Parganas'],
-  'Bihar': ['Patna', 'Gaya', 'Muzaffarpur', 'Bhagalpur'],
-  'Delhi': ['New Delhi', 'South Delhi', 'North Delhi', 'East Delhi']
+  'Karnataka': ['Bangalore', 'Ramanagara', 'Mysuru', 'Mandya', 'Tumakuru'],
+  'Maharashtra': ['Mumbai City', 'Pune', 'Nagpur', 'Thane'],
+  'Uttar Pradesh': ['Lucknow', 'Varanasi', 'Kanpur Nagar', 'Noida'],
+  'Tamil Nadu': ['Chennai', 'Coimbatore', 'Madurai'],
+  'West Bengal': ['Kolkata', 'Howrah', 'Darjeeling']
 };
 
 export default function Onboarding() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
-  const { currentLang, changeLanguage, languagesList } = useLanguage();
-  const { loginWithPhone, confirmOTP, syncUserWithFirestore, user } = useAuth();
-  const { location, setLocation, detectLocation, loading: locLoading } = useLocation();
 
   const [step, setStep] = useState(1);
+  const [selectedLanguage, setSelectedLanguage] = useState(localStorage.getItem('vanguard_language') || 'en');
   const [selectedRole, setSelectedRole] = useState('');
   
-  // Location manual entry form
-  const [manualLocation, setManualLocation] = useState(false);
+  // Location
+  const [coords, setCoords] = useState([12.9716, 77.5946]);
   const [locForm, setLocForm] = useState({
     state: 'Karnataka',
-    district: 'Ramanagara',
+    district: 'Bangalore',
     village: '',
     ward: '',
     houseNo: ''
   });
+  const [isDetectingLoc, setIsDetectingLoc] = useState(false);
 
-  // Phone Auth form
+  // Phone Authentication states
   const [phone, setPhone] = useState('');
-  const [otp, setOtp] = useState(['', '', '', '', '', '']);
-  const [verificationSent, setVerificationSent] = useState(false);
-  const [authError, setAuthError] = useState('');
-  const [authLoading, setAuthLoading] = useState(false);
-  const [timer, setTimer] = useState(0);
-
-  // Recaptcha verifier ref
-  const [recaptchaCreated, setRecaptchaCreated] = useState(false);
+  const [otp, setOtp] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
 
   useEffect(() => {
-    // If user is already authenticated and has a complete profile, redirect to home
-    const cachedDbUser = localStorage.getItem('vanguard_session_dbuser');
-    if (cachedDbUser) {
-      const dbUser = JSON.parse(cachedDbUser);
-      if (dbUser.village) {
-        navigate('/');
-      }
-    }
-  }, [navigate]);
+    // Sync active translation language
+    i18n.changeLanguage(selectedLanguage);
+    localStorage.setItem('vanguard_language', selectedLanguage);
+  }, [selectedLanguage]);
 
-  useEffect(() => {
-    let interval;
-    if (timer > 0) {
-      interval = setInterval(() => {
-        setTimer(prev => prev - 1);
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [timer]);
+  const languagesList = [
+    { code: 'en', label: '🇬🇧 English (English)' },
+    { code: 'hi', label: '🇮🇳 हिन्दी (Hindi)' },
+    { code: 'kn', label: '🇮🇳 ಕನ್ನಡ (Kannada)' },
+    { code: 'ta', label: '🇮🇳 தமிழ் (Tamil)' },
+    { code: 'te', label: '🇮🇳 తెలుగు (Telugu)' },
+    { code: 'ml', label: '🇮🇳 മലയാളം (Malayalam)' },
+    { code: 'bn', label: '🇮🇳 বাংলা (Bengali)' },
+    { code: 'mr', label: '🇮🇳 मराठी (Marathi)' },
+    { code: 'gu', label: '🇮🇳 ગુજરાતી (Gujarati)' },
+    { code: 'pa', label: '🇮🇳 ਪੰਜਾਬੀ (Punjabi)' }
+  ];
 
-  // Handle manual form changes
-  const handleFormChange = (e) => {
-    const { name, value } = e.target;
-    setLocForm(prev => {
-      const updated = { ...prev, [name]: value };
-      if (name === 'state') {
-        updated.district = indianStates[value][0] || '';
-      }
-      return updated;
+  const roles = [
+    { id: 'Citizen', icon: '👤', label: 'Citizen', desc: 'Report civic issues & track local safety alerts.' },
+    { id: 'Worker', icon: '👷', label: 'Worker', desc: 'Find daily jobs & list your utility skills.' },
+    { id: 'Official', icon: '🏛', label: 'Official', desc: 'Review community logs & manage resolutions.' },
+    { id: 'Volunteer', icon: '🤝', label: 'Volunteer', desc: 'Assist community safety & coordinate worker jobs.' }
+  ];
+
+  // Geolocation detection
+  const handleDetectLocation = () => {
+    setIsDetectingLoc(true);
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setCoords([latitude, longitude]);
+          fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`)
+            .then(r => r.json())
+            .then(data => {
+              const addressParts = data.address || {};
+              const state = addressParts.state || 'Karnataka';
+              const district = addressParts.city_district || addressParts.district || addressParts.county || 'Bangalore';
+              const village = addressParts.village || addressParts.suburb || addressParts.town || 'Rajajinagar';
+              const ward = addressParts.postcode || '6';
+
+              setLocForm({
+                state,
+                district,
+                village,
+                ward,
+                houseNo: ''
+              });
+              setIsDetectingLoc(false);
+              toast.success("Location auto-detected successfully!");
+            })
+            .catch(err => {
+              console.error(err);
+              setIsDetectingLoc(false);
+            });
+        },
+        (error) => {
+          console.warn(error);
+          setIsDetectingLoc(false);
+          toast.error("Geolocation failed, please enter address manually.");
+        }
+      );
+    } else {
+      setIsDetectingLoc(false);
+      toast.error("Browser doesn't support geolocation.");
+    }
+  };
+
+  const handleStateChange = (stateName) => {
+    const districts = indianStates[stateName] || [];
+    setLocForm({
+      ...locForm,
+      state: stateName,
+      district: districts[0] || ''
     });
   };
 
-  // GPS auto-fill handler
-  const handleGPSDetect = async () => {
-    try {
-      const detected = await detectLocation();
-      setLocForm({
-        state: detected.state || 'Karnataka',
-        district: detected.district || 'Ramanagara',
-        village: detected.village || 'Ramanagara Town',
-        ward: detected.ward || 'Ward 6',
-        houseNo: ''
+  // Setup reCAPTCHA Verifier
+  const setupRecaptcha = () => {
+    if (!window.recaptchaVerifier) {
+      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+        size: 'invisible',
+        callback: (response) => {
+          // reCAPTCHA solved
+        }
       });
-      setManualLocation(false);
+    }
+  };
+
+  // Send Verification SMS
+  const handleSendOTP = async () => {
+    if (!phone || phone.length < 10) {
+      toast.error("Please enter a valid 10-digit phone number.");
+      return;
+    }
+    const phoneToast = toast.loading("Sending Verification Code...");
+    try {
+      setupRecaptcha();
+      const verifier = window.recaptchaVerifier;
+      const result = await signInWithPhoneNumber(auth, '+91' + phone, verifier);
+      window.confirmationResult = result;
+      toast.dismiss(phoneToast);
+      toast.success("OTP sent to +91 " + phone);
+      setOtpSent(true);
     } catch (err) {
       console.error(err);
-      setManualLocation(true);
+      toast.dismiss(phoneToast);
+      toast.error("Failed to send OTP. Check console for details.");
     }
   };
 
-  // Phone auth trigger
-  const handleSendOTP = async (e) => {
-    e.preventDefault();
-    if (phone.length < 10) {
-      setAuthError('Please enter a valid 10-digit mobile number');
+  // Verify OTP & Save Firestore Profile
+  const handleVerifyOTP = async () => {
+    if (!otp || otp.length < 6) {
+      toast.error("Please enter the 6-digit OTP code.");
       return;
     }
-
-    setAuthError('');
-    setAuthLoading(true);
-
+    setIsVerifying(true);
+    const verifyToast = toast.loading("Verifying code...");
     try {
-      // In a real application we would initialize a RecaptchaVerifier
-      // const verifier = new RecaptchaVerifier(auth, 'recaptcha-container', { size: 'invisible' });
-      const mockVerifier = {}; 
-      await loginWithPhone(phone, mockVerifier);
-      setVerificationSent(true);
-      setTimer(60);
-    } catch (err) {
-      setAuthError(err.message || 'Verification failed. Try again.');
-    } finally {
-      setAuthLoading(false);
-    }
-  };
+      const result = await window.confirmationResult.confirm(otp);
+      const userObj = result.user;
 
-  // OTP box input handling
-  const handleOtpChange = (e, index) => {
-    const val = e.target.value;
-    if (isNaN(Number(val))) return;
-
-    const newOtp = [...otp];
-    newOtp[index] = val.substring(val.length - 1);
-    setOtp(newOtp);
-
-    // Auto-focus next box
-    if (val && index < 5) {
-      const nextInput = document.getElementById(`otp-${index + 1}`);
-      nextInput?.focus();
-    }
-  };
-
-  const handleOtpKeyDown = (e, index) => {
-    if (e.key === 'Backspace' && !otp[index] && index > 0) {
-      const prevInput = document.getElementById(`otp-${index - 1}`);
-      prevInput?.focus();
-    }
-  };
-
-  // Verify OTP & Save all details to Firestore
-  const handleVerifyOTP = async (e) => {
-    e.preventDefault();
-    const otpCode = otp.join('');
-    if (otpCode.length < 6) {
-      setAuthError('Please enter the full 6-digit code');
-      return;
-    }
-
-    setAuthError('');
-    setAuthLoading(true);
-
-    try {
-      const firebaseUser = await confirmOTP(otpCode);
-      
-      // Save all local onboarding configurations into Firestore
+      // Save user profile details
       const userProfile = {
+        uid: userObj.uid,
+        name: dbUserTempName(selectedRole) || 'Vanguard Member',
+        phone: '+91' + phone,
+        language: selectedLanguage,
         role: selectedRole,
-        language: currentLang,
         state: locForm.state,
         district: locForm.district,
-        village: locForm.village || 'Ramanagara Rural',
-        ward: locForm.ward || 'Ward 6',
-        houseNo: locForm.houseNo || '',
-        lat: location.lat,
-        lng: location.lng
+        village: locForm.village || 'Rajajinagar',
+        ward: locForm.ward || '6',
+        houseNo: locForm.houseNo || 'N/A',
+        lat: coords[0],
+        lng: coords[1],
+        profileImageUrl: `https://api.dicebear.com/7.x/bottts/svg?seed=${userObj.uid}`,
+        createdAt: new Date().toISOString()
       };
+
+      await setDoc(doc(db, 'users', userObj.uid), userProfile);
       
-      await syncUserWithFirestore(firebaseUser, userProfile);
-      navigate('/');
+      // Seed official worker database link if needed
+      if (selectedRole === 'Worker') {
+        await setDoc(doc(db, 'workers', userObj.uid), {
+          userId: userObj.uid,
+          name: userProfile.name,
+          skills: ['general'],
+          experienceYears: 1,
+          dailyRate: 400,
+          bio: 'Self-registered daily worker ready to help.',
+          rating: 5.0,
+          reviewCount: 1,
+          isAvailable: true,
+          village: userProfile.village,
+          ward: userProfile.ward,
+          district: userProfile.district,
+          lat: coords[0],
+          lng: coords[1]
+        });
+      }
+
+      toast.dismiss(verifyToast);
+      toast.success("Account successfully created!");
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 1000);
     } catch (err) {
-      setAuthError(err.message || 'OTP verification failed. Use "123456" for testing.');
-    } finally {
-      setAuthLoading(false);
+      console.error(err);
+      toast.dismiss(verifyToast);
+      toast.error("Invalid verification code. Please check and try again.");
+      setIsVerifying(false);
     }
   };
 
-  // Roles available
-  const roles = [
-    { id: 'Citizen', icon: '👤', label: 'Citizen', desc: 'Report issues and keep your village safe.' },
-    { id: 'Worker', icon: '👷', label: 'Worker', desc: 'Offer your daily-wage services to locals.' },
-    { id: 'Official', icon: '🏛', label: 'Official', desc: 'Review, manage and resolve civic safety issues.' },
-    { id: 'Volunteer', icon: '🤝', label: 'Volunteer', desc: 'Lend assistance in community emergencies.' }
-  ];
-
-  // Helper page wrapper
-  const containerVariants = {
-    initial: { opacity: 0, y: 8 },
-    animate: { opacity: 1, y: 0, transition: { duration: 0.2 } },
-    exit: { opacity: 0, y: -8, transition: { duration: 0.15 } }
+  const dbUserTempName = (role) => {
+    return `${role} User`;
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-950 flex flex-col items-center justify-center p-4">
-      {/* Top Header / Logo */}
-      <div className="flex items-center gap-3 mb-8">
-        <div className="w-12 h-12 bg-accent text-white flex items-center justify-center rounded-2xl shadow-lg animate-pulse-ring">
-          <ShieldCheck className="w-7 h-7" />
-        </div>
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-primary dark:text-white m-0 p-0 leading-none">VANGUARD</h1>
-          <p className="text-sm font-medium text-text-muted mt-1 m-0">AI Community Protection</p>
-        </div>
+    <div className="max-w-md mx-auto bg-surface dark:bg-slate-800 border border-border dark:border-slate-700 rounded-3xl p-6 shadow-xl space-y-6">
+      
+      {/* Invisible reCAPTCHA Container */}
+      <div id="recaptcha-container"></div>
+
+      <div className="text-center space-y-2">
+        <h1 className="text-2xl font-black text-primary dark:text-white flex items-center justify-center gap-1.5 uppercase">
+          🛡️ VANGUARD
+        </h1>
+        <p className="text-xs text-text-muted">AI-Powered Civic Safety & Protection Platform</p>
       </div>
 
-      <div className="w-full max-w-lg bg-surface dark:bg-slate-800 rounded-3xl shadow-xl border border-border dark:border-slate-700 p-6 md:p-8 relative overflow-hidden">
-        {/* Step Indicator Progress Bar */}
-        <div className="absolute top-0 left-0 right-0 h-1.5 bg-slate-200 dark:bg-slate-700">
-          <div 
-            className="h-full bg-accent transition-all duration-300 ease-out" 
-            style={{ width: `${(step / 4) * 100}%` }}
-          />
-        </div>
-
-        <div className="flex justify-between items-center text-xs text-text-muted mb-6 mt-2 font-bold tracking-wider uppercase">
-          <span>Step {step} of 4</span>
-          <span>
-            {step === 1 && 'Language'}
-            {step === 2 && 'Role Selection'}
-            {step === 3 && 'Location Settings'}
-            {step === 4 && 'Verification'}
-          </span>
-        </div>
-
-        <AnimatePresence mode="wait">
-          {/* STEP 1: LANGUAGE SELECTION */}
-          {step === 1 && (
-            <motion.div
-              key="step1"
-              variants={containerVariants}
-              initial="initial"
-              animate="animate"
-              exit="exit"
-              className="space-y-6"
-            >
-              <div className="text-center">
-                <h2 className="text-2xl font-bold text-text dark:text-white">Choose Your Language</h2>
-                <p className="text-text-muted mt-1">अपनी भाषा चुनें / ಕನ್ನಡವನ್ನು ಆಯ್ಕೆ ಮಾಡಿ</p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 max-h-[300px] overflow-y-auto pr-1">
-                {languagesList.map((lang) => (
-                  <button
-                    key={lang.code}
-                    onClick={() => changeLanguage(lang.code)}
-                    className={`flex items-center gap-3 p-4 rounded-xl border text-left transition-all duration-200 min-h-[56px] ${
-                      currentLang === lang.code
-                        ? 'border-accent bg-accent-soft text-accent dark:bg-slate-700/60 dark:text-blue-400 font-bold shadow-sm'
-                        : 'border-border dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/30 text-text dark:text-slate-300'
-                    }`}
-                  >
-                    <span className="text-2xl">{lang.flag}</span>
-                    <div className="flex flex-col">
-                      <span className="font-semibold leading-tight">{lang.nativeName}</span>
-                      <span className="text-xs text-text-muted">{lang.name}</span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-
+      {step === 1 && (
+        <div className="space-y-4">
+          <h2 className="text-base font-black text-text dark:text-white flex items-center gap-1.5">
+            <Languages className="w-5 h-5 text-accent" /> Choose App Language
+          </h2>
+          <div className="grid grid-cols-2 gap-2">
+            {languagesList.map(lang => (
               <button
-                onClick={() => setStep(2)}
-                className="w-full btn-primary mt-4 flex items-center justify-center gap-2"
+                key={lang.code}
+                onClick={() => setSelectedLanguage(lang.code)}
+                className={`py-3 px-4 rounded-2xl text-xs font-bold border transition text-left cursor-pointer ${
+                  selectedLanguage === lang.code
+                    ? 'bg-accent border-accent text-white shadow-sm'
+                    : 'bg-slate-50 dark:bg-slate-900 border-border dark:border-slate-750 text-text dark:text-slate-300'
+                }`}
               >
-                Continue <ArrowRight className="w-5 h-5" />
+                {lang.label}
               </button>
-            </motion.div>
-          )}
+            ))}
+          </div>
+          <button
+            onClick={() => setStep(2)}
+            className="w-full h-12 bg-accent text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1 cursor-pointer hover:bg-opacity-95 shadow-sm mt-4"
+          >
+            Continue Onboarding <ArrowRight className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
-          {/* STEP 2: ROLE SELECTION */}
-          {step === 2 && (
-            <motion.div
-              key="step2"
-              variants={containerVariants}
-              initial="initial"
-              animate="animate"
-              exit="exit"
-              className="space-y-6"
-            >
-              <div className="text-center">
-                <h2 className="text-2xl font-bold text-text dark:text-white">Select Your Role</h2>
-                <p className="text-text-muted mt-1">This helps us tailor your community experience.</p>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {roles.map((role) => (
-                  <button
-                    key={role.id}
-                    onClick={() => setSelectedRole(role.id)}
-                    className={`flex flex-col items-start p-5 rounded-2xl border text-left transition-all duration-200 ${
-                      selectedRole === role.id
-                        ? 'border-accent bg-accent-soft dark:bg-slate-700/60 dark:border-blue-400 shadow-sm'
-                        : 'border-border dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/30'
-                    }`}
-                  >
-                    <span className="text-4xl mb-3">{role.icon}</span>
-                    <span className="font-bold text-lg text-text dark:text-white">{role.label}</span>
-                    <span className="text-xs text-text-muted mt-1 leading-normal">{role.desc}</span>
-                  </button>
-                ))}
-              </div>
-
-              <div className="flex gap-3 mt-4">
-                <button
-                  onClick={() => setStep(1)}
-                  className="w-1/3 btn-secondary"
-                >
-                  Back
-                </button>
-                <button
-                  disabled={!selectedRole}
-                  onClick={() => setStep(3)}
-                  className={`w-2/3 btn-primary flex items-center justify-center gap-2 ${
-                    !selectedRole ? 'opacity-50 cursor-not-allowed' : ''
-                  }`}
-                >
-                  Continue <ArrowRight className="w-5 h-5" />
-                </button>
-              </div>
-            </motion.div>
-          )}
-
-          {/* STEP 3: LOCATION SETTINGS */}
-          {step === 3 && (
-            <motion.div
-              key="step3"
-              variants={containerVariants}
-              initial="initial"
-              animate="animate"
-              exit="exit"
-              className="space-y-5"
-            >
-              <div className="text-center">
-                <h2 className="text-2xl font-bold text-text dark:text-white">Set Your Location</h2>
-                <p className="text-text-muted mt-1">We need this to connect you with nearby issues and services.</p>
-              </div>
-
-              <div className="space-y-4">
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <button
-                    type="button"
-                    onClick={handleGPSDetect}
-                    className="flex-1 min-h-[56px] rounded-xl bg-accent text-white flex items-center justify-center gap-2 font-bold cursor-pointer hover:bg-opacity-90 shadow-sm transition"
-                  >
-                    {locLoading ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                    ) : (
-                      <Navigation className="w-5 h-5" />
-                    )}
-                    Detect My Location
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setManualLocation(prev => !prev)}
-                    className="flex-1 min-h-[56px] border border-accent rounded-xl text-accent dark:text-blue-400 flex items-center justify-center gap-2 font-bold hover:bg-accent-soft transition cursor-pointer"
-                  >
-                    <Map className="w-5 h-5" />
-                    {manualLocation ? 'Hide Form' : 'Enter Manually'}
-                  </button>
+      {step === 2 && (
+        <div className="space-y-4">
+          <h2 className="text-base font-black text-text dark:text-white flex items-center gap-1.5">
+            <UserCheck className="w-5 h-5 text-accent" /> Select Your Civic Role
+          </h2>
+          <div className="grid grid-cols-1 gap-2.5">
+            {roles.map(role => (
+              <button
+                key={role.id}
+                onClick={() => setSelectedRole(role.id)}
+                className={`p-4 rounded-2xl border text-left transition cursor-pointer flex items-start gap-3.5 ${
+                  selectedRole === role.id
+                    ? 'bg-accent-soft border-accent dark:bg-slate-900/60 dark:border-accent'
+                    : 'bg-slate-50 dark:bg-slate-900 border-border dark:border-slate-750 hover:bg-slate-100'
+                }`}
+              >
+                <span className="text-3xl mt-0.5">{role.icon}</span>
+                <div>
+                  <h4 className="text-xs font-bold text-text dark:text-white">{role.label}</h4>
+                  <p className="text-[10px] text-text-muted mt-0.5 leading-relaxed">{role.desc}</p>
                 </div>
+              </button>
+            ))}
+          </div>
+          <div className="flex gap-2 pt-2">
+            <button
+              onClick={() => setStep(1)}
+              className="flex-1 h-12 bg-slate-100 dark:bg-slate-750 text-text dark:text-white text-xs font-bold rounded-xl cursor-pointer"
+            >
+              Back
+            </button>
+            <button
+              disabled={!selectedRole}
+              onClick={() => setStep(3)}
+              className="flex-1 h-12 bg-accent disabled:opacity-50 text-white text-xs font-bold rounded-xl cursor-pointer"
+            >
+              Continue
+            </button>
+          </div>
+        </div>
+      )}
 
-                {/* Detected Location Card */}
-                {!manualLocation && (
-                  <div className="bg-slate-50 dark:bg-slate-700/40 border border-border dark:border-slate-700 p-4 rounded-xl space-y-2">
-                    <div className="flex items-center gap-2 text-accent font-bold text-sm">
-                      <MapPin className="w-4 h-4" />
-                      <span>Detected Settings:</span>
-                    </div>
-                    <p className="text-sm font-semibold text-text dark:text-slate-200">
-                      {location.address || 'Detecting address...'}
-                    </p>
-                    <div className="grid grid-cols-2 gap-2 text-xs text-text-muted font-medium">
-                      <div>Village: {locForm.village || 'Inferred'}</div>
-                      <div>Ward: {locForm.ward || 'Inferred'}</div>
-                      <div>District: {locForm.district}</div>
-                      <div>State: {locForm.state}</div>
-                    </div>
-                  </div>
-                )}
+      {step === 3 && (
+        <div className="space-y-4">
+          <h2 className="text-base font-black text-text dark:text-white flex items-center gap-1.5">
+            <MapPin className="w-5 h-5 text-accent" /> Set Location Details
+          </h2>
 
-                {/* Manual Address Form */}
-                {manualLocation && (
-                  <motion.div 
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    className="space-y-3 bg-slate-50 dark:bg-slate-700/40 p-4 rounded-xl border border-border dark:border-slate-700"
-                  >
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-xs font-bold text-text-muted mb-1 uppercase">State</label>
-                        <select
-                          name="state"
-                          value={locForm.state}
-                          onChange={handleFormChange}
-                          className="w-full min-h-[48px] bg-surface dark:bg-slate-800 border border-border dark:border-slate-700 rounded-lg px-3 text-sm text-text dark:text-white"
-                        >
-                          {Object.keys(indianStates).map(state => (
-                            <option key={state} value={state}>{state}</option>
-                          ))}
-                        </select>
-                      </div>
+          <div className="space-y-3">
+            <button
+              onClick={handleDetectLocation}
+              disabled={isDetectingLoc}
+              className="w-full h-12 bg-accent-soft hover:bg-opacity-80 text-accent font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+            >
+              {isDetectingLoc ? <Loader2 className="w-4 h-4 animate-spin" /> : <Navigation className="w-4 h-4" />}
+              📍 Use My Live GPS Location
+            </button>
 
-                      <div>
-                        <label className="block text-xs font-bold text-text-muted mb-1 uppercase">District</label>
-                        <select
-                          name="district"
-                          value={locForm.district}
-                          onChange={handleFormChange}
-                          className="w-full min-h-[48px] bg-surface dark:bg-slate-800 border border-border dark:border-slate-700 rounded-lg px-3 text-sm text-text dark:text-white"
-                        >
-                          {(indianStates[locForm.state] || []).map(dist => (
-                            <option key={dist} value={dist}>{dist}</option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
+            <div className="border-t border-slate-200 dark:border-slate-700 my-2" />
 
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-xs font-bold text-text-muted mb-1 uppercase">Village / Town</label>
-                        <input
-                          type="text"
-                          name="village"
-                          required
-                          value={locForm.village}
-                          onChange={handleFormChange}
-                          placeholder="e.g. Ramanagara"
-                          className="w-full min-h-[48px] bg-surface dark:bg-slate-800 border border-border dark:border-slate-700 rounded-lg px-3 text-sm text-text dark:text-white"
-                        />
-                      </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-[10px] font-bold text-text-muted uppercase">State</label>
+                <select
+                  value={locForm.state}
+                  onChange={(e) => handleStateChange(e.target.value)}
+                  className="w-full h-11 px-3 bg-slate-50 dark:bg-slate-900 border border-border dark:border-slate-700 rounded-xl text-xs focus:outline-none dark:text-white"
+                >
+                  {Object.keys(indianStates).map(state => (
+                    <option key={state} value={state}>{state}</option>
+                  ))}
+                </select>
+              </div>
 
-                      <div>
-                        <label className="block text-xs font-bold text-text-muted mb-1 uppercase">Ward (Optional)</label>
-                        <input
-                          type="text"
-                          name="ward"
-                          value={locForm.ward}
-                          onChange={handleFormChange}
-                          placeholder="e.g. Ward 6"
-                          className="w-full min-h-[48px] bg-surface dark:bg-slate-800 border border-border dark:border-slate-700 rounded-lg px-3 text-sm text-text dark:text-white"
-                        />
-                      </div>
-                    </div>
+              <div>
+                <label className="text-[10px] font-bold text-text-muted uppercase">District</label>
+                <select
+                  value={locForm.district}
+                  onChange={(e) => setLocForm({ ...locForm, district: e.target.value })}
+                  className="w-full h-11 px-3 bg-slate-50 dark:bg-slate-900 border border-border dark:border-slate-700 rounded-xl text-xs focus:outline-none dark:text-white"
+                >
+                  {(indianStates[locForm.state] || []).map(dist => (
+                    <option key={dist} value={dist}>{dist}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
 
-                    <div>
-                      <label className="block text-xs font-bold text-text-muted mb-1 uppercase">House / Flat No (Optional)</label>
-                      <input
-                        type="text"
-                        name="houseNo"
-                        value={locForm.houseNo}
-                        onChange={handleFormChange}
-                        placeholder="e.g. 104, Block B"
-                        className="w-full min-h-[48px] bg-surface dark:bg-slate-800 border border-border dark:border-slate-700 rounded-lg px-3 text-sm text-text dark:text-white"
-                      />
-                    </div>
-                  </motion.div>
-                )}
+            <div>
+              <label className="text-[10px] font-bold text-text-muted uppercase">Village / Ward Name</label>
+              <input
+                type="text"
+                value={locForm.village}
+                onChange={(e) => setLocForm({ ...locForm, village: e.target.value })}
+                placeholder="e.g. Rajajinagar"
+                className="w-full h-11 px-3 bg-slate-50 dark:bg-slate-900 border border-border dark:border-slate-700 rounded-xl text-xs focus:outline-none dark:text-white"
+              />
+            </div>
 
-                {/* Google Maps Preview simulated */}
-                <div className="h-[120px] bg-slate-200 dark:bg-slate-700 rounded-xl flex flex-col items-center justify-center text-text-muted text-xs border border-border dark:border-slate-700 relative overflow-hidden">
-                  <div className="absolute inset-0 bg-blue-50/10 flex items-center justify-center opacity-30 pointer-events-none">
-                    <div className="w-full h-full bg-[radial-gradient(circle_at_center,rgba(0,0,0,0.1)_1px,transparent_1px)] bg-[size:10px_10px]" />
-                  </div>
-                  <MapPin className="w-8 h-8 text-accent animate-bounce mb-1" />
-                  <span className="font-semibold text-text dark:text-slate-300">Map Area Selected</span>
-                  <span className="text-[10px] text-text-muted mt-0.5">
-                    Lat: {location.lat.toFixed(4)}, Lng: {location.lng.toFixed(4)}
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-[10px] font-bold text-text-muted uppercase">Ward No (Optional)</label>
+                <input
+                  type="text"
+                  value={locForm.ward}
+                  onChange={(e) => setLocForm({ ...locForm, ward: e.target.value })}
+                  placeholder="e.g. 6"
+                  className="w-full h-11 px-3 bg-slate-50 dark:bg-slate-900 border border-border dark:border-slate-700 rounded-xl text-xs focus:outline-none dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold text-text-muted uppercase">House No (Optional)</label>
+                <input
+                  type="text"
+                  value={locForm.houseNo}
+                  onChange={(e) => setLocForm({ ...locForm, houseNo: e.target.value })}
+                  placeholder="e.g. 32/B"
+                  className="w-full h-11 px-3 bg-slate-50 dark:bg-slate-900 border border-border dark:border-slate-700 rounded-xl text-xs focus:outline-none dark:text-white"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex gap-2 pt-2">
+            <button
+              onClick={() => setStep(2)}
+              className="flex-1 h-12 bg-slate-100 dark:bg-slate-750 text-text dark:text-white text-xs font-bold rounded-xl cursor-pointer"
+            >
+              Back
+            </button>
+            <button
+              disabled={!locForm.village}
+              onClick={() => setStep(4)}
+              className="flex-1 h-12 bg-accent disabled:opacity-50 text-white text-xs font-bold rounded-xl cursor-pointer"
+            >
+              Continue
+            </button>
+          </div>
+        </div>
+      )}
+
+      {step === 4 && (
+        <div className="space-y-4">
+          <h2 className="text-base font-black text-text dark:text-white flex items-center gap-1.5">
+            <PhoneCall className="w-5 h-5 text-accent" /> Phone Verification
+          </h2>
+
+          <div className="space-y-4">
+            {!otpSent ? (
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-text-muted uppercase block">Mobile Phone Number</label>
+                <div className="flex">
+                  <span className="h-11 px-3 bg-slate-100 dark:bg-slate-900 border border-border dark:border-slate-700 border-r-0 rounded-l-xl flex items-center text-xs font-bold dark:text-white">
+                    +91
                   </span>
+                  <input
+                    type="tel"
+                    maxLength={10}
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                    placeholder="Enter 10-digit number"
+                    className="flex-1 h-11 px-3 bg-slate-50 dark:bg-slate-900 border border-border dark:border-slate-700 rounded-r-xl text-xs focus:outline-none dark:text-white font-bold"
+                  />
                 </div>
-              </div>
-
-              <div className="flex gap-3 mt-4">
                 <button
-                  onClick={() => setStep(2)}
-                  className="w-1/3 btn-secondary"
+                  onClick={handleSendOTP}
+                  className="w-full h-12 bg-accent text-white text-xs font-bold rounded-xl cursor-pointer flex items-center justify-center gap-1 mt-4"
                 >
-                  Back
-                </button>
-                <button
-                  disabled={!locForm.village && manualLocation}
-                  onClick={() => setStep(4)}
-                  className={`w-2/3 btn-primary flex items-center justify-center gap-2 ${
-                    !locForm.village && manualLocation ? 'opacity-50 cursor-not-allowed' : ''
-                  }`}
-                >
-                  Continue <ArrowRight className="w-5 h-5" />
+                  Send OTP Code <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
-            </motion.div>
-          )}
+            ) : (
+              <div className="space-y-2 animate-fadeIn">
+                <label className="text-[10px] font-bold text-text-muted uppercase block">6-Digit Verification Code</label>
+                <div className="flex gap-2 justify-center">
+                  <input
+                    type="text"
+                    maxLength={6}
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                    placeholder="Enter 6-digit OTP"
+                    className="w-full h-11 px-3 bg-slate-50 dark:bg-slate-900 border border-border dark:border-slate-700 rounded-xl text-center text-sm focus:outline-none dark:text-white font-black tracking-widest"
+                  />
+                </div>
+                <button
+                  onClick={handleVerifyOTP}
+                  disabled={isVerifying}
+                  className="w-full h-12 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl cursor-pointer flex items-center justify-center gap-1 mt-4 shadow-sm"
+                >
+                  {isVerifying ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+                  Verify & Finish Setup
+                </button>
+              </div>
+            )}
+          </div>
 
-          {/* STEP 4: PHONE VERIFICATION */}
-          {step === 4 && (
-            <motion.div
-              key="step4"
-              variants={containerVariants}
-              initial="initial"
-              animate="animate"
-              exit="exit"
-              className="space-y-6"
+          <div className="flex gap-2 pt-2 border-t border-slate-100 dark:border-slate-700 mt-4">
+            <button
+              onClick={() => { setOtpSent(false); setOtp(''); }}
+              className="flex-1 h-12 bg-slate-100 dark:bg-slate-750 text-text dark:text-white text-xs font-bold rounded-xl cursor-pointer"
             >
-              <div className="text-center">
-                <h2 className="text-2xl font-bold text-text dark:text-white">Phone Verification</h2>
-                <p className="text-text-muted mt-1">Verify your identity to post emergencies and chat.</p>
-              </div>
-
-              {authError && (
-                <div className="bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 p-4 rounded-xl text-sm font-semibold border border-red-200 dark:border-red-900">
-                  {authError}
-                </div>
-              )}
-
-              {!verificationSent ? (
-                <form onSubmit={handleSendOTP} className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-bold text-text-muted mb-2 uppercase">Mobile Number</label>
-                    <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-text font-bold text-lg dark:text-slate-300">
-                        +91
-                      </span>
-                      <input
-                        type="tel"
-                        maxLength="10"
-                        required
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
-                        placeholder="Enter 10-digit number"
-                        className="w-full min-h-[56px] pl-16 pr-4 bg-surface dark:bg-slate-800 border-2 border-border dark:border-slate-700 rounded-xl text-lg font-bold text-text dark:text-white focus:border-accent outline-none"
-                      />
-                    </div>
-                  </div>
-
-                  <div id="recaptcha-container" className="my-2"></div>
-
-                  <div className="flex gap-3 mt-4">
-                    <button
-                      type="button"
-                      onClick={() => setStep(3)}
-                      className="w-1/3 btn-secondary"
-                    >
-                      Back
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={phone.length < 10 || authLoading}
-                      className="w-2/3 btn-primary flex items-center justify-center gap-2"
-                    >
-                      {authLoading ? (
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                      ) : (
-                        <>Send OTP <PhoneCall className="w-5 h-5" /></>
-                      )}
-                    </button>
-                  </div>
-                </form>
-              ) : (
-                <form onSubmit={handleVerifyOTP} className="space-y-5">
-                  <div className="text-center space-y-1">
-                    <p className="text-sm font-medium text-text-muted">
-                      Verification code sent to <strong className="text-text dark:text-white">+91 {phone}</strong>
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => setVerificationSent(false)}
-                      className="text-xs text-accent dark:text-blue-400 font-bold hover:underline"
-                    >
-                      Change Phone Number
-                    </button>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="block text-xs font-bold text-text-muted text-center uppercase">Enter 6-Digit OTP</label>
-                    <div className="flex justify-center gap-2">
-                      {otp.map((digit, idx) => (
-                        <input
-                          key={idx}
-                          id={`otp-${idx}`}
-                          type="text"
-                          maxLength="1"
-                          required
-                          value={digit}
-                          onKeyDown={(e) => handleOtpKeyDown(e, idx)}
-                          onChange={(e) => handleOtpChange(e, idx)}
-                          className="w-12 h-14 text-center text-2xl font-bold bg-surface dark:bg-slate-800 border-2 border-border dark:border-slate-700 rounded-xl focus:border-accent outline-none text-text dark:text-white"
-                        />
-                      ))}
-                    </div>
-                    <p className="text-xs text-center text-text-muted mt-2">
-                      Use code <strong className="text-accent dark:text-blue-400">123456</strong> for simulated verification
-                    </p>
-                  </div>
-
-                  <div className="flex gap-3 mt-6">
-                    <button
-                      type="button"
-                      disabled={timer > 0 || authLoading}
-                      onClick={handleSendOTP}
-                      className={`w-1/3 btn-secondary px-2 text-sm ${
-                        timer > 0 ? 'opacity-50 cursor-not-allowed' : ''
-                      }`}
-                    >
-                      {timer > 0 ? `Resend (${timer}s)` : 'Resend OTP'}
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={authLoading}
-                      className="w-2/3 btn-primary flex items-center justify-center gap-2"
-                    >
-                      {authLoading ? (
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                      ) : (
-                        <>Verify & Register <Check className="w-5 h-5" /></>
-                      )}
-                    </button>
-                  </div>
-                </form>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
+              Modify Details
+            </button>
+          </div>
+        </div>
+      )}
+      
+      {/* Footer login switch link */}
+      <div className="text-center pt-2">
+        <button
+          onClick={() => navigate('/login')}
+          className="text-xs text-accent font-bold hover:underline cursor-pointer"
+        >
+          Already registered? Sign In Here
+        </button>
       </div>
     </div>
   );
