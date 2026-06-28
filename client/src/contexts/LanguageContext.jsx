@@ -46,3 +46,9 @@ export const useLanguage = () => {
   }
   return context;
 };
+
+export function changeLanguage(langCode) {
+  i18n.changeLanguage(langCode)
+  localStorage.setItem('vanguard_language', langCode)
+}
+
