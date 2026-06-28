@@ -3,7 +3,7 @@
 
 @import "tailwindcss";
 
-@variant dark (&:where(.dark, .dark *));
+*, *::before, *::after { box-sizing: border-box; }
 
 @theme {
   --font-sans: 'Noto Sans', system-ui, -apple-system, sans-serif;
@@ -15,6 +15,7 @@
   --color-warning: var(--warning);
   --color-danger: var(--danger);
   --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
   --color-bg: var(--bg);
   --color-text: var(--text);
   --color-text-muted: var(--text-muted);
@@ -27,43 +28,41 @@
 }
 
 :root {
-  --bg: #F4F6FB;
-  --surface: #FFFFFF;
-  --text: #0F172A;
-  --text-muted: #64748B;
-  --border: #E2E8F0;
-  --primary: #0F2B4E;
-  --accent: #1B6FD8;
-  --accent-soft: #E8F0FE;
-  --success: #1A7F4B;
-  --warning: #D97706;
-  --danger: #DC2626;
+  --bg:           #F4F6FB;
+  --surface:      #FFFFFF;
+  --surface-2:    #F1F5F9;
+  --text:         #0F172A;
+  --text-muted:   #64748B;
+  --border:       #E2E8F0;
+  --accent:       #1B6FD8;
+  --accent-soft:  #EFF6FF;
+  --success:      #16A34A;
+  --warning:      #D97706;
+  --danger:       #DC2626;
+  --shadow:       0 2px 8px rgba(0,0,0,0.08);
 }
 
 [data-theme="dark"] {
-  --bg: #0A1628;
-  --surface: #142038;
-  --text: #F1F5F9;
-  --text-muted: #94A3B8;
-  --border: #1E3A5F;
-  --primary: #1B6FD8;
-  --accent: #3B82F6;
-  --accent-soft: #1E3A5F;
-  --success: #10B981;
-  --warning: #F59E0B;
-  --danger: #EF4444;
+  --bg:           #0A1628;
+  --surface:      #142038;
+  --surface-2:    #1C2E45;
+  --text:         #F1F5F9;
+  --text-muted:   #94A3B8;
+  --border:       #1E3A5F;
+  --accent:       #3B82F6;
+  --accent-soft:  #1E3A5F;
+  --success:      #22C55E;
+  --warning:      #FBBF24;
+  --danger:       #F87171;
+  --shadow:       0 2px 8px rgba(0,0,0,0.3);
 }
 
 body {
-  font-family: 'Noto Sans', system-ui, -apple-system, sans-serif;
-  font-size: 16px;
-  line-height: 1.6;
-  background-color: var(--color-bg);
-  color: var(--color-text);
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Noto Sans', sans-serif;
   margin: 0;
-  padding: 0;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  transition: background 0.2s, color 0.2s;
 }
 
 /* Tap targets rule: at least 56px height for elder friendliness */
