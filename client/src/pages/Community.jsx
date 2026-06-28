@@ -18,9 +18,9 @@ import {
   Pause
 } from 'lucide-react';
 import useAuth from '../hooks/useAuth';
-import { db, storage } from '../lib/firebase';
+import { db } from '../lib/firebase';
 import { collection, addDoc, onSnapshot, query, orderBy, serverTimestamp } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { uploadImage } from '../lib/imageUpload';
 import toast from 'react-hot-toast';
 
 export default function Community() {
@@ -143,9 +143,17 @@ export default function Community() {
     setUploadingFile(true);
     const uploadToast = toast.loading(`Uploading ${type}...`);
     try {
-      const storageRef = ref(storage, `communities/${communityId}/${type}_${Date.now()}_${file.name}`);
-      const uploadResult = await uploadBytes(storageRef, file);
-      const downloadUrl = await getDownloadURL(uploadResult.ref);
+      let downloadUrl = '';
+      if (type === 'image') {
+        downloadUrl = await uploadImage(file);
+      } else {
+        // PDF fallback: convert to base64 data URL
+        downloadUrl = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve(e.target.result);
+          reader.readAsDataURL(file);
+        });
+      }
 
       await addDoc(collection(db, 'communities', communityId, 'messages'), {
         senderId: user?.uid || 'anonymous',
@@ -208,9 +216,12 @@ export default function Community() {
   const uploadAudioNote = async (blob) => {
     const uploadToast = toast.loading("Sending voice note...");
     try {
-      const audioRef = ref(storage, `communities/${communityId}/audio_${Date.now()}.wav`);
-      const uploadResult = await uploadBytes(audioRef, blob);
-      const downloadUrl = await getDownloadURL(uploadResult.ref);
+      // Audio fallback: convert to base64 data URL
+      const downloadUrl = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.readAsDataURL(blob);
+      });
 
       await addDoc(collection(db, 'communities', communityId, 'messages'), {
         senderId: user?.uid || 'anonymous',

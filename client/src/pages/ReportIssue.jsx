@@ -16,9 +16,9 @@ import {
   RefreshCw,
   Sparkles
 } from 'lucide-react';
-import { db, storage } from '../lib/firebase';
+import { db } from '../lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { ref, uploadString, getDownloadURL } from 'firebase/storage';
+import { uploadImage, fileToBase64 } from '../lib/imageUpload';
 import { MapContainer, TileLayer, CircleMarker, useMapEvents } from 'react-leaflet';
 import toast from 'react-hot-toast';
 import useAuth from '../hooks/useAuth';
@@ -51,6 +51,8 @@ export default function ReportIssue() {
 
   const [step, setStep] = useState(1);
   const [photoBase64, setPhotoBase64] = useState(null);
+  const [photoFile, setPhotoFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
   const [transcription, setTranscription] = useState('');
   const [description, setDescription] = useState('');
   const [isListening, setIsListening] = useState(false);
@@ -151,14 +153,13 @@ export default function ReportIssue() {
   }, [aiLoading]);
 
   // Convert uploaded image to base64
-  const handlePhotoUpload = (e) => {
+  const handlePhotoUpload = async (e) => {
     const file = e.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        setPhotoBase64(reader.result);
-      };
-      reader.readAsDataURL(file);
+      setPhotoFile(file);
+      setPreviewUrl(URL.createObjectURL(file));
+      const base64 = await fileToBase64(file);
+      setPhotoBase64(base64);
     }
   };
 
@@ -207,10 +208,9 @@ export default function ReportIssue() {
     const saveToast = toast.loading("Submitting report to VANGUARD civic logs...");
     try {
       let downloadUrl = '';
-      if (photoBase64) {
-        const fileRef = ref(storage, `issues/issue_${Date.now()}.jpg`);
-        const uploadResult = await uploadString(fileRef, photoBase64, 'data_url');
-        downloadUrl = await getDownloadURL(uploadResult.ref);
+      if (photoFile) {
+        const base64 = await fileToBase64(photoFile);
+        downloadUrl = `data:image/jpeg;base64,${base64}`;
       }
 
       const issuePayload = {
@@ -348,7 +348,7 @@ export default function ReportIssue() {
             <Camera className="w-5 h-5 text-accent" /> Step 1: Upload Civic Hazard Photo
           </h2>
 
-          {!photoBase64 ? (
+          {!previewUrl ? (
             <label className="flex flex-col items-center justify-center border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-accent dark:hover:border-accent rounded-2xl h-[180px] cursor-pointer transition p-4 text-center">
               <Camera className="w-10 h-10 text-slate-400 mb-2" />
               <span className="text-sm font-bold text-text dark:text-white">📷 Take Photo or Upload from Gallery</span>
@@ -364,12 +364,16 @@ export default function ReportIssue() {
             <div className="space-y-4">
               <div className="relative w-full h-[220px] rounded-xl overflow-hidden border border-border dark:border-slate-700">
                 <img 
-                  src={photoBase64} 
+                  src={previewUrl} 
                   alt="Hazard preview" 
                   className="w-full h-full object-cover"
                 />
                 <button 
-                  onClick={() => setPhotoBase64(null)}
+                  onClick={() => {
+                    setPhotoFile(null);
+                    setPreviewUrl(null);
+                    setPhotoBase64(null);
+                  }}
                   className="absolute top-3 right-3 bg-red-600 hover:bg-red-700 text-white rounded-xl px-3 py-1.5 text-xs font-bold shadow-md cursor-pointer"
                 >
                   Change Photo
@@ -386,7 +390,7 @@ export default function ReportIssue() {
               Cancel
             </button>
             <button 
-              disabled={!photoBase64}
+              disabled={!photoFile}
               onClick={() => setStep(2)}
               className="h-12 px-6 bg-accent hover:bg-opacity-90 disabled:opacity-50 text-white text-xs font-bold rounded-xl cursor-pointer shadow-sm flex items-center gap-1"
             >
