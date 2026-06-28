@@ -1,3 +1,4 @@
+// VANGUARD Global Theme Context Manager
 import { createContext, useContext, useState, useEffect } from 'react'
 
 const ThemeContext = createContext(null)
