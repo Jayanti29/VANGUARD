@@ -13,11 +13,11 @@ export default function TopBar() {
   useEffect(() => {
     const hrs = new Date().getHours();
     if (hrs < 12) {
-      setGreeting(t('home.greeting', 'Good morning'));
+      setGreeting(t('greeting_morning', 'Good morning'));
     } else if (hrs < 17) {
-      setGreeting(t('home.greeting_afternoon', 'Good afternoon'));
+      setGreeting(t('greeting_afternoon', 'Good afternoon'));
     } else {
-      setGreeting(t('home.greeting_evening', 'Good evening'));
+      setGreeting(t('greeting_evening', 'Good evening'));
     }
   }, [t]);
 

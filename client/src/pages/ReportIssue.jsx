@@ -283,10 +283,10 @@ export default function ReportIssue() {
   // Step header wizard indicator
   const renderProgress = () => {
     const stepsList = [
-      { id: 1, label: "Photo" },
-      { id: 2, label: "Details" },
-      { id: 3, label: "Location" },
-      { id: 4, label: "AI Report" }
+      { id: 1, label: t('photo', 'Photo') },
+      { id: 2, label: t('details', 'Details') },
+      { id: 3, label: t('location', 'Location') },
+      { id: 4, label: t('ai_report', 'AI Report') }
     ];
     return (
       <div className="flex items-center justify-between border-b pb-4 border-slate-200 dark:border-slate-700">
@@ -345,14 +345,14 @@ export default function ReportIssue() {
       {step === 1 && (
         <div className="bg-surface dark:bg-slate-800 p-6 rounded-2xl border border-border dark:border-slate-700 shadow-sm space-y-6">
           <h2 className="text-lg font-black text-text dark:text-white flex items-center gap-2">
-            <Camera className="w-5 h-5 text-accent" /> Step 1: Upload Civic Hazard Photo
+            <Camera className="w-5 h-5 text-accent" /> {t('step_1_upload', 'Step 1: Upload Civic Hazard Photo')}
           </h2>
 
           {!previewUrl ? (
             <label className="flex flex-col items-center justify-center border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-accent dark:hover:border-accent rounded-2xl h-[180px] cursor-pointer transition p-4 text-center">
               <Camera className="w-10 h-10 text-slate-400 mb-2" />
-              <span className="text-sm font-bold text-text dark:text-white">📷 Take Photo or Upload from Gallery</span>
-              <span className="text-[10px] text-text-muted mt-1">Accepts images (JPEG, PNG) up to 5MB</span>
+              <span className="text-sm font-bold text-text dark:text-white">📷 {t('take_photo_upload', 'Take Photo or Upload from Gallery')}</span>
+              <span className="text-[10px] text-text-muted mt-1">{t('accepts_images', 'Accepts images (JPEG, PNG) up to 5MB')}</span>
               <input 
                 type="file" 
                 accept="image/*" 
@@ -376,7 +376,7 @@ export default function ReportIssue() {
                   }}
                   className="absolute top-3 right-3 bg-red-600 hover:bg-red-700 text-white rounded-xl px-3 py-1.5 text-xs font-bold shadow-md cursor-pointer"
                 >
-                  Change Photo
+                  {t('change_photo', 'Change Photo')}
                 </button>
               </div>
             </div>
@@ -387,14 +387,14 @@ export default function ReportIssue() {
               onClick={() => navigate('/')}
               className="h-12 px-5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 text-text dark:text-white text-xs font-bold rounded-xl cursor-pointer"
             >
-              Cancel
+              {t('cancel', 'Cancel')}
             </button>
             <button 
               disabled={!photoFile}
               onClick={() => setStep(2)}
               className="h-12 px-6 bg-accent hover:bg-opacity-90 disabled:opacity-50 text-white text-xs font-bold rounded-xl cursor-pointer shadow-sm flex items-center gap-1"
             >
-              Next Step
+              {t('next_step', 'Next Step')}
             </button>
           </div>
         </div>
@@ -403,16 +403,16 @@ export default function ReportIssue() {
       {step === 2 && (
         <div className="bg-surface dark:bg-slate-800 p-6 rounded-2xl border border-border dark:border-slate-700 shadow-sm space-y-6">
           <h2 className="text-lg font-black text-text dark:text-white flex items-center gap-2">
-            <Mic className="w-5 h-5 text-accent" /> Step 2: Describe the Hazard
+            <Mic className="w-5 h-5 text-accent" /> {t('step_2_describe', 'Step 2: Describe the Hazard')}
           </h2>
 
           <div className="space-y-4">
-            <label className="text-xs font-bold text-text-muted">Describe using text or record voice note:</label>
+            <label className="text-xs font-bold text-text-muted">{t('describe_using_voice', 'Describe using text or record voice note:')}</label>
             <div className="relative">
               <textarea 
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Describe the issue (e.g. Broken road with dangerous potholes near public park, water pipe leakage creating a massive sinkhole...)"
+                placeholder={t('textarea_placeholder', 'Describe the issue (e.g. Broken road with dangerous potholes near public park, water pipe leakage creating a massive sinkhole...)')}
                 className="w-full h-32 p-4 bg-slate-50 dark:bg-slate-900 border border-border dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-accent dark:text-white"
                 maxLength={300}
               />
@@ -434,11 +434,11 @@ export default function ReportIssue() {
                 <Mic className="w-6 h-6" />
               </button>
               <span className="text-xs font-bold mt-2 text-text dark:text-white">
-                {isListening ? "Listening... Speak now" : "Tap to Speak (Voice Input)"}
+                {isListening ? t('listening_speak', "Listening... Speak now") : t('tap_to_speak', "Tap to Speak (Voice Input)")}
               </span>
               {transcription && (
                 <p className="text-xs text-accent font-bold mt-2 text-center italic">
-                  Transcribed: "{transcription}"
+                  {t('transcribed', 'Transcribed')}: "{transcription}"
                 </p>
               )}
             </div>
@@ -449,13 +449,13 @@ export default function ReportIssue() {
               onClick={() => setStep(1)}
               className="h-12 px-5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 text-text dark:text-white text-xs font-bold rounded-xl cursor-pointer"
             >
-              Back
+              {t('back', 'Back')}
             </button>
             <button 
               onClick={() => setStep(3)}
               className="h-12 px-6 bg-accent hover:bg-opacity-90 text-white text-xs font-bold rounded-xl cursor-pointer shadow-sm"
             >
-              Next Step
+              {t('next_step', 'Next Step')}
             </button>
           </div>
         </div>
@@ -464,13 +464,13 @@ export default function ReportIssue() {
       {step === 3 && (
         <div className="bg-surface dark:bg-slate-800 p-6 rounded-2xl border border-border dark:border-slate-700 shadow-sm space-y-6">
           <h2 className="text-lg font-black text-text dark:text-white flex items-center gap-2">
-            <MapPin className="w-5 h-5 text-accent" /> Step 3: Confirm GPS Location
+            <MapPin className="w-5 h-5 text-accent" /> {t('step_3_confirm', 'Step 3: Confirm GPS Location')}
           </h2>
 
           <div className="space-y-4">
             <div className="flex items-center justify-between p-3.5 bg-slate-50 dark:bg-slate-900 rounded-xl border border-border dark:border-slate-700 gap-2">
               <div className="min-w-0 flex-1">
-                <span className="text-[10px] font-bold text-accent uppercase block">📍 GPS Detected Address</span>
+                <span className="text-[10px] font-bold text-accent uppercase block">📍 {t('gps_detected', 'GPS Detected Address')}</span>
                 <p className="text-xs font-bold text-text dark:text-white truncate">{address}</p>
               </div>
               <button 
@@ -504,7 +504,7 @@ export default function ReportIssue() {
               </MapContainer>
             </div>
             <p className="text-[10px] text-text-muted font-bold text-center">
-              💡 Drag or tap anywhere on the map above to manually correct the pin position.
+              💡 {t('map_drag_instruction', 'Drag or tap anywhere on the map above to manually correct the pin position.')}
             </p>
           </div>
 
@@ -513,13 +513,13 @@ export default function ReportIssue() {
               onClick={() => setStep(2)}
               className="h-12 px-5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 text-text dark:text-white text-xs font-bold rounded-xl cursor-pointer"
             >
-              Back
+              {t('back', 'Back')}
             </button>
             <button 
               onClick={runAIAnalysis}
               className="h-12 px-6 bg-accent hover:bg-opacity-90 text-white text-xs font-bold rounded-xl cursor-pointer shadow-sm flex items-center gap-1.5"
             >
-              <Sparkles className="w-4 h-4 text-yellow-300" /> Analyze with AI
+              <Sparkles className="w-4 h-4 text-yellow-300" /> {t('analyze_with_ai', 'Analyze with AI')}
             </button>
           </div>
         </div>
@@ -540,7 +540,7 @@ export default function ReportIssue() {
                 <AlertTriangle className="w-4 h-4" /> {aiResult.severityLabel || 'Hazard Status'}
               </span>
               <span className="text-[10px] font-black uppercase bg-white bg-opacity-20 px-2 py-0.5 rounded">
-                Escalated to: {aiResult.escalationLevel}
+                {t('escalated_to', 'Escalated to')}: {aiResult.escalationLevel}
               </span>
             </div>
 
@@ -549,7 +549,7 @@ export default function ReportIssue() {
               {/* Category info */}
               <div className="flex items-center justify-between border-b pb-4 border-slate-100 dark:border-slate-700">
                 <div>
-                  <span className="text-[10px] font-bold text-text-muted block uppercase">Civic Category</span>
+                  <span className="text-[10px] font-bold text-text-muted block uppercase">{t('civic_category', 'Civic Category')}</span>
                   <h3 className="text-lg font-black text-text dark:text-white">
                     {aiResult.categoryLabel || aiResult.category?.replace('_', ' ')}
                   </h3>
@@ -575,7 +575,7 @@ export default function ReportIssue() {
 
               {/* Severity choose explanation reason */}
               <div className="space-y-1">
-                <span className="text-[10px] font-bold text-text-muted block uppercase">Analysis Reason</span>
+                <span className="text-[10px] font-bold text-text-muted block uppercase">{t('analysis_reason', 'Analysis Reason')}</span>
                 <p className="text-xs font-semibold leading-relaxed text-text dark:text-white">
                   {aiResult.severityReason}
                 </p>
@@ -585,7 +585,7 @@ export default function ReportIssue() {
               <div className="p-3 bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/50 rounded-xl flex items-start gap-2.5">
                 <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
                 <div>
-                  <span className="text-[10px] font-bold text-red-700 dark:text-red-400 block uppercase">predicted community risk</span>
+                  <span className="text-[10px] font-bold text-red-700 dark:text-red-400 block uppercase">{t('predicted_risk', 'predicted community risk')}</span>
                   <p className="text-xs font-bold text-red-900 dark:text-red-200 mt-0.5 leading-relaxed">{aiResult.riskPrediction}</p>
                 </div>
               </div>
@@ -593,7 +593,7 @@ export default function ReportIssue() {
               {/* Recommended Authority */}
               <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-border dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <span className="text-[10px] font-bold text-text-muted block uppercase">recommended dispatch agency</span>
+                  <span className="text-[10px] font-bold text-text-muted block uppercase">{t('dispatch_agency', 'recommended dispatch agency')}</span>
                   <h4 className="text-sm font-black text-text dark:text-white truncate mt-0.5">{aiResult.recommendedAuthority}</h4>
                 </div>
                 <div className="flex gap-2">
@@ -616,7 +616,7 @@ export default function ReportIssue() {
 
               {/* Official complaint paragraph */}
               <div className="space-y-1">
-                <span className="text-[10px] font-bold text-text-muted block uppercase">Generated Complaint Text</span>
+                <span className="text-[10px] font-bold text-text-muted block uppercase">{t('complaint_text', 'Generated Complaint Text')}</span>
                 <blockquote className="border-l-4 border-slate-300 dark:border-slate-600 pl-4 py-1 italic text-xs text-text-muted leading-relaxed">
                   "{aiResult.reportText}"
                 </blockquote>
@@ -628,14 +628,14 @@ export default function ReportIssue() {
                   onClick={downloadReportPDF}
                   className="h-12 bg-white dark:bg-slate-800 border border-accent text-accent dark:text-blue-400 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 hover:bg-slate-50 dark:hover:bg-slate-750 cursor-pointer"
                 >
-                  <Download className="w-4 h-4" /> Download PDF Report
+                  <Download className="w-4 h-4" /> {t('download_pdf_report', 'Download PDF Report')}
                 </button>
                 <button
                   disabled={isSaving}
                   onClick={() => handleSaveIssue(true)}
                   className="h-12 bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
                 >
-                  <Share2 className="w-4 h-4" /> Share with Community
+                  <Share2 className="w-4 h-4" /> {t('share_with_community', 'Share with Community')}
                 </button>
               </div>
             </div>
@@ -647,14 +647,14 @@ export default function ReportIssue() {
               onClick={() => setStep(3)}
               className="h-12 px-6 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 text-text dark:text-white text-xs font-bold rounded-xl cursor-pointer"
             >
-              Modify Location
+              {t('modify_location', 'Modify Location')}
             </button>
             <button
               disabled={isSaving}
               onClick={() => handleSaveIssue(false)}
               className="h-12 px-8 bg-accent hover:bg-opacity-95 text-white text-xs font-bold rounded-xl cursor-pointer flex items-center gap-1 disabled:opacity-50 shadow-md"
             >
-              {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Submit Issue Log
+              {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} {t('submit_issue_log', 'Submit Issue Log')}
             </button>
           </div>
         </div>
