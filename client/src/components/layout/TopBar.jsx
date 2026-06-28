@@ -1,11 +1,38 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell } from 'lucide-react';
+import { Bell, Sun, Moon, Globe } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import useAuth from '../../hooks/useAuth';
+import toast from 'react-hot-toast';
 
 export default function TopBar() {
   const navigate = useNavigate();
   const { dbUser } = useAuth();
+  const { i18n } = useTranslation();
+  const currentLang = i18n.language || localStorage.getItem('vanguard_language') || 'en';
+
+  const [darkMode, setDarkMode] = useState(
+    document.documentElement.classList.contains('dark') ||
+    localStorage.getItem('vanguard_theme') === 'dark'
+  );
+
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('vanguard_theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('vanguard_theme', 'light');
+    }
+  }, [darkMode]);
+
+  const handleLanguageChange = (e) => {
+    const lang = e.target.value;
+    i18n.changeLanguage(lang);
+    localStorage.setItem('vanguard_language', lang);
+    toast.success(`Language changed to ${lang.toUpperCase()}`);
+    window.dispatchEvent(new Event('languageChanged'));
+  };
 
   const getRoleBadgeColor = (role) => {
     switch (role?.toLowerCase()) {
@@ -25,21 +52,49 @@ export default function TopBar() {
         <span className="font-extrabold text-lg text-[var(--text)] tracking-wider">VANGUARD</span>
       </div>
 
-      {/* User details and notification bell Right */}
+      {/* Controls and Profile */}
       <div className="flex items-center gap-3">
-        <div className="flex flex-col items-end text-right">
-          <span className="text-sm font-bold text-[var(--text)]">{dbUser?.name || 'Citizen'}</span>
-          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border mt-0.5 capitalize ${getRoleBadgeColor(role)}`}>
-            {role}
-          </span>
+        {/* Language selector */}
+        <div className="flex items-center gap-1 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-2 py-1">
+          <Globe className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+          <select 
+            value={currentLang} 
+            onChange={handleLanguageChange}
+            style={{ background: 'transparent', color: 'var(--text)', border: 'none', outline: 'none', fontSize: '11px', fontWeight: 'bold' }}
+            className="cursor-pointer font-bold"
+          >
+            <option value="en">English</option>
+            <option value="hi">हिंदी (Hindi)</option>
+            <option value="kn">ಕನ್ನಡ (Kannada)</option>
+            <option value="ta">தமிழ் (Tamil)</option>
+            <option value="te">తెలుగు (Telugu)</option>
+          </select>
         </div>
 
+        {/* Theme toggler */}
+        <button
+          onClick={() => setDarkMode(!darkMode)}
+          className="w-9 h-9 border border-[var(--border)] rounded-xl flex items-center justify-center bg-[var(--surface-2)] transition cursor-pointer text-[var(--text-muted)] hover:text-[var(--text)]"
+          title="Toggle Light/Dark Theme"
+        >
+          {darkMode ? <Sun className="w-4 h-4 text-amber-500" /> : <Moon className="w-4 h-4" />}
+        </button>
+
+        {/* Bell notification */}
         <button 
           onClick={() => navigate('/profile')} 
-          className="w-9 h-9 border border-[var(--border)] rounded-xl flex items-center justify-center bg-[var(--surface)] transition cursor-pointer text-[var(--text-muted)] hover:text-[var(--text)]"
+          className="w-9 h-9 border border-[var(--border)] rounded-xl flex items-center justify-center bg-[var(--surface-2)] transition cursor-pointer text-[var(--text-muted)] hover:text-[var(--text)]"
         >
           <Bell className="w-4 h-4" />
         </button>
+
+        {/* User profile */}
+        <div className="hidden sm:flex flex-col items-end text-right">
+          <span className="text-xs font-bold text-[var(--text)]">{dbUser?.name || 'Citizen'}</span>
+          <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border mt-0.5 capitalize ${getRoleBadgeColor(role)}`}>
+            {role}
+          </span>
+        </div>
 
         <img 
           onClick={() => navigate('/profile')}
