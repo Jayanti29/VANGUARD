@@ -1,7 +1,10 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { LanguageProvider } from './contexts/LanguageContext';
+import { Toaster } from 'react-hot-toast';
+import { seedOfficials } from './lib/seedData';
+import ProtectedRoute from './components/ProtectedRoute';
 import './lib/i18n'; // import to initialize translation engine
 
 // Pages
@@ -97,17 +100,42 @@ function AppLayout() {
 }
 
 export default function App() {
+  useEffect(() => {
+    // Seed default officials and workers on load
+    seedOfficials();
+  }, []);
+
   return (
     <AuthProvider>
       <LanguageProvider>
         <BrowserRouter>
+          <Toaster 
+            position="top-center" 
+            reverseOrder={false}
+            toastOptions={{
+              style: {
+                borderRadius: '12px',
+                background: '#0F2B4E',
+                color: '#fff',
+                fontSize: '13px',
+                fontWeight: '600'
+              }
+            }}
+          />
           <Routes>
             {/* Public/wizard routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/onboarding" element={<Onboarding />} />
 
             {/* Protected application layout */}
-            <Route path="/*" element={<AppLayout />} />
+            <Route 
+              path="/*" 
+              element={
+                <ProtectedRoute>
+                  <AppLayout />
+                </ProtectedRoute>
+              } 
+            />
           </Routes>
         </BrowserRouter>
       </LanguageProvider>
