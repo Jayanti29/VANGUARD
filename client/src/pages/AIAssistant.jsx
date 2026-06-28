@@ -20,9 +20,47 @@ export default function AIAssistant() {
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [aiStatus, setAiStatus] = useState('idle');
   
   const recognitionRef = useRef(null);
   const chatEndRef = useRef(null);
+
+  const isDev = (typeof process !== 'undefined' && process.env.NODE_ENV === 'development') || import.meta.env.DEV;
+
+  useEffect(() => {
+    const testGemini = async () => {
+      const key = import.meta.env.VITE_GEMINI_API_KEY
+      console.log('Testing Gemini. Key present:', !!key)
+      console.log('Key prefix:', key?.substring(0, 10))
+      
+      try {
+        const res = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: 'Say hello in one word' }] }]
+            })
+          }
+        )
+        const data = await res.json()
+        console.log('Gemini test response:', JSON.stringify(data))
+        
+        if (data.error) {
+          console.error('Gemini error:', data.error.message)
+          setAiStatus('error: ' + data.error.message)
+        } else {
+          console.log('Gemini working!')
+          setAiStatus('connected')
+        }
+      } catch (err) {
+        console.error('Gemini fetch failed:', err)
+        setAiStatus('fetch_failed')
+      }
+    }
+    testGemini()
+  }, [])
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -103,12 +141,10 @@ export default function AIAssistant() {
     }
   };
 
-  // Triggers chat response
   const handleSendMessage = async (textToSend) => {
     const cleanText = textToSend?.trim() || inputText.trim();
     if (!cleanText) return;
 
-    // 1. Add User Message
     const userMsg = {
       id: 'user_' + Date.now(),
       sender: 'user',
@@ -124,13 +160,9 @@ export default function AIAssistant() {
       const userLocation = `${dbUser?.village || 'Ramanagara'}, ${dbUser?.district || 'Bangalore'}`;
       const lang = localStorage.getItem('vanguard_language') || 'en';
 
-      // Call Gemini Chat Engine
       const reply = await chatWithAI(cleanText, userLocation, lang);
-
-      // Speak AI response
       speakText(reply, lang);
 
-      // 2. Add AI Message
       setMessages(prev => [...prev, {
         id: 'ai_' + Date.now(),
         sender: 'ai',
@@ -173,7 +205,7 @@ export default function AIAssistant() {
           </div>
           <div>
             <h2 className="text-sm font-black text-text dark:text-white">
-              🛡️ VANGUARD AI Assistant
+              VANGUARD AI Assistant
             </h2>
             <span className="text-[10px] text-text-muted font-bold block mt-0.5">
               Ask anything about civic procedures, authorities, and safety risks.
@@ -191,6 +223,13 @@ export default function AIAssistant() {
           </button>
         )}
       </div>
+
+      {/* Development status block */}
+      {isDev && (
+        <div style={{fontSize:'11px', color:'gray', padding:'4px 8px', background: 'var(--surface-2)', borderBottom: '1px solid var(--border)', textAlign: 'center'}}>
+          AI Status: {aiStatus}
+        </div>
+      )}
 
       {/* Messages scrolling view */}
       <div className="flex-1 overflow-y-auto p-6 space-y-4">
@@ -246,7 +285,6 @@ export default function AIAssistant() {
               );
             })}
 
-            {/* Typing Indicator */}
             {loading && (
               <div className="flex gap-3 justify-start items-center animate-fadeIn">
                 <div className="w-8 h-8 rounded-lg bg-accent-soft text-accent flex items-center justify-center flex-shrink-0">
