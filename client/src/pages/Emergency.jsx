@@ -118,9 +118,9 @@ export default function Emergency() {
       const communityId = `${dbUser?.district || 'bangalore'}_${dbUser?.village || 'ward6'}`.toLowerCase().replace(/\s+/g, '');
       await addDoc(collection(db, 'communities', communityId, 'messages'), {
         senderId: 'system_alert',
-        senderName: '🚨 BROADCAST ALERT',
+        senderName: 'BROADCAST ALERT',
         senderRole: 'Emergency Broadcast',
-        text: `⚠️ EMERGENCY ALERT PLACED: "${selectedCategory.id}". Action description: "${description || 'Help needed immediately!'}" at location: "${address}"`,
+        text: `EMERGENCY ALERT PLACED: "${selectedCategory.id}". Action description: "${description || 'Help needed immediately!'}" at location: "${address}"`,
         type: 'text',
         channel: 'Emergency',
         timestamp: serverTimestamp()
@@ -150,7 +150,7 @@ export default function Emergency() {
         </button>
         <div>
           <h1 className="text-xl font-black uppercase tracking-wider text-red-500">
-            🚨 Emergency Alert Dashboard
+            Emergency Alert Dashboard
           </h1>
           <p className="text-[10px] text-slate-350 font-bold block">
             Broadcast instantly to all local residents and dispatch authorities.
@@ -228,7 +228,7 @@ export default function Emergency() {
                 onClick={() => setShowConfirm(true)}
                 className="w-full h-14 bg-red-600 hover:bg-red-700 text-white font-black text-xs rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow-lg active:scale-98 transition uppercase tracking-widest mt-4"
               >
-                Send Emergency Alert 🚨
+                Send Emergency Alert
               </button>
             </div>
           )}
@@ -260,7 +260,7 @@ export default function Emergency() {
       {/* Active Emergencies Listing */}
       <div className="space-y-3 border-t border-white/10 pt-5">
         <h3 className="text-sm font-black text-red-500 uppercase tracking-widest flex items-center gap-1.5">
-          ⚠️ Active Alerts Nearby
+          Active Alerts Nearby
         </h3>
         
         {activeEmergencies.length === 0 ? (
@@ -274,7 +274,7 @@ export default function Emergency() {
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-black text-red-500 uppercase">{emerg.category} Alert</span>
-                      <span className="text-[9px] text-slate-400 font-bold">⏰ {timeAgo}</span>
+                      <span className="text-[9px] text-slate-400 font-bold">Time: {timeAgo}</span>
                     </div>
                     <p className="text-xs text-slate-200 leading-relaxed font-semibold">
                       {emerg.description || "No description provided, check map locations."}
