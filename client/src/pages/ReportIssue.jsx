@@ -352,7 +352,7 @@ export default function ReportIssue() {
           {!previewUrl ? (
             <label className="flex flex-col items-center justify-center border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-accent dark:hover:border-accent rounded-2xl h-[180px] cursor-pointer transition p-4 text-center">
               <Camera className="w-10 h-10 text-slate-400 mb-2" />
-              <span className="text-sm font-bold text-text dark:text-white">📷 {t('take_photo_upload', 'Take Photo or Upload from Gallery')}</span>
+              <span className="text-sm font-bold text-text dark:text-white">{t('take_photo_upload', 'Take Photo or Upload from Gallery')}</span>
               <span className="text-[10px] text-text-muted mt-1">{t('accepts_images', 'Accepts images (JPEG, PNG) up to 5MB')}</span>
               <input 
                 type="file" 
@@ -471,7 +471,7 @@ export default function ReportIssue() {
           <div className="space-y-4">
             <div className="flex items-center justify-between p-3.5 bg-slate-50 dark:bg-slate-900 rounded-xl border border-border dark:border-slate-700 gap-2">
               <div className="min-w-0 flex-1">
-                <span className="text-[10px] font-bold text-accent uppercase block">📍 {t('gps_detected', 'GPS Detected Address')}</span>
+                <span className="text-xs font-bold text-accent uppercase block">{t('gps_detected', 'GPS Detected Address')}</span>
                 <p className="text-xs font-bold text-text dark:text-white truncate">{address}</p>
               </div>
               <button 
@@ -505,7 +505,7 @@ export default function ReportIssue() {
               </MapContainer>
             </div>
             <p className="text-[10px] text-text-muted font-bold text-center">
-              💡 {t('map_drag_instruction', 'Drag or tap anywhere on the map above to manually correct the pin position.')}
+              {t('map_drag_instruction', 'Drag or tap anywhere on the map above to manually correct the pin position.')}
             </p>
           </div>
 
