@@ -1,21 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { 
-  ShieldAlert, 
   Send, 
   Mic, 
-  Square,
-  Building, 
-  AlertTriangle, 
-  ArrowRight,
-  ShieldCheck,
-  CheckCircle,
-  Volume2,
-  Trash2
+  Trash2,
+  Bot,
+  User,
+  Loader2
 } from 'lucide-react';
 import useAuth from '../hooks/useAuth';
-import { askAIAssistant } from '../lib/gemini';
-import SeverityBadge from '../components/ui/SeverityBadge';
+import { chatWithAI } from '../lib/gemini';
+import toast from 'react-hot-toast';
 
 export default function AIAssistant() {
   const { t } = useTranslation();
@@ -24,18 +19,16 @@ export default function AIAssistant() {
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(false);
-  
-  // Speech recognition state
   const [isListening, setIsListening] = useState(false);
+  
   const recognitionRef = useRef(null);
-
   const chatEndRef = useRef(null);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, loading]);
 
-  // Setup Web Speech API Speech Recognition
+  // Setup Web Speech API recognition
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
@@ -45,16 +38,8 @@ export default function AIAssistant() {
 
       const getSpeechLang = (lang) => {
         const mapping = {
-          en: 'en-IN',
-          hi: 'hi-IN',
-          kn: 'kn-IN',
-          ta: 'ta-IN',
-          te: 'te-IN',
-          ml: 'ml-IN',
-          bn: 'bn-IN',
-          mr: 'mr-IN',
-          gu: 'gu-IN',
-          pa: 'pa-IN'
+          en: 'en-IN', hi: 'hi-IN', kn: 'kn-IN', ta: 'ta-IN', te: 'te-IN',
+          ml: 'ml-IN', bn: 'bn-IN', mr: 'mr-IN', gu: 'gu-IN', pa: 'pa-IN'
         };
         return mapping[lang] || 'en-IN';
       };
@@ -68,7 +53,7 @@ export default function AIAssistant() {
       };
 
       rec.onerror = (err) => {
-        console.error("Speech Recognition error: ", err);
+        console.error("Speech recognition error:", err);
         setIsListening(false);
       };
 
@@ -80,35 +65,29 @@ export default function AIAssistant() {
     }
   }, []);
 
-  const startListening = () => {
-    if (recognitionRef.current) {
-      setIsListening(true);
-      try {
-        recognitionRef.current.start();
-      } catch (e) {
-        console.warn("Speech recognition already active", e);
-      }
-    } else {
-      alert("Speech recognition is not supported in this browser.");
+  const toggleListening = () => {
+    if (!recognitionRef.current) {
+      toast.error("Speech recognition is not supported in this browser.");
+      return;
     }
-  };
-
-  const stopListening = () => {
-    if (recognitionRef.current && isListening) {
+    if (isListening) {
       recognitionRef.current.stop();
-      setIsListening(false);
+    } else {
+      setIsListening(true);
+      recognitionRef.current.start();
     }
   };
 
-  // Triggers assistant response
+  // Triggers chat response
   const handleSendMessage = async (textToSend) => {
-    if (!textToSend.trim()) return;
+    const cleanText = textToSend?.trim() || inputText.trim();
+    if (!cleanText) return;
 
     // 1. Add User Message
     const userMsg = {
       id: 'user_' + Date.now(),
       sender: 'user',
-      text: textToSend,
+      text: cleanText,
       timestamp: new Date().toISOString()
     };
     
@@ -117,36 +96,25 @@ export default function AIAssistant() {
     setLoading(true);
 
     try {
-      // 2. Fetch Gemini Response
-      const userInfo = {
-        village: dbUser?.village || 'Ramanagara Town',
-        ward: dbUser?.ward || 'Ward 6',
-        district: dbUser?.district || 'Ramanagara',
-        state: dbUser?.state || 'Karnataka',
-        language: localStorage.getItem('vanguard_language') || 'en'
-      };
+      const userLocation = `${dbUser?.village || 'Ramanagara'}, ${dbUser?.district || 'Bangalore'}`;
+      const lang = localStorage.getItem('vanguard_language') || 'en';
 
-      const aiResponse = await askAIAssistant(textToSend, messages, userInfo);
+      // Call Gemini Chat Engine
+      const reply = await chatWithAI(cleanText, userLocation, lang);
 
-      // 3. Add AI Message
-      const aiMsg = {
+      // 2. Add AI Message
+      setMessages(prev => [...prev, {
         id: 'ai_' + Date.now(),
         sender: 'ai',
-        text: aiResponse.text,
-        recommendedAuthority: aiResponse.recommendedAuthority,
-        riskLevel: aiResponse.riskLevel,
-        suggestedAction: aiResponse.suggestedAction,
+        text: reply,
         timestamp: new Date().toISOString()
-      };
-
-      setMessages(prev => [...prev, aiMsg]);
+      }]);
     } catch (err) {
       console.error(err);
-      // Add Error Fallback
       setMessages(prev => [...prev, {
-        id: 'ai_error_' + Date.now(),
+        id: 'ai_err_' + Date.now(),
         sender: 'ai',
-        text: "I experienced a connection issue while communicating with Gemini AI. Please check your network and ask again.",
+        text: "I experienced a connection issue while communicating with Gemini. Please try again.",
         timestamp: new Date().toISOString()
       }]);
     } finally {
@@ -154,196 +122,151 @@ export default function AIAssistant() {
     }
   };
 
-  const handleFormSubmit = (e) => {
-    e.preventDefault();
-    handleSendMessage(inputText);
-  };
-
-  // Clear chat logs
-  const handleClearChat = () => {
+  const clearChat = () => {
     setMessages([]);
+    toast.success("Chat history cleared");
   };
 
-  const suggestedPrompts = [
-    { label: "Water overflowing near school 🏫", text: "Water overflowing near school" },
-    { label: "Who handles electricity issues? ⚡", text: "Who handles electricity issues?" },
-    { label: "Garbage not collected for 3 days 🗑", text: "Garbage not collected for 3 days" },
-    { label: "How do I report a pothole? 🕳", text: "How do I report a pothole?" }
+  const promptChips = [
+    "Water overflowing near school",
+    "Who handles electricity issues?",
+    "Garbage not collected for 3 days",
+    "How to report a pothole?"
   ];
 
   return (
-    <div className="h-[calc(100vh-140px)] flex flex-col bg-surface dark:bg-slate-800 rounded-3xl border border-border dark:border-slate-700 overflow-hidden shadow-md">
+    <div className="flex flex-col h-[calc(100vh-140px)] md:h-[calc(100vh-100px)] rounded-2xl border border-border dark:border-slate-700 bg-slate-50 dark:bg-slate-900 overflow-hidden shadow-sm">
       
-      {/* 1. Header */}
-      <div className="p-4 border-b border-border dark:border-slate-700 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/10">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-accent-soft text-accent rounded-xl flex items-center justify-center shadow-sm">
-            <ShieldCheck className="w-6 h-6" />
+      {/* Assistant Header */}
+      <div className="bg-white dark:bg-slate-800 border-b border-border dark:border-slate-700 px-6 py-4 flex items-center justify-between z-10">
+        <div className="flex items-center gap-2.5">
+          <div className="w-10 h-10 rounded-xl bg-accent-soft text-accent flex items-center justify-center">
+            <Bot className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="text-base font-black text-text dark:text-white leading-tight">VANGUARD AI</h3>
-            <p className="text-[10px] text-text-muted mt-0.5 font-bold">Ask anything about community rules or hazards</p>
+            <h2 className="text-sm font-black text-text dark:text-white">
+              🛡️ VANGUARD AI Assistant
+            </h2>
+            <span className="text-[10px] text-text-muted font-bold block mt-0.5">
+              Ask anything about civic procedures, authorities, and safety risks.
+            </span>
           </div>
         </div>
+
         {messages.length > 0 && (
-          <button 
-            onClick={handleClearChat}
-            className="w-9 h-9 text-text-muted hover:text-red-500 rounded-lg flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-700"
-            title="Clear Chat Logs"
+          <button
+            onClick={clearChat}
+            className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 flex items-center justify-center text-red-650 cursor-pointer"
+            title="Clear Chat History"
           >
-            <Trash2 className="w-4.5 h-4.5" />
+            <Trash2 className="w-4 h-4" />
           </button>
         )}
       </div>
 
-      {/* 2. Chat Conversation View */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/20 dark:bg-slate-950/15">
-        
-        {/* Suggest prompts chips when empty */}
-        {messages.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full text-center p-6 space-y-6">
-            <div className="w-16 h-16 bg-accent-soft text-accent rounded-2xl flex items-center justify-center shadow-sm">
-              <ShieldAlert className="w-8 h-8" />
+      {/* Messages scrolling view */}
+      <div className="flex-1 overflow-y-auto p-6 space-y-4">
+        {messages.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-center max-w-md mx-auto space-y-6">
+            <div className="w-16 h-16 rounded-3xl bg-accent-soft text-accent flex items-center justify-center">
+              <Bot className="w-8 h-8" />
             </div>
-            <div>
-              <h4 className="text-base font-black text-text dark:text-white">How can I help you today?</h4>
-              <p className="text-xs text-text-muted mt-1 leading-normal max-w-xs mx-auto">
-                Ask about local department guidelines, report methods, or risk predictions for safety hazards.
+            <div className="space-y-1.5">
+              <h3 className="text-sm font-black text-text dark:text-white">How can I assist you today?</h3>
+              <p className="text-xs text-text-muted leading-relaxed font-semibold">
+                I can guide you on local department responsibilities, predicted risks, or help compose a formal civic report.
               </p>
             </div>
-
-            {/* Suggested prompts list */}
-            <div className="flex flex-col gap-2 w-full max-w-sm">
-              {suggestedPrompts.map((p) => (
+            
+            {/* Suggested prompts chips */}
+            <div className="flex flex-col gap-2 w-full pt-2">
+              {promptChips.map(chip => (
                 <button
-                  key={p.label}
-                  onClick={() => handleSendMessage(p.text)}
-                  className="px-4 py-3 bg-surface hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 border border-border dark:border-slate-700 rounded-2xl text-left text-xs font-bold text-text dark:text-slate-200 transition shadow-sm cursor-pointer"
+                  key={chip}
+                  onClick={() => handleSendMessage(chip)}
+                  className="w-full text-left py-2.5 px-4 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-750 border border-border dark:border-slate-700 rounded-xl text-xs font-bold text-text dark:text-white transition cursor-pointer"
                 >
-                  {p.label}
+                  💡 "{chip}"
                 </button>
               ))}
             </div>
           </div>
-        )}
-
-        {/* Message bubbles list */}
-        {messages.map((msg) => (
-          <div 
-            key={msg.id} 
-            className={`flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}
-          >
-            <div 
-              className={`max-w-[85%] rounded-2xl p-4 shadow-sm border space-y-3 ${
-                msg.sender === 'user'
-                  ? 'bg-accent text-white border-accent-soft rounded-tr-none'
-                  : 'bg-surface dark:bg-slate-800 text-text dark:text-white border-border dark:border-slate-700 rounded-tl-none'
-              }`}
-            >
-              {/* Text message */}
-              <p className="text-sm font-semibold leading-relaxed break-words">
-                {msg.text}
-              </p>
-
-              {/* Renders dynamic cards inside AI responses */}
-              {msg.sender === 'ai' && (msg.recommendedAuthority || msg.riskLevel) && (
-                <div className="space-y-2.5 pt-2 border-t border-border dark:border-slate-700/60">
-                  {/* Severity Badge */}
-                  {msg.riskLevel && (
-                    <div className="flex items-center justify-between text-xs font-bold">
-                      <span className="text-text-muted">Hazard Level:</span>
-                      <SeverityBadge severity={msg.riskLevel} />
+        ) : (
+          <div className="space-y-4">
+            {messages.map(msg => {
+              const isOwn = msg.sender === 'user';
+              return (
+                <div key={msg.id} className={`flex gap-3 ${isOwn ? 'justify-end' : 'justify-start'} animate-fadeIn`}>
+                  {!isOwn && (
+                    <div className="w-8 h-8 rounded-lg bg-accent-soft text-accent flex items-center justify-center flex-shrink-0">
+                      <Bot className="w-4.5 h-4.5" />
                     </div>
                   )}
-
-                  {/* Authority helpline Card */}
-                  {msg.recommendedAuthority && (
-                    <div className="bg-slate-50 dark:bg-slate-900/40 p-3 rounded-xl border border-border dark:border-slate-700 flex items-center justify-between gap-3 text-left">
-                      <div className="flex items-center gap-2 text-text dark:text-white font-bold text-xs">
-                        <Building className="w-4.5 h-4.5 text-accent" />
-                        <span className="truncate max-w-[140px]">{msg.recommendedAuthority}</span>
-                      </div>
-                      <button 
-                        onClick={() => alert(`Calling ${msg.recommendedAuthority} Helpline`)}
-                        className="h-8 px-3 bg-accent text-white text-[10px] font-black rounded-lg flex items-center gap-1 cursor-pointer transition active:scale-95"
-                      >
-                        Helpline
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Action alert box */}
-                  {msg.suggestedAction && (
-                    <div className="flex gap-2 text-xs text-text-muted leading-relaxed font-semibold">
-                      <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
-                      <span>Next Step: {msg.suggestedAction}</span>
+                  <div className={`max-w-[75%] p-3.5 rounded-2xl text-xs leading-relaxed ${
+                    isOwn 
+                      ? 'bg-accent text-white rounded-tr-none shadow-sm' 
+                      : 'bg-white dark:bg-slate-800 text-text dark:text-white rounded-tl-none shadow-sm border border-border dark:border-slate-700 font-semibold'
+                  }`}>
+                    {msg.text}
+                  </div>
+                  {isOwn && (
+                    <div className="w-8 h-8 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-350 flex items-center justify-center flex-shrink-0">
+                      <User className="w-4.5 h-4.5" />
                     </div>
                   )}
                 </div>
-              )}
+              );
+            })}
 
-              <span className={`text-[8px] font-semibold mt-1 block text-right leading-none ${
-                msg.sender === 'user' ? 'text-white/60' : 'text-text-muted'
-              }`}>
-                {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </span>
-            </div>
-          </div>
-        ))}
-
-        {/* AI Thinking Loader */}
-        {loading && (
-          <div className="flex items-center gap-2 p-4 bg-surface dark:bg-slate-800 rounded-2xl border border-border dark:border-slate-700 max-w-[140px]">
-            <span className="w-2 h-2 rounded-full bg-accent animate-bounce" />
-            <span className="w-2 h-2 rounded-full bg-accent animate-bounce" style={{ animationDelay: '0.2s' }} />
-            <span className="w-2 h-2 rounded-full bg-accent animate-bounce" style={{ animationDelay: '0.4s' }} />
-            <span className="text-[10px] font-bold text-text-muted uppercase">Vanguard AI</span>
+            {/* Typing Indicator */}
+            {loading && (
+              <div className="flex gap-3 justify-start items-center animate-fadeIn">
+                <div className="w-8 h-8 rounded-lg bg-accent-soft text-accent flex items-center justify-center flex-shrink-0">
+                  <Bot className="w-4.5 h-4.5" />
+                </div>
+                <div className="bg-white dark:bg-slate-800 border border-border dark:border-slate-700 p-3.5 rounded-2xl rounded-tl-none flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 bg-accent rounded-full animate-bounce delay-75" />
+                  <span className="w-1.5 h-1.5 bg-accent rounded-full animate-bounce delay-150" />
+                  <span className="w-1.5 h-1.5 bg-accent rounded-full animate-bounce delay-300" />
+                </div>
+              </div>
+            )}
           </div>
         )}
         <div ref={chatEndRef} />
       </div>
 
-      {/* 3. Bottom Input Area */}
-      <form onSubmit={handleFormSubmit} className="p-3 border-t border-border dark:border-slate-700 flex items-center gap-2 relative bg-surface dark:bg-slate-800">
-        
-        {/* Voice Input mic */}
-        {isListening ? (
-          <button
-            type="button"
-            onClick={stopListening}
-            className="w-12 h-12 bg-red-600 text-white rounded-xl flex items-center justify-center animate-pulse shadow-md cursor-pointer"
-            title="Stop listening"
-          >
-            <Square className="w-5 h-5 fill-white" />
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={startListening}
-            className="w-12 h-12 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-text-muted hover:text-accent rounded-xl flex items-center justify-center cursor-pointer transition"
-            title="Voice input"
-          >
-            <Mic className="w-5 h-5" />
-          </button>
-        )}
+      {/* Input controls bar */}
+      <form 
+        onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }}
+        className="bg-white dark:bg-slate-800 border-t border-border dark:border-slate-700 p-4 flex items-center gap-3"
+      >
+        <button
+          type="button"
+          onClick={toggleListening}
+          className={`w-11 h-11 rounded-xl flex items-center justify-center cursor-pointer border ${
+            isListening 
+              ? 'bg-red-600 text-white animate-pulse border-red-650' 
+              : 'bg-slate-100 dark:bg-slate-700 text-text-muted border-border dark:border-slate-650'
+          }`}
+          title="Voice input"
+        >
+          <Mic className="w-5 h-5 text-accent" />
+        </button>
 
-        {/* Text Area */}
         <input
-          type="text"
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
-          placeholder={isListening ? "Listening... Speak now" : "Ask VANGUARD assistant anything..."}
-          disabled={loading || isListening}
-          className="flex-1 bg-slate-50 dark:bg-slate-900 border border-border dark:border-slate-700 rounded-xl px-4 text-sm font-semibold text-text dark:text-white outline-none focus:border-accent min-h-[44px]"
+          placeholder="Ask a question..."
+          className="flex-1 h-11 px-4 bg-slate-50 dark:bg-slate-900 border border-border dark:border-slate-700 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-accent dark:text-white"
         />
 
-        {/* Submit */}
         <button
           type="submit"
-          disabled={!inputText.trim() || loading}
-          className="w-12 h-12 bg-accent hover:bg-opacity-95 text-white flex items-center justify-center rounded-xl cursor-pointer shadow-md disabled:opacity-40 transition active:scale-95 flex-shrink-0"
+          disabled={!inputText.trim()}
+          className="w-11 h-11 bg-accent disabled:opacity-40 text-white rounded-xl flex items-center justify-center cursor-pointer shadow-sm animate-fadeIn"
         >
-          <Send className="w-5 h-5 fill-white" />
+          <Send className="w-4 h-4" />
         </button>
       </form>
     </div>
