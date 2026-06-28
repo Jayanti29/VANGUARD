@@ -1,3 +1,4 @@
+// VANGUARD Authentication Context Provider
 import { createContext, useContext, useEffect, useState } from 'react'
 import { onAuthStateChanged, signInAnonymously,
          signInWithPopup, GoogleAuthProvider,
