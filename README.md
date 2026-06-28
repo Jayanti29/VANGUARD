@@ -7,7 +7,8 @@
 **Problem Statement:** Addressing civic safety, emergency escalation, and local labor development in rural and urban India using agentic AI.
 
 ## 🚀 Live Demo
-[Firebase Hosting URL Placeholder]
+- Production: https://client-eight-sigma-10.vercel.app
+- Alternative: https://client-j711p1ga9-jayanti29s-projects.vercel.app
 
 ## 📹 Demo Video
 [Link to 2-3 min screen recording Placeholder]
