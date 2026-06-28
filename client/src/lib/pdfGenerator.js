@@ -1,138 +1,93 @@
-import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
+import jsPDF from 'jspdf'
 
-// Generate the PDF document layout
-const buildPdfDocument = (issue) => {
-  const doc = new jsPDF({
-    orientation: 'portrait',
-    unit: 'mm',
-    format: 'a4'
-  });
+export function generateIssuePDF(issue, aiResult) {
+  const doc = new jsPDF()
+  const pageWidth = doc.internal.pageSize.getWidth()
 
-  const timestamp = new Date(issue.createdAt || new Date()).toLocaleString();
+  // Header
+  doc.setFillColor(15, 43, 78)
+  doc.rect(0, 0, pageWidth, 30, 'F')
+  doc.setTextColor(255, 255, 255)
+  doc.setFontSize(20)
+  doc.setFont('helvetica', 'bold')
+  doc.text('VANGUARD', 14, 18)
+  doc.setFontSize(10)
+  doc.setFont('helvetica', 'normal')
+  doc.text('AI-Powered Community Protection Platform', 14, 25)
 
-  // Page Colors
-  const navyColor = [15, 43, 78]; // #0F2B4E Primary
-  const blueColor = [27, 111, 216]; // #1B6FD8 Accent
-  const darkTextColor = [15, 23, 42]; // #0F172A Text
+  // Title
+  doc.setTextColor(15, 43, 78)
+  doc.setFontSize(16)
+  doc.setFont('helvetica', 'bold')
+  doc.text('Community Issue Report', 14, 45)
 
-  // Header Title
-  doc.setFont('Helvetica', 'bold');
-  doc.setFontSize(22);
-  doc.setTextColor(navyColor[0], navyColor[1], navyColor[2]);
-  doc.text('VANGUARD AI', 14, 20);
+  // Severity badge color
+  const severityColors = {
+    green: [22, 163, 74],
+    yellow: [234, 179, 8],
+    orange: [234, 88, 12],
+    red: [220, 38, 38]
+  }
+  const color = severityColors[aiResult.severity] || [100, 100, 100]
+  doc.setFillColor(...color)
+  doc.roundedRect(pageWidth - 60, 35, 50, 12, 3, 3, 'F')
+  doc.setTextColor(255, 255, 255)
+  doc.setFontSize(10)
+  doc.setFont('helvetica', 'bold')
+  doc.text(aiResult.severityLabel || aiResult.severity.toUpperCase(), 
+           pageWidth - 35, 43, { align: 'center' })
 
-  doc.setFontSize(10);
-  doc.setFont('Helvetica', 'normal');
-  doc.setTextColor(100, 116, 139);
-  doc.text('COMMUNITY PROTECTION PLATFORM', 14, 25);
+  // Issue details
+  doc.setTextColor(0, 0, 0)
+  doc.setFontSize(11)
+  doc.setFont('helvetica', 'bold')
+  doc.text('Issue Details', 14, 60)
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(10)
+  doc.text(`Category: ${aiResult.categoryLabel || aiResult.category}`, 14, 70)
+  doc.text(`Reported: ${new Date().toLocaleString('en-IN')}`, 14, 78)
+  doc.text(`Location: ${issue.address || 'Community Area'}`, 14, 86)
+  doc.text(`Ward: ${issue.ward || 'N/A'} | Village: ${issue.village || 'N/A'}`, 14, 94)
 
-  doc.setFontSize(14);
-  doc.setFont('Helvetica', 'bold');
-  doc.setTextColor(blueColor[0], blueColor[1], blueColor[2]);
-  doc.text('CIVIC SAFETY & INCIDENT REPORT', 110, 20);
+  // AI Analysis
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(11)
+  doc.text('AI Analysis', 14, 108)
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(10)
+  doc.text(`Impact Score: ${aiResult.impactScore}/100`, 14, 118)
+  doc.text(`Risk Type: ${aiResult.riskType}`, 14, 126)
+  doc.text(`Recommended Authority: ${aiResult.recommendedAuthority}`, 14, 134)
+  doc.text(`Escalation Level: ${aiResult.escalationLevel?.toUpperCase()}`, 14, 142)
 
-  // Line separator
-  doc.setDrawColor(226, 232, 240);
-  doc.setLineWidth(0.5);
-  doc.line(14, 28, 196, 28);
+  // Risk prediction
+  doc.setFont('helvetica', 'bold')
+  doc.text('Risk Prediction:', 14, 154)
+  doc.setFont('helvetica', 'normal')
+  const riskLines = doc.splitTextToSize(aiResult.riskPrediction || '', pageWidth - 28)
+  doc.text(riskLines, 14, 162)
 
-  // Section 1: Issue Details (Table)
-  doc.autoTable({
-    startY: 32,
-    head: [[{ content: 'SECTION 1: INCIDENT SUMMARY', colSpan: 2 }]],
-    body: [
-      ['Category:', issue.categoryLabel || issue.category || 'Other'],
-      ['Reported By:', `${issue.reporterName || 'Citizen'} (${issue.village || 'Ramanagara'}${issue.ward ? `, ${issue.ward}` : ''})`],
-      ['Date & Time:', timestamp],
-      ['Location Coords:', `Lat: ${Number(issue.lat).toFixed(5)}, Lng: ${Number(issue.lng).toFixed(5)}`]
-    ],
-    theme: 'striped',
-    headStyles: { fillColor: navyColor, fontSize: 10, fontStyle: 'bold' },
-    bodyStyles: { fontSize: 9, textColor: darkTextColor },
-    columnStyles: { 0: { cellWidth: 40, fontStyle: 'bold' } },
-    margin: { left: 14, right: 14 }
-  });
+  // AI Report
+  const reportY = 162 + (riskLines.length * 7) + 10
+  doc.setFillColor(240, 245, 255)
+  doc.rect(14, reportY - 6, pageWidth - 28, 40, 'F')
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(11)
+  doc.text('Official Complaint Text:', 18, reportY + 2)
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(10)
+  const reportLines = doc.splitTextToSize(aiResult.reportText || '', pageWidth - 36)
+  doc.text(reportLines, 18, reportY + 10)
 
-  // Section 2: AI Safety Analysis (Table)
-  const severityLabel = issue.severity ? issue.severity.toUpperCase() : 'GREEN';
-  
-  doc.autoTable({
-    startY: doc.lastAutoTable.finalY + 6,
-    head: [[{ content: 'SECTION 2: AI HAZARD CLASSIFICATION', colSpan: 2 }]],
-    body: [
-      ['Risk Classification:', severityLabel],
-      ['Impact Score:', `${issue.impactScore || 30} / 100`],
-      ['Hazard Prediction:', issue.riskSummary || 'Potential accident or environmental risk.'],
-      ['Escalation Level:', (issue.escalationLevel || 'community').toUpperCase()]
-    ],
-    theme: 'grid',
-    headStyles: { fillColor: blueColor, fontSize: 10, fontStyle: 'bold' },
-    bodyStyles: { fontSize: 9, textColor: darkTextColor },
-    columnStyles: { 0: { cellWidth: 45, fontStyle: 'bold' } },
-    margin: { left: 14, right: 14 }
-  });
+  // Footer
+  doc.setFillColor(15, 43, 78)
+  doc.rect(0, 275, pageWidth, 22, 'F')
+  doc.setTextColor(255, 255, 255)
+  doc.setFontSize(8)
+  doc.text('Generated by VANGUARD AI • ' + new Date().toLocaleString('en-IN'), 
+           pageWidth / 2, 284, { align: 'center' })
+  doc.text('This report can be submitted to the relevant government authority.', 
+           pageWidth / 2, 290, { align: 'center' })
 
-  // Section 3: AI Complaint Draft (Bordered Box)
-  const finalY = doc.lastAutoTable.finalY + 6;
-  doc.setFontSize(10);
-  doc.setFont('Helvetica', 'bold');
-  doc.setTextColor(navyColor[0], navyColor[1], navyColor[2]);
-  doc.text('SECTION 3: PROFESSIONAL COMPLAINT TEXT (AI DRAFT)', 14, finalY + 4);
-
-  const reportText = issue.aiReportText || `This report formalizes a community complaint regarding a local hazard classified under ${issue.categoryLabel || issue.category}. Urgent repair or cleanup is requested to safeguard public health and accessibility.`;
-  
-  doc.setFont('Helvetica', 'oblique');
-  doc.setFontSize(9.5);
-  doc.setTextColor(51, 65, 85);
-  
-  // Renders multi-line text inside a bordered rectangle box
-  const splitText = doc.splitTextToSize(reportText, 172);
-  const textHeight = splitText.length * 5;
-  const boxHeight = textHeight + 8;
-
-  doc.setDrawColor(203, 213, 225);
-  doc.setFillColor(248, 250, 252);
-  doc.rect(14, finalY + 7, 182, boxHeight, 'FD');
-  doc.text(splitText, 18, finalY + 13);
-
-  // Section 4: Recommended Action
-  const nextSectionY = finalY + 7 + boxHeight + 6;
-  doc.autoTable({
-    startY: nextSectionY,
-    head: [[{ content: 'SECTION 4: RESOLUTION RECOMMENDATION', colSpan: 2 }]],
-    body: [
-      ['Recommended Board:', issue.recommendedAuthority || 'Local Municipal Ward Office'],
-      ['Escalation Status:', issue.escalationLevel ? issue.escalationLevel.toUpperCase() : 'COMMUNITY'],
-      ['Required Next Step:', issue.suggestedAction || 'Alert residents and dispatch maintenance staff.']
-    ],
-    theme: 'striped',
-    headStyles: { fillColor: navyColor, fontSize: 10, fontStyle: 'bold' },
-    bodyStyles: { fontSize: 9, textColor: darkTextColor },
-    columnStyles: { 0: { cellWidth: 45, fontStyle: 'bold' } },
-    margin: { left: 14, right: 14 }
-  });
-
-  // Footer text
-  const footerY = 285;
-  doc.setFont('Helvetica', 'normal');
-  doc.setFontSize(8);
-  doc.setTextColor(148, 163, 184);
-  doc.text(`Generated by VANGUARD AI • ${timestamp}`, 14, footerY);
-  doc.text('This report is digitally compiled and ready for submittal to the relevant municipal authority.', 110, footerY);
-
-  return doc;
-};
-
-// Download trigger directly in client browser
-export const downloadPdfReport = (issue) => {
-  const doc = buildPdfDocument(issue);
-  const cleanName = (issue.category || 'report').toLowerCase().replace(/\s+/g, '_');
-  doc.save(`vanguard_${cleanName}_report.pdf`);
-};
-
-// Generates blob format to upload to Firebase Storage
-export const generatePdfBlob = (issue) => {
-  const doc = buildPdfDocument(issue);
-  return doc.output('blob');
-};
+  return doc
+}
