@@ -152,11 +152,26 @@ export default function Login() {
       {/* Invisible reCAPTCHA Container */}
       <div id="recaptcha-container"></div>
 
-      <div className="text-center space-y-2">
-        <h1 className="text-2xl font-black text-primary dark:text-white flex items-center justify-center gap-1.5 uppercase">
-          🛡️ VANGUARD
+      <div className="text-center flex flex-col items-center justify-center space-y-3">
+        {/* V icon with glow */}
+        <div className="relative group mt-2">
+          <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 via-teal-500 to-green-500 rounded-2xl blur opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
+          <img 
+            src="/vanguard-logo.png" 
+            alt="VANGUARD Logo" 
+            className="relative w-20 h-20 rounded-2xl object-contain bg-slate-900 p-1.5" 
+          />
+        </div>
+
+        <h1 className="text-2xl font-black text-primary dark:text-white uppercase tracking-wider mt-2">
+          VANGUARD
         </h1>
-        <p className="text-xs text-text-muted">Sign In to Your Community Hub</p>
+        <h2 className="text-sm font-bold text-accent">
+          AI Community Guardian
+        </h2>
+        <p className="text-xs text-text-muted font-bold">
+          Protect &bull; Connect &bull; Empower
+        </p>
       </div>
 
       {/* Guest Login Bypass Buttons */}
