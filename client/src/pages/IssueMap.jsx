@@ -30,24 +30,41 @@ function MapController({ triggerLocate, setTriggerLocate, userCoords }) {
   const map = useMap();
 
   useEffect(() => {
-    // Initial locate on load
-    map.locate({ setView: true, maxZoom: 13 });
-
-    map.on('locationfound', (e) => {
-      map.flyTo(e.latlng, 13);
-    });
-
-    map.on('locationerror', () => {
-      console.warn("Location access denied, flying to default user coordinates.");
+    // Initial locate on mount using navigator.geolocation
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          map.setView([latitude, longitude], 13);
+        },
+        (error) => {
+          console.warn("Geolocation failed on mount, centering on user default coords:", error);
+          if (userCoords) {
+            map.setView(userCoords, 13);
+          }
+        },
+        { timeout: 10000 }
+      );
+    } else {
       if (userCoords) {
-        map.flyTo(userCoords, 13);
+        map.setView(userCoords, 13);
       }
-    });
+    }
   }, [map]);
 
   useEffect(() => {
     if (triggerLocate) {
-      map.locate({ setView: true, maxZoom: 13 });
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const { latitude, longitude } = position.coords;
+            map.setView([latitude, longitude], 13);
+          },
+          (error) => {
+            console.warn("Geolocation click failed:", error);
+          }
+        );
+      }
       setTriggerLocate(false);
     }
   }, [triggerLocate, map]);
@@ -67,9 +84,9 @@ export default function IssueMap() {
   const [showFilters, setShowFilters] = useState(false);
   const [triggerLocate, setTriggerLocate] = useState(false);
 
-  // Set default center coordinates to user coords or Ramanagara
+  // Default coordinate pairs
   const userCoords = [dbUser?.lat || 12.7244, dbUser?.lng || 77.2911];
-  const mapCenter = [20.5937, 78.9629]; // center of India default
+  const mapCenter = [20.5937, 78.9629]; // center of India
 
   // 10 sample officials with realistic Indian names and roles
   const sampleOfficials = [
@@ -183,7 +200,7 @@ export default function IssueMap() {
       <div className="h-[calc(100vh-210px)] md:h-[calc(100vh-160px)] w-full rounded-2xl overflow-hidden border border-border dark:border-slate-700 relative shadow-sm z-0">
         <MapContainer
           center={mapCenter}
-          zoom={13}
+          zoom={5}
           style={{ width: '100%', height: '100%' }}
           zoomControl={true}
         >
@@ -247,7 +264,7 @@ export default function IssueMap() {
                         onClick={() => navigate(`/issues/${issue.id}`)}
                         className="text-accent font-black hover:underline flex items-center gap-0.5"
                       >
-                        View Details <ArrowRight className="w-3 h-3" />
+                        View Details <ArrowRight className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>
@@ -320,7 +337,7 @@ export default function IssueMap() {
         <div className="fixed bottom-[72px] md:bottom-6 left-4 right-4 md:left-[270px] md:right-6 bg-surface dark:bg-slate-800 rounded-2xl border border-border dark:border-slate-700 p-4 shadow-xl z-50 flex gap-4 max-w-xl mx-auto">
           <button 
             onClick={() => setSelectedPin(null)}
-            className="absolute top-2.5 right-2.5 w-7 h-7 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 rounded-full flex items-center justify-center text-text-muted"
+            className="absolute top-2.5 right-2.5 w-7 h-7 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-650 rounded-full flex items-center justify-center text-text-muted"
           >
             <X className="w-4 h-4" />
           </button>

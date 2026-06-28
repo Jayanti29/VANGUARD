@@ -104,7 +104,24 @@ export default function ReportIssue() {
       const rec = new SpeechRecognition();
       rec.continuous = false;
       rec.interimResults = false;
-      rec.lang = localStorage.getItem('vanguard_language') === 'hi' ? 'hi-IN' : 'en-IN';
+
+      const getSpeechLang = (lang) => {
+        const mapping = {
+          en: 'en-IN',
+          hi: 'hi-IN',
+          kn: 'kn-IN',
+          ta: 'ta-IN',
+          te: 'te-IN',
+          ml: 'ml-IN',
+          bn: 'bn-IN',
+          mr: 'mr-IN',
+          gu: 'gu-IN',
+          pa: 'pa-IN'
+        };
+        return mapping[lang] || 'en-IN';
+      };
+
+      rec.lang = getSpeechLang(localStorage.getItem('vanguard_language') || 'en');
       
       rec.onresult = (event) => {
         const text = event.results[0][0].transcript;

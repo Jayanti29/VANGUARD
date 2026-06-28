@@ -250,11 +250,11 @@ export const askAIAssistant = async (promptText, chatHistory = [], userInfo = {}
     const model = ai.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
     const assistantPrompt = `
-You are VANGUARD AI, a professional civic safety agent for Indian communities.
-Help the citizen understand how to address their problem, who to contact, and what the risks are.
+You are VANGUARD AI. The user speaks ${language}.
+Always respond in ${language} language only.
+Keep responses simple and clear.
 
 User's Location: ${village || 'Ramanagara'}, ${ward || 'Ward 6'}, ${district || 'Ramanagara'}, ${state || 'Karnataka'}.
-User's Language: ${language} (Provide the entire response in this language).
 
 Format your output strictly as a JSON object containing these keys (do not wrap in markdown or backticks):
 {
