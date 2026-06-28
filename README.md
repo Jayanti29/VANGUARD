@@ -3,9 +3,6 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Jayanti29/VANGUARD">
-    <img src="https://img.shields.io/badge/Vanguard-Hackathon_Submission-9c27b0?style=for-the-badge&logo=github" alt="Vanguard Hackathon" />
-  </a>
   <a href="https://react.dev">
     <img src="https://img.shields.io/badge/React-18.x-blue?style=for-the-badge&logo=react" alt="React Badge" />
   </a>
@@ -15,17 +12,11 @@
   <a href="https://ai.google.dev">
     <img src="https://img.shields.io/badge/Gemini_AI-1.5_Flash-4285f4?style=for-the-badge&logo=google-gemini" alt="Gemini Badge" />
   </a>
-</p>
-
-<p align="center">
   <a href="https://www.typescriptlang.org">
     <img src="https://img.shields.io/badge/TypeScript-Supported-3178c6?style=for-the-badge&logo=typescript" alt="TypeScript Badge" />
   </a>
   <a href="https://tailwindcss.com">
     <img src="https://img.shields.io/badge/Tailwind_CSS-3.x-38bdf8?style=for-the-badge&logo=tailwind-css" alt="Tailwind Badge" />
-  </a>
-  <a href="https://vercel.com">
-    <img src="https://img.shields.io/badge/Vercel-Deployment-000000?style=for-the-badge&logo=vercel" alt="Vercel Badge" />
   </a>
 </p>
 
