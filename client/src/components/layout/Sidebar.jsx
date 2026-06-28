@@ -25,46 +25,59 @@ export default function Sidebar() {
   const { dbUser } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
 
+  const theme = {
+    bg: 'var(--bg)',
+    surface: 'var(--surface)',
+    surface2: 'var(--surface-2)',
+    text: 'var(--text)',
+    muted: 'var(--text-muted)',
+    border: 'var(--border)',
+    accent: 'var(--accent)',
+    accentSoft: 'var(--accent-soft)',
+  };
+
   const menuItems = [
     { path: '/', label: t('common.home', 'Home'), icon: Home },
     { path: '/map', label: t('common.map', 'Live Map'), icon: Map },
     { path: '/community', label: t('common.community', 'Community Chat'), icon: MessageSquare },
     { path: '/workers', label: t('common.workers', 'Worker Market'), icon: Users },
-    { path: '/emergency', label: t('common.emergency', 'Emergency Alert'), icon: AlertTriangle, badge: '🚨' },
+    { path: '/emergency', label: t('common.emergency', 'Emergency Alert'), icon: AlertTriangle, badge: 'Alert' },
     { path: '/ai', label: t('common.ai', 'AI Assistant'), icon: ShieldAlert },
     { path: '/officials', label: t('common.officials', 'Officials Directory'), icon: Building },
     { path: '/profile', label: t('common.profile', 'Profile'), icon: User }
   ];
 
-  // If official, show admin link
-  if (dbUser?.role === 'Official') {
+  if ((dbUser?.role || '').toLowerCase() === 'official') {
     menuItems.push({ path: '/admin', label: t('common.admin', 'Admin Panel'), icon: ShieldCheck });
   }
 
   return (
     <div 
-      className={`hidden md:flex flex-col bg-surface dark:bg-slate-800 border-r border-border dark:border-slate-700 h-screen sticky top-0 left-0 transition-all duration-300 ${
-        collapsed ? 'w-20' : 'w-60'
-      } z-40`}
+      style={{
+        background: theme.surface,
+        borderRight: '1px solid ' + theme.border,
+        color: theme.text,
+        width: collapsed ? '64px' : '220px'
+      }}
+      className="hidden md:flex flex-col h-screen sticky top-0 left-0 transition-all duration-300 z-40"
     >
       {/* Title / Logo header */}
-      <div className="p-4 border-b border-border dark:border-slate-700 flex items-center justify-between min-h-[72px]">
+      <div 
+        style={{ borderBottom: '1px solid ' + theme.border }}
+        className="p-4 flex items-center justify-between min-h-[72px]"
+      >
         {!collapsed && (
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-accent text-white flex items-center justify-center rounded-xl shadow-md">
-              <ShieldCheck className="w-5 h-5" />
-            </div>
-            <span className="font-extrabold text-lg text-primary dark:text-white tracking-wider">VANGUARD</span>
-          </div>
+          <img src="/vanguard-logo.png" alt="VANGUARD" 
+               style={{height:'48px', objectFit:'contain'}} />
         )}
         {collapsed && (
-          <div className="w-8 h-8 bg-accent text-white flex items-center justify-center rounded-xl mx-auto">
-            <ShieldCheck className="w-5 h-5" />
-          </div>
+          <img src="/vanguard-logo.png" alt="V" 
+               style={{height:'32px', objectFit:'contain', margin:'0 auto'}} />
         )}
         <button 
           onClick={() => setCollapsed(!collapsed)}
-          className="text-text-muted hover:text-text dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer"
+          style={{ color: theme.muted }}
+          className="hover:text-text p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer"
         >
           {collapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
         </button>
@@ -79,16 +92,16 @@ export default function Sidebar() {
             <button
               key={item.path}
               onClick={() => navigate(item.path)}
-              className={`w-full flex items-center gap-3 p-3 rounded-xl font-medium transition duration-200 cursor-pointer ${
-                isActive 
-                  ? 'bg-accent-soft text-accent dark:bg-slate-700 dark:text-blue-400 font-bold' 
-                  : 'text-text hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/50'
-              }`}
+              style={{
+                background: isActive ? theme.accentSoft : 'transparent',
+                color: isActive ? theme.accent : theme.muted
+              }}
+              className={`w-full flex items-center gap-3 p-3 rounded-xl font-medium transition duration-200 cursor-pointer`}
             >
-              <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-accent dark:text-blue-400 scale-105' : 'text-text-muted dark:text-slate-400'}`} />
+              <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'scale-105' : ''}`} />
               {!collapsed && <span className="text-sm truncate">{item.label}</span>}
               {!collapsed && item.badge && (
-                <span className="ml-auto text-xs animate-pulse bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300 px-1.5 py-0.5 rounded-md font-bold">
+                <span className="ml-auto text-[10px] animate-pulse bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300 px-1.5 py-0.5 rounded-md font-bold uppercase">
                   {item.badge}
                 </span>
               )}
@@ -99,15 +112,18 @@ export default function Sidebar() {
 
       {/* User Summary footer */}
       {!collapsed && dbUser && (
-        <div className="p-4 border-t border-border dark:border-slate-700 bg-slate-50 dark:bg-slate-900/30 flex items-center gap-3">
+        <div 
+          style={{ borderTop: '1px solid ' + theme.border, background: theme.surface2 }}
+          className="p-4 flex items-center gap-3"
+        >
           <img 
             src={dbUser.profileImageUrl || 'https://api.dicebear.com/7.x/bottts/svg?seed=user'} 
             alt="avatar" 
-            className="w-10 h-10 rounded-xl object-cover bg-slate-200"
+            className="w-10 h-10 rounded-xl object-cover"
           />
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-text dark:text-white truncate">{dbUser.name}</p>
-            <p className="text-xs text-text-muted truncate capitalize">{dbUser.role}</p>
+            <p className="text-sm font-bold truncate" style={{ color: theme.text }}>{dbUser.name}</p>
+            <p className="text-xs truncate capitalize" style={{ color: theme.muted }}>{dbUser.role}</p>
           </div>
         </div>
       )}
