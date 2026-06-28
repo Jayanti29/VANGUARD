@@ -74,7 +74,6 @@ export default function Home() {
     useEffect(() => {
       if (!dbUser) return;
 
-      // 1. Open issues in user's ward
       const openQ = query(
         collection(db, 'issues'),
         where('ward', '==', dbUser.ward || '6'),
@@ -84,7 +83,6 @@ export default function Home() {
         setOpenIssuesCount(snap.size);
       });
 
-      // 2. Issues reported by current user
       const myQ = query(
         collection(db, 'issues'),
         where('reporterId', '==', dbUser.uid)
@@ -93,7 +91,6 @@ export default function Home() {
         setMyReportsCount(snap.size);
       });
 
-      // 3. Community members count (district match)
       const usersQ = query(
         collection(db, 'users'),
         where('district', '==', dbUser.district || 'Ramanagara')
@@ -102,7 +99,6 @@ export default function Home() {
         if (snap.size > 0) setCommunityCount(snap.size);
       });
 
-      // 4. Last 5 issues
       const recentQ = query(
         collection(db, 'issues'),
         where('village', '==', dbUser.village || 'Ramanagara'),
@@ -226,7 +222,6 @@ export default function Home() {
     const [availableJobs, setAvailableJobs] = useState([]);
     const [myApplications, setMyApplications] = useState([]);
     
-    // Application modal state
     const [selectedJob, setSelectedJob] = useState(null);
     const [proposedRate, setProposedRate] = useState(dbUser?.dailyRate || 400);
     const [coverMessage, setCoverMessage] = useState('');
@@ -235,11 +230,9 @@ export default function Home() {
     useEffect(() => {
       if (!dbUser) return;
 
-      // 1. Availability check
       setIsAvailable(dbUser.isAvailable !== false);
       setAvgRating(dbUser.rating || 5.0);
 
-      // 2. Fetch jobs matching worker district
       const jobsQ = query(
         collection(db, 'jobPosts'),
         where('status', '==', 'open'),
@@ -254,7 +247,6 @@ export default function Home() {
         setAvailableJobs(matched);
       });
 
-      // 3. Fetch applications matching current user
       const appsQ = query(
         collection(db, 'worker_applications'),
         where('workerId', '==', dbUser.uid)
@@ -380,19 +372,19 @@ export default function Home() {
 
         {/* Quick Actions */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <button onClick={() => navigate('/workers')} style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', justify: 'center', gap: '8px', cursor: 'pointer', boxShadow: 'var(--shadow)' }}>
+          <button onClick={() => navigate('/workers')} style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', boxShadow: 'var(--shadow)' }}>
             <Briefcase size={24} className="text-amber-500" />
             <span style={{ fontSize: '11px', fontWeight: 800, color: theme.text }}>Browse Jobs</span>
           </button>
-          <button onClick={() => navigate('/workers?tab=applications')} style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', justify: 'center', gap: '8px', cursor: 'pointer', boxShadow: 'var(--shadow)' }}>
+          <button onClick={() => navigate('/workers?tab=applications')} style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', boxShadow: 'var(--shadow)' }}>
             <FileText size={24} className="text-blue-500" />
             <span style={{ fontSize: '11px', fontWeight: 800, color: theme.text }}>My Applications</span>
           </button>
-          <button onClick={() => navigate('/profile')} style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', justify: 'center', gap: '8px', cursor: 'pointer', boxShadow: 'var(--shadow)' }}>
+          <button onClick={() => navigate('/profile')} style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', boxShadow: 'var(--shadow)' }}>
             <User size={24} className="text-purple-500" />
             <span style={{ fontSize: '11px', fontWeight: 800, color: theme.text }}>Edit Profile</span>
           </button>
-          <button onClick={() => navigate('/community')} style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', justify: 'center', gap: '8px', cursor: 'pointer', boxShadow: 'var(--shadow)' }}>
+          <button onClick={() => navigate('/community')} style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', boxShadow: 'var(--shadow)' }}>
             <MessageSquare size={24} className="text-blue-500" />
             <span style={{ fontSize: '11px', fontWeight: 800, color: theme.text }}>Community</span>
           </button>
@@ -829,7 +821,7 @@ export default function Home() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               {reportersToday.map(r => (
-                <div key={r.name} style={{ background: theme.surface2, border: '1px solid ' + theme.border, padding: '16px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div key={r.name} style={{ background: theme.surface2, border: '1px solid ' + theme.border, padding: '16px', borderRadius: '12px', display: 'flex', justify: 'space-between', alignItems: 'center' }}>
                   <div>
                     <span style={{ fontSize: '12px', fontWeight: 800, color: theme.text, display: 'block' }}>{r.name}</span>
                     <span style={{ fontSize: '10px', color: theme.muted }}>Village: {r.village} &bull; Ward {r.ward}</span>
@@ -962,6 +954,210 @@ export default function Home() {
             </div>
           </div>
         )}
+      </div>
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // VOLUNTEER DASHBOARD
+  // ─────────────────────────────────────────────────────────────────
+  if (role === 'volunteer') {
+    const [confirmedCount, setConfirmedCount] = useState(0);
+    const [reportedCount, setReportedCount] = useState(0);
+    const [emergenciesResponded, setEmergenciesResponded] = useState(0);
+    const [activeEmergencies, setActiveEmergencies] = useState([]);
+    const [needingConfirm, setNeedingConfirm] = useState([]);
+
+    useEffect(() => {
+      if (!dbUser) return;
+
+      // 1. Fetch reported count
+      const repQ = query(collection(db, 'issues'), where('reporterId', '==', dbUser.uid));
+      const unsubRep = onSnapshot(repQ, (snap) => {
+        setReportedCount(snap.size);
+      });
+
+      // 2. Fetch confirmed issues count
+      const confQ = query(collection(db, 'issues'));
+      const unsubConf = onSnapshot(confQ, (snap) => {
+        const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const myConfirmed = docs.filter(i => (i.confirmations || []).includes(dbUser.uid));
+        setConfirmedCount(myConfirmed.length);
+        
+        // Find issues needing confirmation (less than 3 confirmations, open status, in same district)
+        const unconfirmed = docs.filter(i => 
+          i.status === 'open' && 
+          (!i.confirmations || i.confirmations.length < 3) &&
+          i.district === dbUser.district
+        );
+        setNeedingConfirm(unconfirmed);
+      });
+
+      // 3. Fetch active emergencies
+      const emerQ = query(collection(db, 'emergencies'), where('isResolved', '==', false));
+      const unsubEmer = onSnapshot(emerQ, (snap) => {
+        const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        setActiveEmergencies(docs);
+        
+        const myResponses = docs.filter(e => (e.responders || []).includes(dbUser.name)).length;
+        setEmergenciesResponded(myResponses);
+      });
+
+      return () => {
+        unsubRep();
+        unsubConf();
+        unsubEmer();
+      };
+    }, [dbUser]);
+
+    const handleConfirm = async (issueId, currentConfirmations = []) => {
+      if (currentConfirmations.includes(dbUser.uid)) {
+        toast.error("You already confirmed this issue!");
+        return;
+      }
+      try {
+        await updateDoc(doc(db, 'issues', issueId), {
+          confirmations: [...currentConfirmations, dbUser.uid]
+        });
+        toast.success("Issue confirmed successfully!");
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    const handleRespond = async (emergencyId, currentResponders = []) => {
+      if (currentResponders.includes(dbUser.name)) {
+        toast.error("You are already responding!");
+        return;
+      }
+      try {
+        await updateDoc(doc(db, 'emergencies', emergencyId), {
+          responders: [...currentResponders, dbUser.name]
+        });
+        toast.success("You have signed up to respond to this emergency!");
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    return (
+      <div className="space-y-6" style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px' }}>
+        {/* Header */}
+        <div style={{ background: theme.surface, border: '1px solid ' + theme.border, padding: '20px', borderRadius: '16px', boxShadow: 'var(--shadow)' }}>
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 style={{ fontSize: '18px', fontWeight: 800, color: theme.text, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {dbUser?.name}
+                <span style={{ background: '#F0FDF4', color: '#166534', border: '1px solid #BBF7D0', fontSize: '10px', fontWeight: 700, padding: '2px 8px', borderRadius: '12px' }}>
+                  Volunteer
+                </span>
+              </h2>
+              <p style={{ fontSize: '12px', color: theme.muted, marginTop: '4px' }}>
+                Protecting village of {dbUser?.village || 'Ramanagara'}
+              </p>
+            </div>
+            <img src={dbUser?.profileImageUrl || 'https://api.dicebear.com/7.x/bottts/svg?seed=volunteer'} alt="avatar" style={{ width: '48px', height: '48px', borderRadius: '50%', border: '1px solid ' + theme.border }} />
+          </div>
+        </div>
+
+        {/* Stats Row */}
+        <div className="grid grid-cols-3 gap-4">
+          <div style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', textAlign: 'center', boxShadow: 'var(--shadow)' }}>
+            <span style={{ fontSize: '24px', fontWeight: 800, color: 'var(--success)', block: true }}>{confirmedCount}</span>
+            <span style={{ fontSize: '11px', color: theme.muted, fontWeight: 700, display: 'block', marginTop: '4px' }}>Issues Confirmed</span>
+          </div>
+          <div style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', textAlign: 'center', boxShadow: 'var(--shadow)' }}>
+            <span style={{ fontSize: '24px', fontWeight: 800, color: 'var(--accent)', block: true }}>{reportedCount}</span>
+            <span style={{ fontSize: '11px', color: theme.muted, fontWeight: 700, display: 'block', marginTop: '4px' }}>Issues Reported</span>
+          </div>
+          <div style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', textAlign: 'center', boxShadow: 'var(--shadow)' }}>
+            <span style={{ fontSize: '24px', fontWeight: 800, color: 'var(--danger)', block: true }}>{emergenciesResponded}</span>
+            <span style={{ fontSize: '11px', color: theme.muted, fontWeight: 700, display: 'block', marginTop: '4px' }}>Responded Alerts</span>
+          </div>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <button onClick={() => navigate('/report')} style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', boxShadow: 'var(--shadow)' }}>
+            <AlertTriangle size={24} className="text-red-500" />
+            <span style={{ fontSize: '11px', fontWeight: 800, color: theme.text }}>Report Issue</span>
+          </button>
+          <button onClick={() => navigate('/emergency')} style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', boxShadow: 'var(--shadow)' }}>
+            <Shield size={24} className="text-red-500" />
+            <span style={{ fontSize: '11px', fontWeight: 800, color: theme.text }}>Active Emergencies</span>
+          </button>
+          <button onClick={() => navigate('/community')} style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', boxShadow: 'var(--shadow)' }}>
+            <MessageSquare size={24} className="text-blue-500" />
+            <span style={{ fontSize: '11px', fontWeight: 800, color: theme.text }}>Community Chat</span>
+          </button>
+          <button onClick={() => navigate('/map')} style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', boxShadow: 'var(--shadow)' }}>
+            <Map size={24} className="text-blue-500" />
+            <span style={{ fontSize: '11px', fontWeight: 800, color: theme.text }}>Live Map</span>
+          </button>
+        </div>
+
+        {/* Active Emergencies Feed */}
+        <div style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '20px', boxShadow: 'var(--shadow)' }}>
+          <h3 style={{ fontSize: '14px', fontWeight: 800, color: theme.text, textTransform: 'uppercase', marginBottom: '16px', tracking: 'wide' }}>
+            Active Emergencies Feed
+          </h3>
+          {activeEmergencies.length === 0 ? (
+            <p style={{ fontSize: '12px', color: theme.muted }}>All clear. No active emergencies reported.</p>
+          ) : (
+            <div className="space-y-4">
+              {activeEmergencies.map(e => (
+                <div key={e.id} style={{ borderLeft: '4px solid var(--danger)', padding: '16px', borderRadius: '12px', background: theme.surface2, border: '1px solid ' + theme.border, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                  <div>
+                    <span style={{ fontSize: '13px', fontWeight: 850, color: 'var(--danger)', display: 'block', textTransform: 'uppercase' }}>
+                      {e.category}
+                    </span>
+                    <span style={{ fontSize: '11px', color: theme.muted, display: 'block', marginTop: '2px' }}>
+                      Location: {e.village || 'Ward Office'} &bull; Reported At: {e.createdAt ? new Date(e.createdAt).toLocaleTimeString() : 'Just now'}
+                    </span>
+                    {e.responders && e.responders.length > 0 && (
+                      <span style={{ fontSize: '10px', color: theme.muted, display: 'block', marginTop: '4px' }}>
+                        Responders: {e.responders.join(', ')}
+                      </span>
+                    )}
+                  </div>
+                  <button 
+                    onClick={() => handleRespond(e.id, e.responders || [])}
+                    style={{ background: 'var(--danger)', border: 'none', color: '#fff', fontWeight: 800, fontSize: '12px', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer' }}
+                  >
+                    Respond
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Issues Needing Confirmation */}
+        <div style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '20px', boxShadow: 'var(--shadow)' }}>
+          <h3 style={{ fontSize: '14px', fontWeight: 800, color: theme.text, textTransform: 'uppercase', marginBottom: '16px', tracking: 'wide' }}>
+            Issues Needing Verification
+          </h3>
+          {needingConfirm.length === 0 ? (
+            <p style={{ fontSize: '12px', color: theme.muted }}>No issues need verification in your area.</p>
+          ) : (
+            <div className="space-y-3">
+              {needingConfirm.map(issue => (
+                <div key={issue.id} style={{ display: 'flex', alignItems: 'center', justify: 'space-between', padding: '12px', borderRadius: '12px', background: theme.surface2, border: '1px solid ' + theme.border }}>
+                  <div>
+                    <span style={{ fontSize: '12px', fontWeight: 800, color: theme.text, display: 'block' }}>{issue.title}</span>
+                    <span style={{ fontSize: '10px', color: theme.muted }}>Village: {issue.village} &bull; Confirmations: {issue.confirmations?.length || 0}/3</span>
+                  </div>
+                  <button 
+                    onClick={() => handleConfirm(issue.id, issue.confirmations || [])}
+                    style={{ background: 'var(--success)', border: 'none', color: '#fff', fontSize: '11px', fontWeight: 800, padding: '6px 12px', borderRadius: '6px', cursor: 'pointer' }}
+                  >
+                    Confirm
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     );
   }
