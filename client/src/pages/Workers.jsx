@@ -1,39 +1,40 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { 
   Search, 
   MapPin, 
   PlusCircle, 
-  UserCheck, 
   Phone, 
   Mail, 
   Check, 
   X, 
   Star,
   Loader2,
-  AlertCircle,
   Briefcase
 } from 'lucide-react';
 import useAuth from '../hooks/useAuth';
-import useWorkers from '../hooks/useWorkers';
-import WorkerCard from '../components/ui/WorkerCard';
+import { db } from '../lib/firebase';
+import { collection, addDoc, onSnapshot, query, where, orderBy, serverTimestamp, getDocs } from 'firebase/firestore';
+import toast from 'react-hot-toast';
 
 export default function Workers() {
   const { t } = useTranslation();
-  const { dbUser } = useAuth();
+  const { dbUser, user } = useAuth();
   
   const [activeTab, setActiveTab] = useState('find'); // 'find' | 'post' | 'my-posts'
-  const { workers, jobPosts, loading, postJob, updateApplicationStatus } = useWorkers();
+  const [workers, setWorkers] = useState([]);
+  const [jobPosts, setJobPosts] = useState([]);
+  const [myJobApplications, setMyJobApplications] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Search & Filter
+  // Search & Filters
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('all');
 
-  // Hire Modal states
+  // Modal / Detailed view states
   const [selectedWorker, setSelectedWorker] = useState(null);
-  const [showHireSuccess, setShowHireSuccess] = useState(false);
 
-  // Job Post Form Formik-like state
+  // Form state
   const [postForm, setPostForm] = useState({
     title: '',
     skillRequired: 'Electrician',
@@ -43,35 +44,90 @@ export default function Workers() {
     payPerDay: ''
   });
   const [posting, setPosting] = useState(false);
-  const [postSuccess, setPostSuccess] = useState(false);
 
-  // Expanded Post ID state to see applicant list
-  const [expandedJobId, setExpandedJobId] = useState(null);
+  // Load Workers matching district
+  useEffect(() => {
+    if (!dbUser) return;
+    setLoading(true);
 
-  // Filter workers based on search and skill chips
-  const getFilteredWorkers = () => {
-    return workers.filter((worker) => {
-      const nameMatch = worker.name.toLowerCase().includes(searchQuery.toLowerCase());
-      const skillMatch = worker.skills.some(skill => 
-        skill.toLowerCase().includes(searchQuery.toLowerCase())
+    // Fetch workers nearby
+    const workersQuery = query(
+      collection(db, 'workers'),
+      where('district', '==', dbUser.district || 'Bangalore'),
+      orderBy('rating', 'desc')
+    );
+    const unsubscribeWorkers = onSnapshot(workersQuery, (snapshot) => {
+      setWorkers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setLoading(false);
+    }, (err) => {
+      console.warn("Workers ordered listener failed:", err);
+      // Fallback query without orderBy to avoid index requirement issues on first setup
+      const simpleQuery = query(
+        collection(db, 'workers'),
+        where('district', '==', dbUser.district || 'Bangalore')
       );
-      const isChipMatch = activeFilter === 'all' || worker.skills.includes(activeFilter);
-      
-      return (nameMatch || skillMatch) && isChipMatch;
+      onSnapshot(simpleQuery, (snap) => {
+        const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        list.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+        setWorkers(list);
+        setLoading(false);
+      });
     });
-  };
 
-  const filteredWorkers = getFilteredWorkers();
+    // Fetch Job Posts
+    const jobsQuery = query(
+      collection(db, 'jobPosts'),
+      orderBy('createdAt', 'desc')
+    );
+    const unsubscribeJobs = onSnapshot(jobsQuery, (snapshot) => {
+      setJobPosts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (err) => {
+      const simpleQuery = query(collection(db, 'jobPosts'));
+      onSnapshot(simpleQuery, (snap) => {
+        setJobPosts(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      });
+    });
 
-  // Form submit handler
-  const handlePostSubmit = async (e) => {
+    // Fetch My Job Applications
+    const applicationsQuery = query(
+      collection(db, 'worker_applications')
+    );
+    const unsubscribeApps = onSnapshot(applicationsQuery, (snapshot) => {
+      setMyJobApplications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+
+    return () => {
+      unsubscribeWorkers();
+      unsubscribeJobs();
+      unsubscribeApps();
+    };
+  }, [dbUser]);
+
+  // Handle Post Job Form Submission
+  const handlePostJob = async (e) => {
     e.preventDefault();
-    if (!postForm.title || !postForm.payPerDay) return;
-
+    if (!postForm.title || !postForm.payPerDay) {
+      toast.error("Please fill in the title and pay fields.");
+      return;
+    }
     setPosting(true);
+    const postToast = toast.loading("Publishing job post to community boards...");
     try {
-      await postJob(postForm);
-      setPostSuccess(true);
+      await addDoc(collection(db, 'jobPosts'), {
+        posterId: user?.uid || 'anonymous',
+        posterName: dbUser?.name || 'Citizen User',
+        title: postForm.title,
+        skillRequired: postForm.skillRequired.toLowerCase(),
+        workersNeeded: Number(postForm.workersNeeded),
+        description: postForm.description,
+        location: postForm.location || dbUser?.village || 'Community Area',
+        payPerDay: Number(postForm.payPerDay),
+        status: 'open',
+        applications: [],
+        createdAt: serverTimestamp()
+      });
+      toast.dismiss(postToast);
+      toast.success("Job posted successfully!");
       setPostForm({
         title: '',
         skillRequired: 'Electrician',
@@ -80,164 +136,215 @@ export default function Workers() {
         location: dbUser?.village || '',
         payPerDay: ''
       });
-      setTimeout(() => {
-        setPostSuccess(false);
-        setActiveTab('my-posts');
-      }, 1500);
+      setActiveTab('my-posts');
     } catch (err) {
       console.error(err);
+      toast.dismiss(postToast);
+      toast.error("Failed to post job. Please try again.");
     } finally {
       setPosting(false);
     }
   };
 
-  // Render Stars Helper
+  // Submit Job Application
+  const handleApplyJob = async (jobId, jobTitle) => {
+    const applyToast = toast.loading("Submitting job application...");
+    try {
+      // Check if already applied
+      const alreadyApplied = myJobApplications.some(app => app.jobId === jobId && app.workerId === user?.uid);
+      if (alreadyApplied) {
+        toast.dismiss(applyToast);
+        toast.error("You have already applied to this job post.");
+        return;
+      }
+
+      await addDoc(collection(db, 'worker_applications'), {
+        jobId,
+        jobTitle,
+        workerId: user?.uid,
+        workerName: dbUser?.name || 'Daily Worker',
+        workerPhone: dbUser?.phone || '',
+        status: 'pending',
+        appliedAt: new Date().toISOString()
+      });
+      toast.dismiss(applyToast);
+      toast.success("Applied to job successfully!");
+    } catch (err) {
+      console.error(err);
+      toast.dismiss(applyToast);
+      toast.error("Failed to apply for job.");
+    }
+  };
+
+  const getFilteredWorkers = () => {
+    return workers.filter(worker => {
+      const matchesSearch = worker.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                            worker.skills?.some(s => s.toLowerCase().includes(searchQuery.toLowerCase()));
+      const matchesFilter = activeFilter === 'all' || worker.skills?.includes(activeFilter.toLowerCase());
+      return matchesSearch && matchesFilter;
+    });
+  };
+
+  const filteredWorkers = getFilteredWorkers();
+
+  // Helper render rating stars
   const renderStars = (rating) => {
     const stars = [];
-    const val = rating || 5;
+    const val = rating || 5.0;
     for (let i = 1; i <= 5; i++) {
       stars.push(
         <Star 
           key={i} 
-          className={`w-4 h-4 ${
-            i <= val ? 'fill-amber-400 text-amber-400' : 'text-slate-300 dark:text-slate-600'
+          className={`w-3.5 h-3.5 ${
+            i <= Math.floor(val) 
+              ? 'text-yellow-400 fill-yellow-400' 
+              : 'text-slate-350 dark:text-slate-650'
           }`} 
         />
       );
     }
-    return stars;
+    return <div className="flex gap-0.5">{stars}</div>;
   };
 
-  const skillFilters = ['All', 'Electrician', 'Plumber', 'Farmer', 'Construction', 'Carpenter'];
+  const filterChips = ['All', 'Electrician', 'Plumber', 'Farmer', 'Construction', 'Carpenter'];
 
   return (
-    <div className="space-y-6">
-      {/* 1. Header Navigation Tabs */}
-      <div className="flex border-b border-border dark:border-slate-700">
+    <div className="space-y-4">
+      {/* Tabs */}
+      <div className="bg-slate-100 dark:bg-slate-800 p-1.5 rounded-xl flex gap-1.5 self-start max-w-md">
         <button
           onClick={() => setActiveTab('find')}
-          className={`flex-1 text-center py-3.5 text-sm font-bold border-b-2 transition duration-200 cursor-pointer min-h-[48px] ${
-            activeTab === 'find'
-              ? 'border-accent text-accent dark:text-blue-400 dark:border-blue-400 font-extrabold'
-              : 'border-transparent text-text-muted hover:text-text'
+          className={`flex-1 px-4 py-2 text-xs font-bold rounded-lg transition min-h-[36px] cursor-pointer ${
+            activeTab === 'find' ? 'bg-accent text-white shadow-sm' : 'text-text-muted dark:text-slate-300'
           }`}
         >
           Find Workers
         </button>
         <button
           onClick={() => setActiveTab('post')}
-          className={`flex-1 text-center py-3.5 text-sm font-bold border-b-2 transition duration-200 cursor-pointer min-h-[48px] ${
-            activeTab === 'post'
-              ? 'border-accent text-accent dark:text-blue-400 dark:border-blue-400 font-extrabold'
-              : 'border-transparent text-text-muted hover:text-text'
+          className={`flex-1 px-4 py-2 text-xs font-bold rounded-lg transition min-h-[36px] cursor-pointer ${
+            activeTab === 'post' ? 'bg-accent text-white shadow-sm' : 'text-text-muted dark:text-slate-300'
           }`}
         >
           Post a Job
         </button>
         <button
           onClick={() => setActiveTab('my-posts')}
-          className={`flex-1 text-center py-3.5 text-sm font-bold border-b-2 transition duration-200 cursor-pointer min-h-[48px] ${
-            activeTab === 'my-posts'
-              ? 'border-accent text-accent dark:text-blue-400 dark:border-blue-400 font-extrabold'
-              : 'border-transparent text-text-muted hover:text-text'
+          className={`flex-1 px-4 py-2 text-xs font-bold rounded-lg transition min-h-[36px] cursor-pointer ${
+            activeTab === 'my-posts' ? 'bg-accent text-white shadow-sm' : 'text-text-muted dark:text-slate-300'
           }`}
         >
-          My Posts ({jobPosts.length})
+          Open Jobs Board
         </button>
       </div>
 
-      {/* 2. TAB SUB-CONTENT PANELS */}
-
-      {/* TAB A: FIND WORKERS */}
       {activeTab === 'find' && (
         <div className="space-y-4">
-          {/* Search bar */}
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted w-5 h-5" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by worker name or skill..."
-              className="w-full min-h-[56px] pl-12 pr-4 bg-surface dark:bg-slate-800 border-2 border-border dark:border-slate-700 rounded-2xl text-sm font-semibold text-text dark:text-white outline-none focus:border-accent"
-            />
+          {/* Search bar & filter row */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-3.5 w-4 h-4 text-text-muted" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search by worker name or skill..."
+                className="w-full h-11 pl-9 pr-4 bg-surface dark:bg-slate-850 border border-border dark:border-slate-700 rounded-xl text-xs focus:outline-none dark:text-white"
+              />
+            </div>
           </div>
 
-          {/* Skill Filter Chips */}
           <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-            {skillFilters.map((skill) => (
+            {filterChips.map(chip => (
               <button
-                key={skill}
-                onClick={() => setActiveFilter(skill.toLowerCase() === 'all' ? 'all' : skill)}
-                className={`flex-shrink-0 px-4 py-2.5 rounded-full text-xs font-bold border transition cursor-pointer min-h-[38px] ${
-                  (activeFilter === 'all' && skill.toLowerCase() === 'all') || activeFilter === skill
+                key={chip}
+                onClick={() => setActiveFilter(chip)}
+                className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold border transition cursor-pointer ${
+                  activeFilter.toLowerCase() === chip.toLowerCase()
                     ? 'bg-accent border-accent text-white shadow-sm'
-                    : 'bg-surface dark:bg-slate-800 border-border dark:border-slate-700 text-text-muted hover:text-text'
+                    : 'bg-surface dark:bg-slate-850 border-border dark:border-slate-700 text-text-muted hover:text-text'
                 }`}
               >
-                {skill}
+                {chip}
               </button>
             ))}
           </div>
 
-          {/* Worker Cards List */}
           {loading ? (
-            <div className="flex items-center justify-center p-12">
-              <span className="text-xs text-text-muted font-bold animate-pulse">Syncing worker directory...</span>
+            <div className="flex items-center justify-center py-10 text-slate-400">
+              <Loader2 className="w-6 h-6 animate-spin text-accent" />
             </div>
           ) : filteredWorkers.length === 0 ? (
-            <div className="card-vanguard text-center p-8 space-y-2">
-              <AlertCircle className="w-10 h-10 text-text-muted mx-auto opacity-45" />
-              <p className="font-bold text-sm text-text-muted">No workers matched search criteria</p>
+            <div className="text-center py-10 bg-surface dark:bg-slate-800 rounded-2xl border border-border dark:border-slate-700">
+              <p className="text-xs text-text-muted font-bold">No registered workers found in {dbUser?.district || 'this area'}.</p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {filteredWorkers.map((worker) => (
-                <WorkerCard
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {filteredWorkers.map(worker => (
+                <div 
                   key={worker.id}
-                  worker={worker}
-                  onHireClick={(w) => setSelectedWorker(w)}
-                />
+                  className="bg-surface dark:bg-slate-800 border border-border dark:border-slate-700 rounded-2xl p-4 shadow-sm flex gap-4 hover:shadow transition cursor-pointer"
+                  onClick={() => setSelectedWorker(worker)}
+                >
+                  <div className="w-14 h-14 bg-slate-100 rounded-full flex-shrink-0 overflow-hidden border border-border dark:border-slate-650">
+                    <img 
+                      src={`https://api.dicebear.com/7.x/bottts/svg?seed=${worker.userId || worker.name}`}
+                      alt={worker.name} 
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-xs font-bold text-text dark:text-white truncate">{worker.name}</h4>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      {renderStars(worker.rating)}
+                      <span className="text-[9px] font-bold text-text-muted">({worker.reviewCount || 0} reviews)</span>
+                    </div>
+                    <div className="flex gap-1 flex-wrap mt-1.5">
+                      {worker.skills?.map(skill => (
+                        <span key={skill} className="bg-slate-100 dark:bg-slate-700 text-text dark:text-slate-350 text-[9px] font-bold px-2 py-0.5 rounded uppercase">
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                    <span className="text-[10px] text-text-muted font-bold block mt-2">
+                      💰 Rate: ₹{worker.dailyRate}/day
+                    </span>
+                  </div>
+                  <button className="h-10 px-4 self-center bg-accent text-white text-[11px] font-black rounded-lg cursor-pointer">
+                    Hire
+                  </button>
+                </div>
               ))}
             </div>
           )}
         </div>
       )}
 
-      {/* TAB B: POST A JOB */}
       {activeTab === 'post' && (
-        <div className="card-vanguard max-w-xl mx-auto p-6">
-          <form onSubmit={handlePostSubmit} className="space-y-4">
-            <div className="text-center space-y-1 pb-2">
-              <h3 className="text-lg font-black text-text dark:text-white">Post Local Job Opening</h3>
-              <p className="text-xs text-text-muted">Directly hire daily-wage work support from community members.</p>
-            </div>
+        <form onSubmit={handlePostJob} className="bg-surface dark:bg-slate-800 border border-border dark:border-slate-700 rounded-2xl p-6 shadow-sm space-y-4 max-w-xl">
+          <h3 className="text-sm font-black text-text dark:text-white flex items-center gap-1.5">
+            <PlusCircle className="w-5 h-5 text-accent" /> Post Local Helper Job Requirement
+          </h3>
 
-            {postSuccess && (
-              <div className="bg-green-50 dark:bg-green-950/30 text-green-600 dark:text-green-400 p-4 rounded-xl text-sm font-semibold border border-green-200 dark:border-green-900 flex items-center justify-center gap-2">
-                <Check className="w-5 h-5" /> Job posted successfully!
-              </div>
-            )}
-
+          <div className="space-y-3">
             <div>
-              <label className="block text-xs font-bold text-text-muted mb-1.5 uppercase">Job Title / काम का नाम</label>
+              <label className="text-[10px] font-bold text-text-muted uppercase">Job Title</label>
               <input
                 type="text"
-                required
                 value={postForm.title}
                 onChange={(e) => setPostForm({ ...postForm, title: e.target.value })}
-                placeholder="e.g. Need electrician for house motor repairs"
-                className="w-full min-h-[48px] px-4 bg-slate-50 dark:bg-slate-900 border border-border dark:border-slate-700 rounded-xl text-sm font-semibold text-text dark:text-white outline-none focus:border-accent"
+                placeholder="e.g. Need electrician to fix borewell starter"
+                className="w-full h-11 px-3 bg-slate-50 dark:bg-slate-900 border border-border dark:border-slate-700 rounded-xl text-xs focus:outline-none dark:text-white font-bold"
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="block text-xs font-bold text-text-muted mb-1.5 uppercase">Skill Needed</label>
+                <label className="text-[10px] font-bold text-text-muted uppercase">Skill Required</label>
                 <select
                   value={postForm.skillRequired}
                   onChange={(e) => setPostForm({ ...postForm, skillRequired: e.target.value })}
-                  className="w-full min-h-[48px] px-3 bg-slate-50 dark:bg-slate-900 border border-border dark:border-slate-700 rounded-xl text-sm font-semibold text-text dark:text-white outline-none focus:border-accent"
+                  className="w-full h-11 px-3 bg-slate-50 dark:bg-slate-900 border border-border dark:border-slate-700 rounded-xl text-xs focus:outline-none dark:text-white font-bold"
                 >
                   <option value="Electrician">Electrician</option>
                   <option value="Plumber">Plumber</option>
@@ -248,294 +355,175 @@ export default function Workers() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-text-muted mb-1.5 uppercase">Workers Count</label>
+                <label className="text-[10px] font-bold text-text-muted uppercase">Workers Needed</label>
                 <input
                   type="number"
-                  min="1"
-                  required
+                  min={1}
                   value={postForm.workersNeeded}
                   onChange={(e) => setPostForm({ ...postForm, workersNeeded: e.target.value })}
-                  className="w-full min-h-[48px] px-4 bg-slate-50 dark:bg-slate-900 border border-border dark:border-slate-700 rounded-xl text-sm font-semibold text-text dark:text-white outline-none focus:border-accent"
+                  className="w-full h-11 px-3 bg-slate-50 dark:bg-slate-900 border border-border dark:border-slate-700 rounded-xl text-xs focus:outline-none dark:text-white font-bold"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-text-muted mb-1.5 uppercase">Description / काम का विवरण</label>
+              <label className="text-[10px] font-bold text-text-muted uppercase">Job Description</label>
               <textarea
-                rows="4"
                 value={postForm.description}
                 onChange={(e) => setPostForm({ ...postForm, description: e.target.value })}
-                placeholder="Explain the required tasks clearly..."
-                className="w-full bg-slate-50 dark:bg-slate-900 border border-border dark:border-slate-700 rounded-xl p-4 text-sm font-semibold text-text dark:text-white outline-none focus:border-accent"
+                placeholder="Describe details like timing, equipment needed, and overall work expectations..."
+                className="w-full h-24 p-3 bg-slate-50 dark:bg-slate-900 border border-border dark:border-slate-700 rounded-xl text-xs focus:outline-none dark:text-white"
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="block text-xs font-bold text-text-muted mb-1.5 uppercase">Location / स्थान</label>
+                <label className="text-[10px] font-bold text-text-muted uppercase">Location</label>
                 <input
                   type="text"
-                  required
                   value={postForm.location}
                   onChange={(e) => setPostForm({ ...postForm, location: e.target.value })}
-                  className="w-full min-h-[48px] px-4 bg-slate-50 dark:bg-slate-900 border border-border dark:border-slate-700 rounded-xl text-sm font-semibold text-text dark:text-white outline-none focus:border-accent"
+                  className="w-full h-11 px-3 bg-slate-50 dark:bg-slate-900 border border-border dark:border-slate-700 rounded-xl text-xs focus:outline-none dark:text-white font-bold"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-text-muted mb-1.5 uppercase">Pay Per Day / दैनिक मजदूरी</label>
-                <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-text dark:text-slate-300 font-bold text-sm">₹</span>
-                  <input
-                    type="number"
-                    required
-                    value={postForm.payPerDay}
-                    onChange={(e) => setPostForm({ ...postForm, payPerDay: e.target.value })}
-                    placeholder="Rate"
-                    className="w-full min-h-[48px] pl-8 pr-4 bg-slate-50 dark:bg-slate-900 border border-border dark:border-slate-700 rounded-xl text-sm font-semibold text-text dark:text-white outline-none focus:border-accent"
-                  />
-                </div>
+                <label className="text-[10px] font-bold text-text-muted uppercase">Pay Per Day (₹)</label>
+                <input
+                  type="number"
+                  value={postForm.payPerDay}
+                  onChange={(e) => setPostForm({ ...postForm, payPerDay: e.target.value })}
+                  placeholder="e.g. 500"
+                  className="w-full h-11 px-3 bg-slate-50 dark:bg-slate-900 border border-border dark:border-slate-700 rounded-xl text-xs focus:outline-none dark:text-white font-bold"
+                />
               </div>
             </div>
+          </div>
 
-            <button
-              type="submit"
-              disabled={posting}
-              className="w-full min-h-[52px] bg-accent hover:bg-opacity-95 text-white font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-md mt-4 transition"
-            >
-              {posting ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Post Job'}
-            </button>
-          </form>
-        </div>
+          <button
+            type="submit"
+            disabled={posting}
+            className="w-full h-12 bg-accent hover:bg-opacity-95 disabled:opacity-50 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+          >
+            {posting && <Loader2 className="w-4 h-4 animate-spin" />} Publish Requirement
+          </button>
+        </form>
       )}
 
-      {/* TAB C: MY POSTED JOBS */}
       {activeTab === 'my-posts' && (
         <div className="space-y-4">
+          <h3 className="text-sm font-black text-text dark:text-white flex items-center gap-1.5">
+            <Briefcase className="w-5 h-5 text-accent" /> Active Open Community Job Posts
+          </h3>
           {jobPosts.length === 0 ? (
-            <div className="card-vanguard text-center p-8 space-y-2">
-              <Briefcase className="w-10 h-10 text-text-muted mx-auto opacity-45" />
-              <p className="font-bold text-sm text-text-muted">You haven't posted any job openings yet.</p>
+            <div className="text-center py-10 bg-surface dark:bg-slate-800 rounded-2xl border border-border dark:border-slate-700">
+              <p className="text-xs text-text-muted font-bold">No active job posts online.</p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {jobPosts.map((job) => (
-                <div key={job.id} className="card-vanguard p-5 space-y-4">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h4 className="text-base font-extrabold text-text dark:text-white leading-tight">
-                        {job.title}
-                      </h4>
-                      <p className="text-xs text-text-muted mt-1 leading-normal">
-                        Skill: <span className="font-bold text-text dark:text-slate-200">{job.skillRequired}</span> • Needs {job.workersNeeded} workers
-                      </p>
+            <div className="grid grid-cols-1 gap-3">
+              {jobPosts.map(job => {
+                const applicants = myJobApplications.filter(app => app.jobId === job.id);
+                return (
+                  <div key={job.id} className="bg-surface dark:bg-slate-800 border border-border dark:border-slate-700 rounded-2xl p-4 shadow-sm flex flex-col sm:flex-row justify-between gap-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-xs font-bold text-text dark:text-white">{job.title}</h4>
+                        <span className="bg-orange-50 dark:bg-orange-950/20 text-orange-600 text-[8px] font-black px-1.5 py-0.5 rounded uppercase">
+                          {job.skillRequired}
+                        </span>
+                      </div>
+                      <p className="text-xs text-text-muted leading-relaxed">{job.description}</p>
+                      <div className="flex gap-3 text-[10px] text-text-muted font-bold pt-1.5">
+                        <span>📍 {job.location}</span>
+                        <span>💰 ₹{job.payPerDay}/day</span>
+                        <span>👥 Need: {job.workersNeeded} workers</span>
+                      </div>
+                      <span className="text-[9px] text-slate-400 block pt-1 font-bold">
+                        Posted by: {job.posterName}
+                      </span>
                     </div>
-                    <span className="bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300 text-[10px] font-black px-2.5 py-1 rounded-md uppercase tracking-wider">
-                      {job.status}
-                    </span>
+
+                    <div className="flex flex-col justify-center items-end gap-2">
+                      <button
+                        onClick={() => handleApplyJob(job.id, job.title)}
+                        className="h-10 px-6 bg-accent text-white text-xs font-bold rounded-lg shadow-sm cursor-pointer hover:bg-opacity-95 w-full sm:w-auto"
+                      >
+                        Apply for Job
+                      </button>
+                      <span className="text-[10px] font-bold text-accent">
+                        {applicants.length} Applicants registered
+                      </span>
+                    </div>
                   </div>
-
-                  <p className="text-xs text-text-muted mt-2 border-l-2 border-accent pl-2.5 py-0.5 leading-relaxed">
-                    {job.description || 'No detailed description provided.'}
-                  </p>
-
-                  <div className="flex justify-between items-center text-xs text-text-muted font-bold pt-2 border-t border-border dark:border-slate-700/60">
-                    <span>Pay: ₹{job.payPerDay}/day</span>
-                    <button
-                      onClick={() => setExpandedJobId(expandedJobId === job.id ? null : job.id)}
-                      className="text-accent dark:text-blue-400 hover:underline cursor-pointer"
-                    >
-                      {expandedJobId === job.id ? 'Hide Applicants' : `View Applicants (${job.applications?.length || 0})`}
-                    </button>
-                  </div>
-
-                  {/* Applicants List details expanded */}
-                  {expandedJobId === job.id && (
-                    <motion.div 
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      className="space-y-3 pt-3 border-t border-border dark:border-slate-700"
-                    >
-                      <h5 className="text-xs font-black text-text dark:text-slate-300 uppercase tracking-widest">
-                        Incoming Worker Applications:
-                      </h5>
-
-                      {(job.applications || []).length === 0 ? (
-                        <p className="text-xs text-text-muted py-2 italic">No applications received yet.</p>
-                      ) : (
-                        <div className="space-y-2">
-                          {job.applications.map((app) => (
-                            <div 
-                              key={app.workerId} 
-                              className="bg-slate-50 dark:bg-slate-900/40 p-3 rounded-xl border border-border dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-                            >
-                              <div className="flex items-center gap-3">
-                                <img
-                                  src={`https://api.dicebear.com/7.x/adventurer/svg?seed=${app.name}`}
-                                  alt="app"
-                                  className="w-10 h-10 rounded-lg object-cover border bg-slate-100"
-                                />
-                                <div>
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="text-sm font-bold text-text dark:text-white">{app.name}</span>
-                                    <div className="flex items-center text-amber-500 gap-0.5 text-xs font-bold">
-                                      <Star className="w-3.5 h-3.5 fill-amber-500" />
-                                      <span>{app.rating}</span>
-                                    </div>
-                                  </div>
-                                  <p className="text-[10px] text-text-muted mt-0.5 font-bold">
-                                    Rate: ₹{app.dailyRate}/day • Status: <span className="capitalize text-accent">{app.status}</span>
-                                  </p>
-                                </div>
-                              </div>
-
-                              <div className="flex gap-2">
-                                {app.status === 'pending' ? (
-                                  <>
-                                    <button
-                                      onClick={() => updateApplicationStatus(job.id, app.workerId, 'accepted')}
-                                      className="h-8 px-3.5 bg-success text-white text-xs font-bold rounded-lg flex items-center justify-center cursor-pointer transition active:scale-95"
-                                    >
-                                      Accept
-                                    </button>
-                                    <button
-                                      onClick={() => updateApplicationStatus(job.id, app.workerId, 'rejected')}
-                                      className="h-8 px-3.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 text-text dark:text-white text-xs font-bold rounded-lg flex items-center justify-center cursor-pointer transition active:scale-95"
-                                    >
-                                      Reject
-                                    </button>
-                                  </>
-                                ) : (
-                                  <span className={`text-xs font-bold uppercase ${
-                                    app.status === 'accepted' ? 'text-success' : 'text-text-muted'
-                                  }`}>
-                                    {app.status}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </motion.div>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
       )}
 
-      {/* 3. WORKER PROFILE MODAL */}
+      {/* Worker Profile Modal */}
       {selectedWorker && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
-          <motion.div 
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="bg-surface dark:bg-slate-800 rounded-3xl border border-border dark:border-slate-700 p-6 max-w-md w-full relative space-y-5 shadow-2xl"
-          >
+        <div className="fixed inset-0 bg-slate-900 bg-opacity-70 z-50 flex items-center justify-center p-4">
+          <div className="bg-surface dark:bg-slate-800 rounded-3xl p-6 border border-border dark:border-slate-700 shadow-xl max-w-md w-full relative animate-fadeIn">
             <button 
-              onClick={() => { setSelectedWorker(null); setShowHireSuccess(false); }}
-              className="absolute top-4 right-4 w-9 h-9 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 rounded-xl flex items-center justify-center text-text-muted transition cursor-pointer"
+              onClick={() => setSelectedWorker(null)}
+              className="absolute top-4.5 right-4.5 w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 flex items-center justify-center text-text-muted"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
 
-            {showHireSuccess ? (
-              <div className="text-center py-6 space-y-4">
-                <div className="w-14 h-14 bg-green-100 text-success rounded-full flex items-center justify-center mx-auto shadow-md animate-bounce">
-                  <UserCheck className="w-7 h-7" />
-                </div>
-                <h3 className="text-xl font-black text-text dark:text-white">Booking Initiated!</h3>
-                <p className="text-xs text-text-muted max-w-xs mx-auto leading-relaxed">
-                  Booking request has been dispatched in real-time to **{selectedWorker.name}**. They will get in touch with you shortly.
-                </p>
-                <button
-                  onClick={() => { setSelectedWorker(null); setShowHireSuccess(false); }}
-                  className="w-full btn-primary"
-                >
-                  Done
-                </button>
+            <div className="flex flex-col items-center text-center space-y-4">
+              <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-accent bg-slate-100 flex items-center justify-center">
+                <img 
+                  src={`https://api.dicebear.com/7.x/bottts/svg?seed=${selectedWorker.userId || selectedWorker.name}`}
+                  alt={selectedWorker.name} 
+                  className="w-full h-full object-cover"
+                />
               </div>
-            ) : (
-              <>
-                <div className="flex gap-4 items-center">
-                  <div className="relative flex-shrink-0">
-                    <img 
-                      src={selectedWorker.profileImageUrl || `https://api.dicebear.com/7.x/adventurer/svg?seed=${selectedWorker.name}`}
-                      alt="avatar" 
-                      className="w-16 h-16 rounded-2xl object-cover border-2 border-border dark:border-slate-700 bg-slate-100"
-                    />
-                    <span className={`absolute -bottom-1 -right-1 w-4.5 h-4.5 rounded-full border-2 border-surface dark:border-slate-800 ${
-                      selectedWorker.isAvailable ? 'bg-success' : 'bg-danger'
-                    }`} />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-black text-text dark:text-white leading-tight">
-                      {selectedWorker.name}
-                    </h3>
-                    <div className="flex items-center gap-1 mt-1 text-xs">
-                      <div className="flex">{renderStars(selectedWorker.rating)}</div>
-                      <span className="text-text-muted font-bold ml-1">({selectedWorker.reviewCount || 0} reviews)</span>
-                    </div>
-                  </div>
+
+              <div>
+                <h3 className="text-base font-black text-text dark:text-white">{selectedWorker.name}</h3>
+                <div className="flex items-center justify-center gap-1.5 mt-1">
+                  {renderStars(selectedWorker.rating)}
+                  <span className="text-[10px] text-text-muted font-bold">({selectedWorker.reviewCount || 0} reviews)</span>
                 </div>
-
-                <div className="space-y-3 text-xs font-semibold text-text-muted leading-relaxed">
-                  <div className="grid grid-cols-2 gap-3 border-t border-b border-border dark:border-slate-700 py-3">
-                    <div>
-                      <span className="block text-[9px] uppercase font-bold text-text-muted mb-0.5">Experience</span>
-                      <span className="text-text dark:text-white font-bold">{selectedWorker.experienceYears || 5} Years</span>
-                    </div>
-                    <div>
-                      <span className="block text-[9px] uppercase font-bold text-text-muted mb-0.5">Daily Rate</span>
-                      <span className="text-text dark:text-white font-bold text-sm">₹{selectedWorker.dailyRate}/day</span>
-                    </div>
-                  </div>
-
-                  <div>
-                    <span className="block text-[9px] uppercase font-bold text-text-muted mb-1">Skills</span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {(selectedWorker.skills || []).map(skill => (
-                        <span key={skill} className="bg-accent-soft text-accent dark:bg-slate-700 dark:text-blue-300 px-2.5 py-1 rounded-md font-bold">
-                          {skill}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <span className="block text-[9px] uppercase font-bold text-text-muted mb-1">About Worker</span>
-                    <p className="text-text dark:text-slate-300 font-medium">
-                      {selectedWorker.bio || 'Professional and local service worker specializing in household utilities and support.'}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-1.5 pt-1">
-                    <MapPin className="w-4 h-4 text-accent" />
-                    <span className="text-text dark:text-slate-200 font-bold">{selectedWorker.village || 'Ramanagara'}</span>
-                  </div>
+                <div className="flex items-center justify-center gap-1 text-[10px] text-text-muted font-bold mt-1">
+                  <MapPin className="w-3.5 h-3.5 text-accent" /> {selectedWorker.village || 'Community Area'}
                 </div>
+              </div>
 
-                {/* Footer buttons */}
-                <div className="flex gap-2 pt-2">
-                  <a 
-                    href={`tel:+919999999999`}
-                    className="flex-1 min-h-[52px] bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 text-text dark:text-white text-sm font-bold rounded-xl flex items-center justify-center gap-1.5 border border-border dark:border-slate-600 transition"
-                  >
-                    <Phone className="w-4 h-4" /> Call
-                  </a>
-                  <button 
-                    onClick={() => { setShowHireSuccess(true); }}
-                    className="flex-2 min-h-[52px] bg-accent hover:bg-opacity-95 text-white text-sm font-bold rounded-xl flex items-center justify-center gap-1.5 shadow-md active:scale-98 transition cursor-pointer"
-                  >
-                    <UserCheck className="w-5 h-5" /> Hire Now
-                  </button>
+              <div className="border-t border-b border-border dark:border-slate-700 py-3 w-full space-y-2 text-left">
+                <p className="text-xs text-text dark:text-slate-350 leading-relaxed font-semibold">
+                  <span className="font-bold text-text-muted uppercase block text-[10px] tracking-wider mb-0.5">Worker Bio</span>
+                  "{selectedWorker.bio || 'Professional worker serving community daily operations.'}"
+                </p>
+                <div className="flex justify-between text-xs font-bold text-text dark:text-white pt-2">
+                  <span>💰 Daily Wage Rate:</span>
+                  <span className="text-accent">₹{selectedWorker.dailyRate}/day</span>
                 </div>
-              </>
-            )}
-          </motion.div>
+                <div className="flex justify-between text-xs font-bold text-text dark:text-white">
+                  <span>📅 Available Status:</span>
+                  <span className="text-green-600">Active online</span>
+                </div>
+              </div>
+
+              <div className="flex gap-2 w-full">
+                <a
+                  href={`tel:${selectedWorker.phone || '100'}`}
+                  className="flex-1 h-12 bg-accent text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow-sm hover:bg-opacity-95"
+                >
+                  <Phone className="w-4 h-4" /> Call Worker
+                </a>
+                <a
+                  href="mailto:help@vanguard.org"
+                  className="w-12 h-12 bg-slate-105 border border-border dark:bg-slate-700 dark:border-slate-650 rounded-xl flex items-center justify-center text-text-muted cursor-pointer hover:bg-slate-200"
+                >
+                  <Mail className="w-4 h-4 text-accent" />
+                </a>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
