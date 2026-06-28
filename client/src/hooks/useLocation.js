@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
 
-const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-
 export const useLocation = () => {
   const [location, setLocation] = useState({
     lat: 12.7244, // Default Ramanagara Latitude
@@ -17,62 +15,28 @@ export const useLocation = () => {
   const [error, setError] = useState(null);
 
   const reverseGeocode = async (lat, lng) => {
-    if (!GOOGLE_MAPS_API_KEY || GOOGLE_MAPS_API_KEY === 'your_google_maps_api_key') {
-      console.log("[Location Hook] Simulated reverse geocoding");
-      // Simulate lat/lng check to return a mock address
-      return {
-        address: 'Ward 6, Ramanagara Rural, Karnataka, 562159',
-        state: 'Karnataka',
-        district: 'Ramanagara',
-        village: 'Ramanagara Rural',
-        ward: 'Ward 6'
-      };
-    }
-
     try {
-      const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${GOOGLE_MAPS_API_KEY}`;
+      const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`;
       const res = await fetch(url);
       const data = await res.json();
       
-      if (data.status === 'OK' && data.results.length > 0) {
-        const result = data.results[0];
-        const components = result.address_components;
-        
-        let state = '';
-        let district = '';
-        let village = '';
-        let ward = '';
-        
-        for (const c of components) {
-          if (c.types.includes('administrative_area_level_1')) {
-            state = c.long_name;
-          }
-          if (c.types.includes('administrative_area_level_2') || c.types.includes('locality')) {
-            district = c.long_name;
-          }
-          if (c.types.includes('sublocality') || c.types.includes('neighborhood') || c.types.includes('sublocality_level_1')) {
-            ward = c.long_name;
-          }
-          if (c.types.includes('premise') || c.types.includes('route')) {
-            village = c.long_name;
-          }
-        }
+      const displayName = data.display_name || 'Ramanagara, Karnataka, India';
+      const addressObj = data.address || {};
+      
+      const state = addressObj.state || 'Karnataka';
+      const district = addressObj.county || addressObj.district || 'Ramanagara';
+      const village = addressObj.village || addressObj.town || addressObj.city || 'Ramanagara Town';
+      const ward = addressObj.suburb || addressObj.neighbourhood || 'Ward 6';
 
-        // Clean up or infer village/ward from sublocality
-        if (!village) village = district || 'Local Town';
-        if (!ward) ward = 'Ward 1';
-
-        return {
-          address: result.formatted_address,
-          state,
-          district,
-          village,
-          ward
-        };
-      }
-      throw new Error(data.error_message || 'Reverse geocoding failed');
+      return {
+        address: displayName,
+        state,
+        district,
+        village,
+        ward
+      };
     } catch (err) {
-      console.error("Geocoding failed, falling back to mock: ", err);
+      console.error("Geocoding failed: ", err);
       return {
         address: 'Ward 6, Ramanagara, Karnataka',
         state: 'Karnataka',
@@ -117,7 +81,6 @@ export const useLocation = () => {
           console.warn("Geolocation permission denied, using Ramanagara default:", err);
           setError('Location access denied. Please fill in location manually.');
           setLoading(false);
-          // Don't crash, resolve default
           resolve(location);
         },
         { timeout: 10000 }

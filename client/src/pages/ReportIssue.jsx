@@ -3,6 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
+  MapContainer, 
+  TileLayer, 
+  Marker, 
+  useMap, 
+  useMapEvents 
+} from 'react-leaflet';
+import { 
   Camera, 
   Mic, 
   MapPin, 
@@ -22,6 +29,25 @@ import { analyzeIssueImage } from '../lib/gemini';
 import { downloadPdfReport } from '../lib/pdfGenerator';
 import LoadingShield from '../components/ui/LoadingShield';
 import AIResultCard from '../components/ui/AIResultCard';
+
+// Leaflet click handler component
+function MapEvents({ onChangeCoords }) {
+  useMapEvents({
+    click(e) {
+      onChangeCoords(e.latlng);
+    }
+  });
+  return null;
+}
+
+// Leaflet auto-recenter component
+function MapRecenter({ coords }) {
+  const map = useMap();
+  useEffect(() => {
+    map.setView(coords, map.getZoom());
+  }, [coords, map]);
+  return null;
+}
 
 export default function ReportIssue() {
   const { t } = useTranslation();
@@ -119,38 +145,35 @@ export default function ReportIssue() {
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
 
-      mediaRecorder.ondataavailable = (event) => {
-        audioChunksRef.current.push(event.data);
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          audioChunksRef.current.push(e.data);
+        }
       };
 
       mediaRecorder.onstop = () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
-        const url = URL.createObjectURL(audioBlob);
         setVoiceBlob(audioBlob);
-        setVoiceUrl(url);
+        setVoiceUrl(URL.createObjectURL(audioBlob));
       };
 
       mediaRecorder.start();
       setIsRecording(true);
 
-      // Start speech recognition transcription
       if (recognitionRef.current) {
         try {
           recognitionRef.current.start();
-        } catch (e) {
-          console.warn("Speech recognition already running", e);
-        }
+        } catch (err) {}
       }
     } catch (err) {
-      console.error("Microphone access denied:", err);
-      alert("Microphone permission denied. Voice note skipped.");
+      console.error("Microphone access failed:", err);
+      alert("Microphone permission denied.");
     }
   };
 
   const stopRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
-      // Stop media tracks
       mediaRecorderRef.current.stream.getTracks().forEach(t => t.stop());
       setIsRecording(false);
     }
@@ -176,13 +199,26 @@ export default function ReportIssue() {
     setIsPlaying(false);
   };
 
-  // Coordinates drag adjustment slider simulation (elder-friendly)
+  // Click handler to adjust coordinates directly on Leaflet map
+  const handleMapClick = async (latlng) => {
+    const newCoords = { lat: latlng.lat, lng: latlng.lng };
+    setAdjustCoords(newCoords);
+    
+    try {
+      const geo = await reverseGeocode(newCoords.lat, newCoords.lng);
+      setResolvedAddress(geo.address);
+      setLocation({ ...location, ...newCoords, ...geo });
+    } catch (e) {
+      console.warn("Unable to reverse geocode map click:", e);
+    }
+  };
+
+  // Slider adjustments
   const handleCoordShift = async (axis, val) => {
     const shift = parseFloat(val);
     const newCoords = { ...adjustCoords, [axis]: shift };
     setAdjustCoords(newCoords);
     
-    // Reverse geocode new coordinate points
     try {
       const geo = await reverseGeocode(newCoords.lat, newCoords.lng);
       setResolvedAddress(geo.address);
@@ -199,7 +235,6 @@ export default function ReportIssue() {
 
     try {
       const language = localStorage.getItem('vanguard_language') || 'en';
-      // Execute the Gemini Vision Pipeline
       const result = await analyzeIssueImage(photo, description, language);
       setAiResult(result);
     } catch (err) {
@@ -214,8 +249,7 @@ export default function ReportIssue() {
   const handleFinalSubmit = async () => {
     setSubmitting(true);
     try {
-      // 1. In standard flow, upload files to Firebase Storage first (Simulated by mock storage ref)
-      const mockPhotoUrl = photo; // Base64 or uploaded URL
+      const mockPhotoUrl = photo;
       
       const payload = {
         title: aiResult?.categoryLabel || 'Civic safety issue',
@@ -236,15 +270,7 @@ export default function ReportIssue() {
         pdfUrl: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf' // placeholder
       };
 
-      const docId = await reportIssue(payload);
-      
-      // Auto post to emergency channel if red severity
-      if (aiResult?.severity === 'red') {
-        const chatRef = { name: 'issues_chat' };
-        // Trigger alert post to community emergency
-        console.log("[Trigger] Posted RED alert to community emergency chat");
-      }
-
+      await reportIssue(payload);
       alert("Issue successfully reported to officials!");
       navigate('/');
     } catch (err) {
@@ -350,8 +376,6 @@ export default function ReportIssue() {
             </div>
 
             <div className="flex flex-col items-center justify-center py-4 space-y-4">
-              
-              {/* Record Mic Button */}
               <button
                 type="button"
                 onMouseDown={startRecording}
@@ -371,7 +395,6 @@ export default function ReportIssue() {
                 {isRecording ? 'Recording... Release to Stop' : 'Hold to Record'}
               </p>
 
-              {/* Waveform visualizer placeholder */}
               {isRecording && (
                 <div className="flex gap-1 items-center h-8">
                   {[...Array(8)].map((_, i) => (
@@ -388,7 +411,6 @@ export default function ReportIssue() {
                 </div>
               )}
 
-              {/* Voice Player & Transcription Output */}
               {voiceUrl && (
                 <div className="w-full bg-slate-50 dark:bg-slate-700/40 p-4 rounded-xl border border-border dark:border-slate-700 flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
@@ -483,24 +505,46 @@ export default function ReportIssue() {
           >
             <div className="text-center space-y-1">
               <h3 className="text-lg font-bold text-text dark:text-white">Verify Hazard Location</h3>
-              <p className="text-xs text-text-muted">Ensure coords match the physical incident spot.</p>
+              <p className="text-xs text-text-muted">Ensure coordinates match the physical incident spot.</p>
             </div>
 
             <div className="space-y-4">
+              
+              {/* Interactive React-Leaflet Map coordinates selector */}
+              <div className="h-60 w-full rounded-xl overflow-hidden border border-border dark:border-slate-700 relative z-0">
+                <MapContainer
+                  center={[adjustCoords.lat, adjustCoords.lng]}
+                  zoom={15}
+                  style={{ width: '100%', height: '100%' }}
+                >
+                  <TileLayer
+                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  />
+                  <MapEvents onChangeCoords={handleMapClick} />
+                  <Marker position={[adjustCoords.lat, adjustCoords.lng]} />
+                  <MapRecenter coords={[adjustCoords.lat, adjustCoords.lng]} />
+                </MapContainer>
+              </div>
+
+              <div className="text-center text-xs text-text-muted font-bold">
+                📍 Click anywhere on the map above to select coordinates.
+              </div>
+
               <div className="bg-slate-50 dark:bg-slate-700/40 p-4 rounded-xl border border-border dark:border-slate-700 space-y-1.5 text-left">
                 <div className="flex items-center gap-1.5 text-accent font-bold text-sm">
                   <MapPin className="w-4 h-4" />
-                  <span>Report Coords Address:</span>
+                  <span>Reported Location Address:</span>
                 </div>
-                <p className="text-sm font-semibold text-text dark:text-slate-200">
+                <p className="text-xs font-semibold text-text dark:text-slate-200">
                   {resolvedAddress || 'Determining location coordinates...'}
                 </p>
               </div>
 
-              {/* Slider Controls to adjust location (Elder Friendly) */}
+              {/* Slider Controls (Elder Friendly) */}
               <div className="space-y-3 bg-slate-50 dark:bg-slate-700/40 p-4 rounded-xl border border-border dark:border-slate-700 text-left">
                 <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider block">
-                  Fine-tune location details:
+                  Fine-tune coordinates:
                 </span>
                 
                 <div className="space-y-1">
@@ -534,16 +578,6 @@ export default function ReportIssue() {
                     className="w-full accent-accent"
                   />
                 </div>
-              </div>
-
-              {/* Mini Map preview */}
-              <div className="h-28 bg-slate-200 dark:bg-slate-700 rounded-xl flex items-center justify-center border border-border dark:border-slate-600 relative overflow-hidden">
-                <MapPin className="w-7 h-7 text-accent animate-bounce z-10" />
-                <span className="absolute bottom-2 right-2 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded font-mono font-bold z-10">
-                  {adjustCoords.lat.toFixed(4)}, {adjustCoords.lng.toFixed(4)}
-                </span>
-                {/* Mock grid details */}
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,0,0,0.15)_1px,transparent_1px)] bg-[size:12px_12px] opacity-25" />
               </div>
             </div>
 
@@ -585,7 +619,6 @@ export default function ReportIssue() {
                   </span>
                 </div>
 
-                {/* Render full result parameters */}
                 <AIResultCard 
                   result={aiResult}
                   onDownloadPdf={() => downloadPdfReport({ 
