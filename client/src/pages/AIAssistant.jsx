@@ -55,6 +55,11 @@ export default function AIAssistant() {
       rec.onerror = (err) => {
         console.error("Speech recognition error:", err);
         setIsListening(false);
+        if (err.error === 'not-allowed') {
+          toast.error("Microphone permission denied. Please allow microphone access.");
+        } else {
+          toast.error("Speech input error. Please try again or type your message.");
+        }
       };
 
       rec.onend = () => {
@@ -64,6 +69,26 @@ export default function AIAssistant() {
       recognitionRef.current = rec;
     }
   }, []);
+
+  useEffect(() => {
+    return () => {
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
+
+  const speakText = (text, lang) => {
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    const mapping = {
+      en: 'en-IN', hi: 'hi-IN', kn: 'kn-IN', ta: 'ta-IN', te: 'te-IN',
+      ml: 'ml-IN', bn: 'bn-IN', mr: 'mr-IN', gu: 'gu-IN', pa: 'pa-IN'
+    };
+    utterance.lang = mapping[lang] || 'en-IN';
+    window.speechSynthesis.speak(utterance);
+  };
 
   const toggleListening = () => {
     if (!recognitionRef.current) {
@@ -101,6 +126,9 @@ export default function AIAssistant() {
 
       // Call Gemini Chat Engine
       const reply = await chatWithAI(cleanText, userLocation, lang);
+
+      // Speak AI response
+      speakText(reply, lang);
 
       // 2. Add AI Message
       setMessages(prev => [...prev, {

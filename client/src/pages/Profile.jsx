@@ -14,7 +14,8 @@ import {
   TrendingUp,
   Briefcase,
   CheckCircle,
-  FileCheck
+  FileCheck,
+  X
 } from 'lucide-react';
 import useAuth from '../hooks/useAuth';
 import useIssues from '../hooks/useIssues';
