@@ -1,6 +1,11 @@
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY
 const BASE_URL = 'https://generativelanguage.googleapis.com/v1beta'
-const MODEL = 'gemini-1.5-flash'
+const MODELS = [
+  'gemini-1.5-flash',
+  'gemini-1.5-flash-latest', 
+  'gemini-pro',
+  'gemini-1.0-pro'
+]
 
 export async function analyzeIssueImage(base64Image, description = '', language = 'en') {
   if (!API_KEY) {
@@ -33,56 +38,58 @@ Replace the example values with your actual analysis of the image.
 Additional context: "${description}"
 IMPORTANT: Return valid parseable JSON only.`
 
-  try {
-    const response = await fetch(
-      `${BASE_URL}/models/${MODEL}:generateContent?key=${API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{
-            parts: [
-              { text: prompt },
-              {
-                inline_data: {
-                  mime_type: 'image/jpeg',
-                  data: base64Image
+  for (const model of MODELS) {
+    try {
+      const response = await fetch(
+        `${BASE_URL}/models/${model}:generateContent?key=${API_KEY}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{
+              parts: [
+                { text: prompt },
+                {
+                  inline_data: {
+                    mime_type: 'image/jpeg',
+                    data: base64Image
+                  }
                 }
-              }
-            ]
-          }],
-          generationConfig: {
-            temperature: 0.1,
-            maxOutputTokens: 1024
-          }
-        })
+              ]
+            }],
+            generationConfig: {
+              temperature: 0.1,
+              maxOutputTokens: 1024
+            }
+          })
+        }
+      )
+
+      if (!response.ok) {
+        console.warn(`Model ${model} failed for image analysis, trying next...`)
+        continue
       }
-    )
 
-    if (!response.ok) {
-      const errorData = await response.json()
-      console.error('Gemini API error:', errorData)
-      return getMockAnalysis(description)
+      const data = await response.json()
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || ''
+      console.log('Gemini raw response:', text)
+
+      const jsonMatch = text.match(/\{[\s\S]*\}/)
+      if (!jsonMatch) {
+        console.error('No JSON found in response')
+        continue
+      }
+
+      const result = JSON.parse(jsonMatch[0])
+      return result
+
+    } catch (err) {
+      console.warn(`Model ${model} image analysis failed:`, err)
+      continue
     }
-
-    const data = await response.json()
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || ''
-    console.log('Gemini raw response:', text)
-
-    // Extract JSON from response
-    const jsonMatch = text.match(/\{[\s\S]*\}/)
-    if (!jsonMatch) {
-      console.error('No JSON found in response')
-      return getMockAnalysis(description)
-    }
-
-    const result = JSON.parse(jsonMatch[0])
-    return result
-
-  } catch (err) {
-    console.error('Gemini request failed:', err)
-    return getMockAnalysis(description)
   }
+
+  return getMockAnalysis(description)
 }
 
 function getMockAnalysis(description) {
@@ -105,33 +112,52 @@ function getMockAnalysis(description) {
 }
 
 export async function chatWithAI(message, userLocation = 'India', language = 'en') {
-  if (!API_KEY) return 'AI assistant is currently unavailable.'
-
-  const prompt = `You are VANGUARD AI, a civic assistant for Indian communities.
-User location: ${userLocation}
-Respond in simple, clear English.
-Help with: reporting civic issues, finding authorities, understanding community risks.
-Be concise and action-oriented. Maximum 3 sentences per response.
-User message: ${message}`
-
-  try {
-    const response = await fetch(
-      `${BASE_URL}/models/${MODEL}:generateContent?key=${API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.7, maxOutputTokens: 256 }
-        })
-      }
-    )
-
-    if (!response.ok) return 'Unable to connect to AI. Please try again.'
-    const data = await response.json()
-    return data.candidates?.[0]?.content?.parts?.[0]?.text || 
-           'I am here to help with your community issues.'
-  } catch {
-    return 'Unable to connect to AI. Please try again.'
+  if (!API_KEY || API_KEY === 'paste_your_gemini_key_here') {
+    return 'AI key not configured. Please check environment variables.'
   }
+
+  const prompt = `You are VANGUARD AI, a helpful civic assistant for Indian communities.
+Keep responses under 100 words. Be direct and helpful.
+User location: ${userLocation || 'India'}
+Question: ${message}`
+
+  for (const model of MODELS) {
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${API_KEY}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ 
+              parts: [{ text: prompt }] 
+            }],
+            generationConfig: {
+              temperature: 0.7,
+              maxOutputTokens: 200
+            }
+          })
+        }
+      )
+      
+      const data = await response.json()
+      
+      if (data.error) {
+        console.warn(`Model ${model} failed:`, data.error.message)
+        continue
+      }
+      
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text
+      if (text) {
+        console.log(`Model ${model} worked!`)
+        return text
+      }
+      
+    } catch (err) {
+      console.warn(`Model ${model} threw error:`, err.message)
+      continue
+    }
+  }
+  
+  return 'AI is temporarily unavailable. Please try again in a moment.'
 }
