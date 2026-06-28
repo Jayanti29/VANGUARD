@@ -20,7 +20,8 @@ import {
   Clock,
   Star,
   Search,
-  Eye
+  Eye,
+  Award
 } from 'lucide-react';
 import useAuth from '../hooks/useAuth';
 import { db } from '../lib/firebase';
@@ -379,19 +380,19 @@ export default function Home() {
 
         {/* Quick Actions */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <button onClick={() => navigate('/workers')} style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', boxShadow: 'var(--shadow)' }}>
+          <button onClick={() => navigate('/workers')} style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', justify: 'center', gap: '8px', cursor: 'pointer', boxShadow: 'var(--shadow)' }}>
             <Briefcase size={24} className="text-amber-500" />
             <span style={{ fontSize: '11px', fontWeight: 800, color: theme.text }}>Browse Jobs</span>
           </button>
-          <button onClick={() => navigate('/workers?tab=applications')} style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', boxShadow: 'var(--shadow)' }}>
+          <button onClick={() => navigate('/workers?tab=applications')} style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', justify: 'center', gap: '8px', cursor: 'pointer', boxShadow: 'var(--shadow)' }}>
             <FileText size={24} className="text-blue-500" />
             <span style={{ fontSize: '11px', fontWeight: 800, color: theme.text }}>My Applications</span>
           </button>
-          <button onClick={() => navigate('/profile')} style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', boxShadow: 'var(--shadow)' }}>
+          <button onClick={() => navigate('/profile')} style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', justify: 'center', gap: '8px', cursor: 'pointer', boxShadow: 'var(--shadow)' }}>
             <User size={24} className="text-purple-500" />
             <span style={{ fontSize: '11px', fontWeight: 800, color: theme.text }}>Edit Profile</span>
           </button>
-          <button onClick={() => navigate('/community')} style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', boxShadow: 'var(--shadow)' }}>
+          <button onClick={() => navigate('/community')} style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', justify: 'center', gap: '8px', cursor: 'pointer', boxShadow: 'var(--shadow)' }}>
             <MessageSquare size={24} className="text-blue-500" />
             <span style={{ fontSize: '11px', fontWeight: 800, color: theme.text }}>Community</span>
           </button>
@@ -514,10 +515,9 @@ export default function Home() {
     const [totalReportsThisWeek, setTotalReportsThisWeek] = useState(0);
     
     const [issues, setIssues] = useState([]);
-    const [filter, setFilter] = useState('all'); // all | critical | open | in_progress | resolved
+    const [filter, setFilter] = useState('all');
     const [searchQuery, setSearchQuery] = useState('');
     
-    // Detailed modal state (TASK 6)
     const [selectedIssue, setSelectedIssue] = useState(null);
     const [officialNote, setOfficialNote] = useState('');
     const [updateStatus, setUpdateStatus] = useState('open');
@@ -526,7 +526,6 @@ export default function Home() {
     useEffect(() => {
       if (!dbUser) return;
 
-      // 1. Fetch ALL issues in official's district
       const qIssues = query(
         collection(db, 'issues'),
         where('district', '==', dbUser.district || 'Ramanagara')
@@ -535,7 +534,6 @@ export default function Home() {
       const unsub = onSnapshot(qIssues, (snap) => {
         const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         
-        // Sort: newest first
         const sorted = docs.sort((a,b) => {
           const tA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
           const tB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
@@ -543,19 +541,16 @@ export default function Home() {
         });
         setIssues(sorted);
         
-        // Compute stats
         const criticals = docs.filter(i => i.severity === 'red' && i.status === 'open').length;
         setCriticalCount(criticals);
 
         const openPending = docs.filter(i => i.status === 'open').length;
         setPendingCount(openPending);
 
-        // Resolved today (last 24 hours)
         const dayAgo = Date.now() - 24 * 60 * 60 * 1000;
         const resolved = docs.filter(i => i.status === 'resolved' && i.resolvedAt && new Date(i.resolvedAt).getTime() > dayAgo).length;
         setResolvedToday(resolved);
 
-        // This week
         const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
         const weekly = docs.filter(i => i.createdAt && new Date(i.createdAt).getTime() > weekAgo).length;
         setTotalReportsThisWeek(weekly);
@@ -564,7 +559,6 @@ export default function Home() {
       return () => unsub();
     }, [dbUser]);
 
-    // Handle status update (TASK 6)
     const handleStatusUpdate = async (e) => {
       e.preventDefault();
       if (!selectedIssue) return;
@@ -590,7 +584,6 @@ export default function Home() {
       }
     };
 
-    // Quick Action button shortcuts for updating status directly
     const quickUpdateStatus = async (issueId, newStatus) => {
       try {
         await updateDoc(doc(db, 'issues', issueId), {
@@ -605,15 +598,12 @@ export default function Home() {
       }
     };
 
-    // Filtered Issues logic
     const filteredIssues = issues.filter(issue => {
-      // 1. Filter by tabs
       if (filter === 'critical' && issue.severity !== 'red') return false;
       if (filter === 'open' && issue.status !== 'open') return false;
       if (filter === 'in_progress' && issue.status !== 'in_progress') return false;
       if (filter === 'resolved' && issue.status !== 'resolved') return false;
 
-      // 2. Filter by search query (category or village or description)
       if (searchQuery.trim()) {
         const queryStr = searchQuery.toLowerCase();
         const categoryMatch = (issue.categoryLabel || issue.category || '').toLowerCase().includes(queryStr);
@@ -625,12 +615,10 @@ export default function Home() {
       return true;
     });
 
-    // Recent Reporters client-side grouping
     const reportersToday = [];
     const dayAgo = Date.now() - 24 * 60 * 60 * 1000;
     const todayIssues = issues.filter(i => i.createdAt && new Date(i.createdAt).getTime() > dayAgo);
     
-    // Group by reporterId
     const grouped = {};
     todayIssues.forEach(issue => {
       if (!issue.reporterId) return;
@@ -667,7 +655,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Stats Row (4 Prominent Cards) */}
+        {/* Stats Row */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div 
             onClick={() => setFilter('critical')}
@@ -705,13 +693,11 @@ export default function Home() {
 
         {/* Issue Management Panel */}
         <div style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '20px', boxShadow: 'var(--shadow)' }}>
-          {/* Title & Filter bar */}
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
             <h3 style={{ fontSize: '14px', fontWeight: 800, color: theme.text, textTransform: 'uppercase', tracking: 'wide', margin: 0 }}>
               Issue Management Panel
             </h3>
             
-            {/* Filter Buttons */}
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
               {['all', 'critical', 'open', 'in_progress', 'resolved'].map(f => (
                 <button
@@ -735,7 +721,6 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Search Bar */}
           <div style={{ position: 'relative', marginBottom: '16px' }}>
             <Search size={18} style={{ position: 'absolute', left: '14px', top: '13px', color: theme.muted }} />
             <input 
@@ -756,7 +741,6 @@ export default function Home() {
             />
           </div>
 
-          {/* Issue Table */}
           <div className="overflow-x-auto">
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '600px' }}>
               <thead>
@@ -863,13 +847,11 @@ export default function Home() {
         {selectedIssue && (
           <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', justify: 'flex-end', zIndex: 100 }}>
             <div style={{ background: theme.surface, width: '100%', maxWidth: '520px', height: '100%', overflowY: 'auto', padding: '32px 24px', boxShadow: 'var(--shadow)', boxSizing: 'border-box', borderLeft: '1px solid ' + theme.border, display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              {/* Header */}
               <div style={{ display: 'flex', justify: 'space-between', alignItems: 'center' }}>
                 <h3 style={{ fontSize: '16px', fontWeight: 800, color: theme.text, margin: 0 }}>Civic Complaint Report</h3>
                 <button onClick={() => setSelectedIssue(null)} style={{ background: 'none', border: 'none', color: theme.muted, cursor: 'pointer', fontSize: '24px' }}>&times;</button>
               </div>
 
-              {/* Photo or Category Image */}
               <div style={{ width: '100%', height: '200px', borderRadius: '12px', overflow: 'hidden', background: theme.surface2, border: '1px solid ' + theme.border }}>
                 <img 
                   src={selectedIssue.imageUrl || 'https://images.unsplash.com/photo-1590674899484-d5640e854abe?q=80&w=400&auto=format&fit=crop'} 
@@ -878,7 +860,6 @@ export default function Home() {
                 />
               </div>
 
-              {/* AI Analysis Box */}
               <div style={{ background: theme.surface2, padding: '16px', borderRadius: '12px', border: '1px solid ' + theme.border, display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <div style={{ display: 'flex', justify: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontSize: '11px', fontWeight: 800, color: theme.muted, textTransform: 'uppercase' }}>AI Analysis Verdict</span>
@@ -887,7 +868,6 @@ export default function Home() {
                   </span>
                 </div>
                 
-                {/* Circular Gauge / Impact Score */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '8px 0' }}>
                   <div style={{
                     width: '54px', height: '54px', borderRadius: '50%',
@@ -910,24 +890,20 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* AI Report Blockquote */}
               <div style={{ borderLeft: '4px solid ' + theme.accent, paddingLeft: '16px', fontStyle: 'italic', fontSize: '12px', color: theme.muted, lineHeight: '1.6' }}>
                 {selectedIssue.reportText || selectedIssue.analysis?.reportText || selectedIssue.description || 'No detailed analysis report generated.'}
               </div>
 
-              {/* Reporter Info */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', background: theme.surface2, padding: '12px', borderRadius: '8px', border: '1px solid ' + theme.border, fontSize: '11px' }}>
                 <span style={{ color: theme.muted }}><strong>Reporter:</strong> {selectedIssue.reporterName || 'Citizen'}</span>
                 <span style={{ color: theme.muted }}><strong>Location:</strong> {selectedIssue.village}, Ward {selectedIssue.ward}</span>
                 <span style={{ color: theme.muted }}><strong>Reported At:</strong> {selectedIssue.createdAt ? new Date(selectedIssue.createdAt).toLocaleString() : 'Just now'}</span>
               </div>
 
-              {/* Community Confirmations */}
               <div style={{ fontSize: '12px', color: theme.text }}>
                 <strong>Confirmations:</strong> {selectedIssue.confirmations?.length || 0} community members verified this hazard.
               </div>
 
-              {/* Status Update Section */}
               <form onSubmit={handleStatusUpdate} style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', borderTop: '1px solid ' + theme.border, paddingTop: '16px' }}>
                 <div>
                   <label style={{ fontSize: '11px', fontWeight: 700, color: theme.muted, display: 'block', marginBottom: '6px' }}>Current Status badge</label>
