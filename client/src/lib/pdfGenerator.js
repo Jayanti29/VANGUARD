@@ -91,3 +91,20 @@ export function generateIssuePDF(issue, aiResult) {
 
   return doc
 }
+
+export function downloadPdfReport(issue) {
+  const aiResult = {
+    severity: issue.severity || 'yellow',
+    severityLabel: issue.severityLabel || 'Needs Attention',
+    category: issue.category || 'other',
+    categoryLabel: issue.categoryLabel || 'Civic Issue',
+    impactScore: issue.impactScore || 50,
+    riskType: issue.riskType || 'accident',
+    recommendedAuthority: issue.recommendedAuthority || 'Local Municipality',
+    escalationLevel: issue.escalationLevel || 'ward',
+    riskPrediction: issue.riskSummary || 'Civic safety hazard',
+    reportText: issue.aiReportText || 'A community issue has been reported and requires attention.'
+  };
+  const doc = generateIssuePDF(issue, aiResult);
+  doc.save(`vanguard_report_${Date.now()}.pdf`);
+}
