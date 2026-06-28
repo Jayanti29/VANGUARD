@@ -1,0 +1,45 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Rules for users collection
+    match /users/{userId} {
+      allow read, write: if true;
+    }
+    
+    // Rules for issues collection
+    match /issues/{issueId} {
+      allow read, write: if true;
+    }
+    
+    // Rules for community chat channels
+    match /communities/{communityId}/messages/{msgId} {
+      allow read, write: if true;
+    }
+    
+    match /communities/{communityId}/members/{userId} {
+      allow read, write: if true;
+    }
+    
+    // Rules for emergency alerts
+    match /emergencies/{alertId} {
+      allow read, write: if true;
+    }
+    
+    // Rules for worker profiles
+    match /workers/{workerId} {
+      allow read, write: if true;
+    }
+    
+    // Rules for jobs posting
+    match /jobPosts/{jobId} {
+      allow read, write: if true;
+    }
+    
+    // Rules for officials registry
+    match /officials/{officialId} {
+      allow read: if true;
+      allow write: if true; // allow initial seeding
+    }
+  }
+}

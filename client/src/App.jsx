@@ -1,122 +1,116 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { LanguageProvider } from './contexts/LanguageContext';
+import './lib/i18n'; // import to initialize translation engine
 
-function App() {
-  const [count, setCount] = useState(0)
+// Pages
+import Onboarding from './pages/Onboarding';
+import Login from './pages/Login';
+import Home from './pages/Home';
+import ReportIssue from './pages/ReportIssue';
+import IssueDetail from './pages/IssueDetail';
+import IssueMap from './pages/IssueMap';
+import Community from './pages/Community';
+import Workers from './pages/Workers';
+import Emergency from './pages/Emergency';
+import AIAssistant from './pages/AIAssistant';
+import Officials from './pages/Officials';
+import Profile from './pages/Profile';
+import AdminDashboard from './pages/AdminDashboard';
+
+// Components
+import Sidebar from './components/layout/Sidebar';
+import BottomNav from './components/layout/BottomNav';
+import TopBar from './components/layout/TopBar';
+
+// Helper Protected Route Layout Wrapper
+function AppLayout() {
+  const { user, dbUser, loading } = useAuth();
+  const location = useLocation();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 border-4 border-accent border-t-transparent rounded-full animate-spin"></div>
+          <span className="text-sm font-bold text-text-muted">Verifying Credentials...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Redirect to login if unauthenticated
+  if (!user) {
+    return <Navigate to="/login" replace state={{ from: location }} />;
+  }
+
+  // If user is authenticated but hasn't set up location/profile settings, redirect to onboarding
+  // Allow Onboarding route itself to pass through
+  const isProfileIncomplete = !dbUser?.village;
+  if (isProfileIncomplete && location.pathname !== '/onboarding') {
+    return <Navigate to="/onboarding" replace />;
+  }
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <div className="flex min-h-screen bg-bg dark:bg-slate-950 text-text dark:text-slate-100 overflow-x-hidden">
+      {/* Sidebar on desktop */}
+      <Sidebar />
 
-      <div className="ticks"></div>
+      {/* Main body content */}
+      <div className="flex-1 flex flex-col min-w-0 pb-[72px] md:pb-0">
+        <TopBar />
+        
+        <main className="flex-1 p-4 md:p-6 overflow-y-auto max-w-5xl w-full mx-auto">
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/report" element={<ReportIssue />} />
+            <Route path="/issues/:id" element={<IssueDetail />} />
+            <Route path="/map" element={<IssueMap />} />
+            <Route path="/community" element={<Community />} />
+            <Route path="/workers" element={<Workers />} />
+            <Route path="/emergency" element={<Emergency />} />
+            <Route path="/ai" element={<AIAssistant />} />
+            <Route path="/officials" element={<Officials />} />
+            <Route path="/profile" element={<Profile />} />
+            
+            {/* Admin only route */}
+            <Route 
+              path="/admin" 
+              element={
+                dbUser?.role === 'Official' 
+                  ? <AdminDashboard /> 
+                  : <Navigate to="/" replace />
+              } 
+            />
+            
+            {/* Catch all */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </main>
+      </div>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+      {/* Bottom nav bar on mobile devices */}
+      <BottomNav />
+    </div>
+  );
 }
 
-export default App
+export default function App() {
+  return (
+    <AuthProvider>
+      <LanguageProvider>
+        <BrowserRouter>
+          <Routes>
+            {/* Public/wizard routes */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/onboarding" element={<Onboarding />} />
+
+            {/* Protected application layout */}
+            <Route path="/*" element={<AppLayout />} />
+          </Routes>
+        </BrowserRouter>
+      </LanguageProvider>
+    </AuthProvider>
+  );
+}

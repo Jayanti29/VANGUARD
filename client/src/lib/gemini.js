@@ -1,4 +1,4 @@
-import { GoogleGenAI } from '@google/generative-ai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
 
@@ -117,10 +117,8 @@ export const analyzeIssueImage = async (base64Image, description, language = 'en
   }
 
   try {
-    // Note: In newer version of the Google Gen AI SDK, the constructor is GoogleGenAI
-    const ai = new GoogleGenAI({ apiKey });
-    // In SDK, for vision queries we can use the gemini-2.5-flash model
-    const model = ai.models.get({ model: 'gemini-2.5-flash' });
+    const ai = new GoogleGenerativeAI(apiKey);
+    const model = ai.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
     const systemPrompt = `
 You are an AI civic safety analyzer for India. Analyze this image of a 
