@@ -9,10 +9,13 @@ import {
 import { auth, db } from '../lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { RecaptchaVerifier, signInWithPhoneNumber, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import useAuth from '../hooks/useAuth';
 import toast from 'react-hot-toast';
 
 export default function Login() {
   const navigate = useNavigate();
+  const { loginAsGuest } = useAuth();
+  
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
@@ -117,7 +120,6 @@ export default function Login() {
         if (userSnap.exists()) {
           window.location.href = '/';
         } else {
-          // Send to onboarding to complete profile setup (role, state, village etc)
           navigate('/onboarding');
         }
       }, 1000);
@@ -128,8 +130,25 @@ export default function Login() {
     }
   };
 
+  // Guest Direct Login Bypass
+  const handleGuestLogin = async (role) => {
+    const guestToast = toast.loading(`Logging in as Guest ${role}...`);
+    try {
+      await loginAsGuest(role);
+      toast.dismiss(guestToast);
+      toast.success(`Logged in as Guest ${role}!`);
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 1000);
+    } catch (err) {
+      console.error(err);
+      toast.dismiss(guestToast);
+      toast.error("Guest login failed.");
+    }
+  };
+
   return (
-    <div className="max-w-md mx-auto bg-surface dark:bg-slate-800 border border-border dark:border-slate-700 rounded-3xl p-6 shadow-xl space-y-6">
+    <div className="max-w-md mx-auto bg-surface dark:bg-slate-800 border border-border dark:border-slate-700 rounded-3xl p-6 shadow-xl space-y-6 animate-fadeIn">
       {/* Invisible reCAPTCHA Container */}
       <div id="recaptcha-container"></div>
 
@@ -138,6 +157,43 @@ export default function Login() {
           🛡️ VANGUARD
         </h1>
         <p className="text-xs text-text-muted">Sign In to Your Community Hub</p>
+      </div>
+
+      {/* Guest Login Bypass Buttons */}
+      <div className="space-y-3">
+        <label className="text-[10px] font-black text-text-muted uppercase tracking-wider block text-center">
+          ⚡ Immediate Access (Skip Verification)
+        </label>
+        <div className="grid grid-cols-3 gap-2">
+          <button
+            onClick={() => handleGuestLogin('Citizen')}
+            className="h-12 bg-accent text-white hover:bg-opacity-95 text-[11px] font-black rounded-xl cursor-pointer transition shadow-sm"
+          >
+            Citizen Guest
+          </button>
+          <button
+            onClick={() => handleGuestLogin('Worker')}
+            className="h-12 bg-accent text-white hover:bg-opacity-95 text-[11px] font-black rounded-xl cursor-pointer transition shadow-sm"
+          >
+            Worker Guest
+          </button>
+          <button
+            onClick={() => handleGuestLogin('Official')}
+            className="h-12 bg-accent text-white hover:bg-opacity-95 text-[11px] font-black rounded-xl cursor-pointer transition shadow-sm"
+          >
+            Official Guest
+          </button>
+        </div>
+      </div>
+
+      {/* Divider */}
+      <div className="relative flex items-center justify-center my-4">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-border dark:border-slate-700"></div>
+        </div>
+        <span className="relative px-3 bg-surface dark:bg-slate-800 text-[10px] font-bold text-text-muted uppercase tracking-wider">
+          Or Connect With Verification
+        </span>
       </div>
 
       <div className="space-y-4">
@@ -164,7 +220,7 @@ export default function Login() {
               </div>
               <button
                 onClick={handleSendOTP}
-                className="w-full h-12 bg-accent text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1 mt-4 cursor-pointer"
+                className="w-full h-12 bg-slate-100 hover:bg-slate-200 border border-border dark:bg-slate-900 dark:hover:bg-slate-850 text-text dark:text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1 mt-4 cursor-pointer"
               >
                 Send OTP Code <ArrowRight className="w-4 h-4" />
               </button>
@@ -191,16 +247,6 @@ export default function Login() {
             </div>
           )}
         </div>
-      </div>
-
-      {/* Social / OAuth Divider */}
-      <div className="relative flex items-center justify-center my-4">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-border dark:border-slate-700"></div>
-        </div>
-        <span className="relative px-3 bg-surface dark:bg-slate-800 text-[10px] font-bold text-text-muted uppercase tracking-wider">
-          Or Continue With
-        </span>
       </div>
 
       {/* Google Login Button */}

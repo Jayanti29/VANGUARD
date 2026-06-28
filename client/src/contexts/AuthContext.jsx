@@ -203,6 +203,55 @@ export const AuthProvider = ({ children }) => {
     return () => unsubscribe();
   }, []);
 
+  // Guest Sign In (completely bypasses Firebase Auth)
+  const loginAsGuest = async (role = 'Citizen') => {
+    setLoading(true);
+    try {
+      const guestId = `guest_${Date.now()}`;
+      const guestUser = {
+        uid: guestId,
+        displayName: `Guest ${role}`,
+        phoneNumber: '+91-9999999999',
+        email: 'guest@vanguard.org',
+        isAnonymous: true
+      };
+
+      const guestDbUser = {
+        uid: guestId,
+        name: `Guest ${role}`,
+        phone: '+91-9999999999',
+        language: 'en',
+        role: role,
+        state: 'Karnataka',
+        district: 'Bangalore',
+        village: 'Rajajinagar',
+        ward: '6',
+        houseNo: 'Flat 101',
+        lat: 12.9716,
+        lng: 77.5946,
+        profileImageUrl: `https://api.dicebear.com/7.x/bottts/svg?seed=${guestId}`,
+        createdAt: new Date().toISOString()
+      };
+
+      // Set user document in Firestore so that any queries targeting the user document don't throw missing doc errors
+      try {
+        await setDoc(doc(db, 'users', guestId), guestDbUser);
+      } catch (err) {
+        console.warn("Could not save guest to Firestore. Bypassing silently:", err);
+      }
+
+      setUser(guestUser);
+      setDbUser(guestDbUser);
+      localStorage.setItem('vanguard_session_user', JSON.stringify(guestUser));
+      localStorage.setItem('vanguard_session_dbuser', JSON.stringify(guestDbUser));
+      return guestUser;
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <AuthContext.Provider value={{
       user,
@@ -211,6 +260,7 @@ export const AuthProvider = ({ children }) => {
       loginWithPhone,
       confirmOTP,
       loginWithGoogle,
+      loginAsGuest,
       logout,
       updateProfile,
       syncUserWithFirestore
