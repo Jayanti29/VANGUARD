@@ -11,240 +11,217 @@ import {
   AlertTriangle,
   ArrowRight,
   TrendingUp,
-  Map
+  Map,
+  Wrench,
+  Bot
 } from 'lucide-react';
 import useAuth from '../hooks/useAuth';
-import useIssues from '../hooks/useIssues';
-import SeverityBadge from '../components/ui/SeverityBadge';
+import { db } from '../lib/firebase';
+import { collection, query, where, limit, onSnapshot, orderBy } from 'firebase/firestore';
 
 export default function Home() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { dbUser } = useAuth();
-  const { issues } = useIssues();
+  const { dbUser, user } = useAuth();
 
-  // Local state for counts and updates
   const [criticalCount, setCriticalCount] = useState(0);
+  const [totalOpenIssues, setTotalOpenIssues] = useState(0);
   const [latestAlert, setLatestAlert] = useState(null);
-  const [workerCount, setWorkerCount] = useState(12); // simulated local count
-  const [latestMessage, setLatestMessage] = useState({
-    senderName: 'Ramesh Kumar',
-    senderRole: 'Volunteer',
-    text: 'Cleanliness drive scheduled this Saturday at 8 AM. Requesting active participation!',
-    time: '10:30 AM'
-  });
+  const [availableWorkersCount, setAvailableWorkersCount] = useState(0);
+  
+  // Real-time Community Message Preview
+  const [latestMessage, setLatestMessage] = useState(null);
 
+  // Time-aware greeting
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 12) return t('greeting.morning', 'Good morning');
+    if (hour >= 12 && hour < 17) return t('greeting.afternoon', 'Good afternoon');
+    if (hour >= 17 && hour < 21) return t('greeting.evening', 'Good evening');
+    return t('greeting.night', 'Good night');
+  };
+
+  const communityId = `${dbUser?.district || 'bangalore'}_${dbUser?.village || 'ward6'}`.toLowerCase().replace(/\s+/g, '');
+
+  // Real-time listeners for issues & counts
   useEffect(() => {
-    if (issues && issues.length > 0) {
-      // Filter issues by severity red
-      const criticals = issues.filter(issue => issue.severity === 'red' && issue.status !== 'Resolved');
+    if (!dbUser) return;
+
+    // 1. Fetch Issues count in user's ward
+    const issuesQuery = query(
+      collection(db, 'issues'),
+      where('ward', '==', dbUser.ward || '6'),
+      where('status', '==', 'open')
+    );
+    const unsubscribeIssues = onSnapshot(issuesQuery, (snapshot) => {
+      const docs = snapshot.docs.map(doc => doc.data());
+      setTotalOpenIssues(docs.length);
+      const criticals = docs.filter(issue => issue.severity === 'red');
       setCriticalCount(criticals.length);
 
-      // Find latest issue with high severity for the alert card
-      const highSeverityIssue = issues.find(issue => issue.severity === 'red' || issue.severity === 'orange');
-      if (highSeverityIssue) {
-        setLatestAlert(highSeverityIssue);
+      // Latest red/orange alert
+      const highAlert = docs.find(issue => issue.severity === 'red' || issue.severity === 'orange');
+      setLatestAlert(highAlert || null);
+    });
+
+    // 2. Fetch community latest message
+    const msgQuery = query(
+      collection(db, 'communities', communityId, 'messages'),
+      orderBy('timestamp', 'desc'),
+      limit(1)
+    );
+    const unsubscribeMessages = onSnapshot(msgQuery, (snapshot) => {
+      if (!snapshot.empty) {
+        setLatestMessage(snapshot.docs[0].data());
+      } else {
+        setLatestMessage(null);
       }
-    }
-  }, [issues]);
+    });
+
+    // 3. Fetch count of available workers nearby
+    const workersQuery = query(
+      collection(db, 'workers'),
+      where('district', '==', dbUser.district || 'Bangalore'),
+      where('isAvailable', '==', true)
+    );
+    const unsubscribeWorkers = onSnapshot(workersQuery, (snapshot) => {
+      setAvailableWorkersCount(snapshot.size);
+    });
+
+    return () => {
+      unsubscribeIssues();
+      unsubscribeMessages();
+      unsubscribeWorkers();
+    };
+  }, [dbUser, communityId]);
 
   const quickActions = [
-    { 
-      label: t('home.reportIssue', 'Report Issue'), 
-      icon: PlusCircle, 
-      path: '/report', 
-      bg: 'bg-blue-50 dark:bg-slate-700 text-blue-600 dark:text-blue-300 hover:border-blue-300' 
-    },
-    { 
-      label: t('home.community', 'Community Chat'), 
-      icon: MessageSquare, 
-      path: '/community', 
-      bg: 'bg-emerald-50 dark:bg-slate-700 text-emerald-600 dark:text-emerald-300 hover:border-emerald-300' 
-    },
-    { 
-      label: t('home.workers', 'Local Workers'), 
-      icon: Users, 
-      path: '/workers', 
-      bg: 'bg-purple-50 dark:bg-slate-700 text-purple-600 dark:text-purple-300 hover:border-purple-300' 
-    },
-    { 
-      label: t('home.emergency', 'Emergency Alert'), 
-      icon: AlertOctagon, 
-      path: '/emergency', 
-      bg: 'bg-red-50 dark:bg-slate-700 text-red-600 dark:text-red-300 hover:border-red-300 border-2 border-red-200 dark:border-red-900 animate-pulse' 
-    },
-    { 
-      label: t('home.map', 'Live Map'), 
-      icon: Map, 
-      path: '/map', 
-      bg: 'bg-amber-50 dark:bg-slate-700 text-amber-600 dark:text-amber-300 hover:border-amber-300' 
-    },
-    { 
-      label: t('home.aiAssistant', 'AI Assistant'), 
-      icon: ShieldAlert, 
-      path: '/ai', 
-      bg: 'bg-indigo-50 dark:bg-slate-700 text-indigo-600 dark:text-indigo-300 hover:border-indigo-300' 
-    }
+    { label: 'Report Issue', icon: PlusCircle, path: '/report', color: 'bg-accent text-white' },
+    { label: 'Community Chat', icon: MessageSquare, path: '/community', color: 'bg-green-600 text-white' },
+    { label: 'Hire Workers', icon: Wrench, path: '/workers', color: 'bg-orange-500 text-white' },
+    { label: 'Emergency Alert', icon: AlertOctagon, path: '/emergency', color: 'bg-red-650 text-white' },
+    { label: 'Issue Map', icon: Map, path: '/map', color: 'bg-blue-650 text-white' },
+    { label: 'AI Assistant', icon: Bot, path: '/ai', color: 'bg-slate-700 text-white' }
   ];
 
   return (
-    <div className="space-y-6 pb-20 md:pb-6">
-      {/* Quick Action Grid - Elder Friendly (Taps >= 56px, big fonts) */}
-      <div>
-        <h3 className="text-xs font-bold text-text-muted dark:text-slate-400 uppercase tracking-wider mb-3">
-          Quick Actions
-        </h3>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          {quickActions.map((action) => {
-            const Icon = action.icon;
-            return (
-              <button
-                key={action.path}
-                onClick={() => navigate(action.path)}
-                className={`flex items-center gap-3 p-4 rounded-2xl border border-border dark:border-slate-700 font-bold text-left transition duration-200 min-h-[80px] shadow-sm cursor-pointer hover:-translate-y-0.5 active:translate-y-0 ${action.bg}`}
-              >
-                <Icon className="w-8 h-8 flex-shrink-0" />
-                <span className="text-sm md:text-base leading-snug">{action.label}</span>
-              </button>
-            );
-          })}
+    <div className="space-y-6">
+      
+      {/* Time-Aware Greeting Header */}
+      <div className="flex items-center justify-between bg-white dark:bg-slate-800 p-5 rounded-2xl border border-border dark:border-slate-700 shadow-sm">
+        <div>
+          <h2 className="text-lg font-black text-text dark:text-white">
+            🌅 {getGreeting()}, {dbUser?.name || 'Citizen'}
+          </h2>
+          <p className="text-xs text-text-muted mt-0.5 flex items-center gap-1 font-bold">
+            <MapPin className="w-3.5 h-3.5 text-accent" /> {dbUser?.village || 'Ramanagara'}, Ward {dbUser?.ward || '6'}
+          </p>
         </div>
+        <img 
+          src={dbUser?.profileImageUrl || 'https://api.dicebear.com/7.x/bottts/svg?seed=avatar'} 
+          alt="profile" 
+          className="w-12 h-12 rounded-full border border-border dark:border-slate-650 object-cover cursor-pointer"
+          onClick={() => navigate('/profile')}
+        />
       </div>
 
-      {/* Dashboard Section */}
-      <div className="space-y-4">
-        <h3 className="text-xs font-bold text-text-muted dark:text-slate-400 uppercase tracking-wider mb-1">
-          Community Dashboard
+      {/* 2x3 Quick Action Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        {quickActions.map(action => (
+          <button
+            key={action.label}
+            onClick={() => navigate(action.path)}
+            className={`min-h-[96px] p-4 rounded-2xl flex flex-col items-center justify-center gap-2 cursor-pointer shadow-sm hover:scale-102 transition ${action.color}`}
+          >
+            <action.icon className="w-8 h-8" />
+            <span className="text-xs font-black text-center">{action.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Real-time Dashboard cards */}
+      <div className="space-y-4 pt-2">
+        <h3 className="text-sm font-black text-text dark:text-white uppercase tracking-wider">
+          Community Updates
         </h3>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          
-          {/* Card 1 — Critical Issues */}
-          <div className="bg-surface dark:bg-slate-800 border-l-4 border-l-danger border border-border dark:border-slate-700 rounded-r-2xl p-5 flex flex-col justify-between shadow-sm">
-            <div className="flex justify-between items-start">
-              <div>
-                <span className="text-xs font-bold text-text-muted uppercase tracking-wider">
-                  Civic Hazards
-                </span>
-                <h4 className="text-2xl font-black text-danger mt-1">
-                  {criticalCount} Active Alerts
-                </h4>
-                <p className="text-xs text-text-muted mt-1 font-medium">
-                  {criticalCount > 0 
-                    ? 'Immediate safety attention requested by ward residents.' 
-                    : 'All critical safety issues have been successfully cleared.'
-                  }
-                </p>
-              </div>
-              <div className="w-10 h-10 bg-red-50 dark:bg-red-950/40 text-danger rounded-xl flex items-center justify-center">
-                <AlertOctagon className="w-6 h-6" />
-              </div>
+        {/* Card 1: Critical Alerts */}
+        <div 
+          onClick={() => navigate('/map')}
+          className="bg-surface dark:bg-slate-800 border-l-4 border-red-600 rounded-2xl p-4 shadow-sm border border-border dark:border-slate-700 flex gap-4 items-center justify-between cursor-pointer hover:shadow"
+        >
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 bg-red-100 dark:bg-red-950/20 text-red-600 rounded-xl flex items-center justify-center flex-shrink-0">
+              <ShieldAlert className="w-6 h-6 animate-pulse" />
             </div>
-            <button 
-              onClick={() => navigate('/map')}
-              className="text-xs text-danger font-bold flex items-center gap-1 mt-4 hover:underline self-start cursor-pointer"
-            >
-              View on Map <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          {/* Card 2 — Community Updates */}
-          <div className="card-vanguard flex flex-col justify-between">
             <div>
-              <span className="text-xs font-bold text-text-muted uppercase tracking-wider">
-                Community Updates
-              </span>
-              <div className="mt-2.5 space-y-1">
-                <p className="text-xs font-bold text-text dark:text-slate-200">
-                  {latestMessage.senderName} 
-                  <span className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 text-[9px] font-black px-1.5 py-0.5 rounded ml-2 uppercase">
-                    {latestMessage.senderRole}
-                  </span>
-                </p>
-                <p className="text-xs text-text-muted italic line-clamp-2 mt-1 leading-relaxed">
-                  "{latestMessage.text}"
-                </p>
-              </div>
-            </div>
-            <div className="flex justify-between items-center mt-4">
-              <span className="text-[10px] text-text-muted font-bold">{latestMessage.time}</span>
-              <button 
-                onClick={() => navigate('/community')}
-                className="text-xs text-accent dark:text-blue-400 font-bold flex items-center gap-1 hover:underline cursor-pointer"
-              >
-                Go to Community <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
-
-          {/* Card 3 — Workers Nearby */}
-          <div className="card-vanguard flex flex-col justify-between">
-            <div>
-              <span className="text-xs font-bold text-text-muted uppercase tracking-wider">
-                Local Workforce
-              </span>
-              <h4 className="text-2xl font-black text-text dark:text-white mt-1">
-                {workerCount} Workers Online
-              </h4>
-              <p className="text-xs text-text-muted mt-1 leading-normal">
-                Available daily-wage workers registered nearby in your village.
+              <h4 className="text-xs font-bold text-text dark:text-white">🚨 Local Critical Issues</h4>
+              <p className="text-[10px] text-text-muted mt-0.5 font-bold">
+                {criticalCount > 0 ? `${criticalCount} Urgent hazards need attention` : "All clear! No critical issues reported"}
               </p>
-              <div className="flex gap-1.5 mt-3">
-                <span className="bg-slate-100 dark:bg-slate-700 text-text dark:text-slate-300 text-[10px] font-bold px-2 py-0.5 rounded">
-                  Electrician
-                </span>
-                <span className="bg-slate-100 dark:bg-slate-700 text-text dark:text-slate-300 text-[10px] font-bold px-2 py-0.5 rounded">
-                  Plumber
-                </span>
-                <span className="bg-slate-100 dark:bg-slate-700 text-text dark:text-slate-300 text-[10px] font-bold px-2 py-0.5 rounded">
-                  Farmer
-                </span>
-              </div>
             </div>
-            <button 
-              onClick={() => navigate('/workers')}
-              className="text-xs text-accent dark:text-blue-400 font-bold flex items-center gap-1 mt-4 hover:underline self-start cursor-pointer"
-            >
-              Browse Workers <ArrowRight className="w-3.5 h-3.5" />
-            </button>
           </div>
+          <ArrowRight className="w-5 h-5 text-text-muted" />
+        </div>
 
-          {/* Card 4 — AI Alert */}
-          <div className="card-vanguard flex flex-col justify-between">
+        {/* Card 2: Community Chat Updates */}
+        <div 
+          onClick={() => navigate('/community')}
+          className="bg-surface dark:bg-slate-800 border-l-4 border-green-600 rounded-2xl p-4 shadow-sm border border-border dark:border-slate-700 flex gap-4 items-center justify-between cursor-pointer hover:shadow"
+        >
+          <div className="flex items-center gap-3.5 flex-1 min-w-0">
+            <div className="w-12 h-12 bg-green-100 dark:bg-green-950/20 text-green-600 rounded-xl flex items-center justify-center flex-shrink-0">
+              <MessageSquare className="w-6 h-6" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <h4 className="text-xs font-bold text-text dark:text-white">💬 Latest Chat Update</h4>
+              <p className="text-[10px] text-text-muted mt-0.5 truncate font-bold">
+                {latestMessage ? `[${latestMessage.senderName}]: "${latestMessage.text}"` : "No chat messages posted yet"}
+              </p>
+            </div>
+          </div>
+          <ArrowRight className="w-5 h-5 text-text-muted" />
+        </div>
+
+        {/* Card 3: Workers Nearby */}
+        <div 
+          onClick={() => navigate('/workers')}
+          className="bg-surface dark:bg-slate-800 border-l-4 border-orange-500 rounded-2xl p-4 shadow-sm border border-border dark:border-slate-700 flex gap-4 items-center justify-between cursor-pointer hover:shadow"
+        >
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 bg-orange-100 dark:bg-orange-950/20 text-orange-500 rounded-xl flex items-center justify-center flex-shrink-0">
+              <Users className="w-6 h-6" />
+            </div>
             <div>
-              <div className="flex justify-between items-center">
-                <span className="text-xs font-bold text-text-muted uppercase tracking-wider">
-                  AI Safety Alert
-                </span>
-                {latestAlert && <SeverityBadge severity={latestAlert.severity} />}
+              <h4 className="text-xs font-bold text-text dark:text-white">👷 Available Workers</h4>
+              <p className="text-[10px] text-text-muted mt-0.5 font-bold">
+                {availableWorkersCount > 0 ? `${availableWorkersCount} skill providers ready to work nearby` : "No registered workers online"}
+              </p>
+            </div>
+          </div>
+          <ArrowRight className="w-5 h-5 text-text-muted" />
+        </div>
+
+        {/* Card 4: AI Alert */}
+        {latestAlert && (
+          <div 
+            onClick={() => navigate(`/issues/${latestAlert.id || ''}`)}
+            className="bg-surface dark:bg-slate-800 border-l-4 border-amber-500 rounded-2xl p-4 shadow-sm border border-border dark:border-slate-700 flex gap-4 items-center justify-between cursor-pointer hover:shadow animate-fadeIn"
+          >
+            <div className="flex items-center gap-3.5 flex-1 min-w-0">
+              <div className="w-12 h-12 bg-amber-100 dark:bg-amber-950/20 text-amber-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                <AlertTriangle className="w-6 h-6" />
               </div>
-              <div className="mt-2.5">
-                <h5 className="text-sm font-bold text-text dark:text-white">
-                  {latestAlert ? latestAlert.title : 'All Clear'}
-                </h5>
-                <p className="text-xs text-text-muted mt-1 leading-relaxed line-clamp-2">
-                  {latestAlert 
-                    ? `Risk: ${latestAlert.riskSummary}`
-                    : 'Gemini Agent reports no active safety hazards in your immediate ward.'
-                  }
+              <div className="min-w-0 flex-1">
+                <h4 className="text-xs font-bold text-text dark:text-white">🤖 AI Prediction Alert</h4>
+                <p className="text-[10px] text-text-muted mt-0.5 truncate font-bold">
+                  {latestAlert.riskSummary || latestAlert.title}
                 </p>
               </div>
             </div>
-            {latestAlert ? (
-              <button 
-                onClick={() => navigate(`/issues/${latestAlert.id}`)}
-                className="text-xs text-accent dark:text-blue-400 font-bold flex items-center gap-1 mt-4 hover:underline self-start cursor-pointer"
-              >
-                View Details <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            ) : (
-              <span className="text-[10px] text-text-muted font-bold mt-4 block">
-                Updated just now
-              </span>
-            )}
+            <ArrowRight className="w-5 h-5 text-text-muted" />
           </div>
-
-        </div>
+        )}
       </div>
     </div>
   );
