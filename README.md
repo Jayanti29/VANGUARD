@@ -7,11 +7,11 @@
 **Problem Statement:** Addressing civic safety, emergency escalation, and local labor development in rural and urban India using agentic AI.
 
 ## 🚀 Live Demo
-- Production: https://client-eight-sigma-10.vercel.app
-- Alternative: https://client-j711p1ga9-jayanti29s-projects.vercel.app
+- Production: [https://client-eight-sigma-10.vercel.app](https://client-eight-sigma-10.vercel.app)
+- Alternative: [https://client-elpt0bshy-jayanti29s-projects.vercel.app](https://client-elpt0bshy-jayanti29s-projects.vercel.app)
 
 ## 📹 Demo Video
-[Link to 2-3 min screen recording Placeholder]
+- Watch Here: [https://client-eight-sigma-10.vercel.app/demo-video](https://client-eight-sigma-10.vercel.app)
 
 ## ✨ Key Features
 - **AI-Powered Civic Safety Analysis**: Takes photos of civic issues (potholes, garbage, water leaks) and uses Gemini Pro Vision to analyze severity, calculate impact score, predict risks, and recommend government authorities.
