@@ -1,9 +1,3 @@
-// MANUAL STEP REQUIRED:
-// Go to Firebase Console → Authentication → Settings → Authorized domains
-// Add these domains:
-// client-eight-sigma-10.vercel.app
-// client-3u3550rgv-jayanti29s-projects.vercel.app
-
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { 
@@ -11,7 +5,6 @@ import {
   signInWithPhoneNumber,
   GoogleAuthProvider,
   signInWithPopup,
-  signInWithRedirect,
   getRedirectResult
 } from 'firebase/auth'
 import { doc, setDoc } from 'firebase/firestore'
@@ -41,19 +34,24 @@ const ROLES = [
 
 export default function Onboarding() {
   const navigate = useNavigate()
-  const { currentUser } = useAuth()
-  const [step, setStep] = useState(1) // 1=language, 2=role, 3=location, 4=auth
+  const { currentUser, loginAsGuest, loginWithGoogle, loginWithEmail } = useAuth()
   const isMountedRef = useRef(true)
-  
-  // Form state
-  const [language, setLanguage] = useState('en')
+
+  // Step states
+  const [step, setStep] = useState(1)
+  const [language, setLanguage] = useState(localStorage.getItem('vanguard_language') || 'en')
   const [role, setRole] = useState('citizen')
+  
+  // Location states
   const [location, setLocation] = useState({
-    village: '', ward: '', district: '', 
-    state: '', lat: null, lng: null
+    village: '',
+    ward: '',
+    district: '',
+    state: '',
+    lat: null,
+    lng: null
   })
   const [locStatus, setLocStatus] = useState('idle')
-  // idle | loading | success | denied | error
   const [manualEntry, setManualEntry] = useState(false)
   
   // Auth state
@@ -63,12 +61,26 @@ export default function Onboarding() {
   const [authLoading, setAuthLoading] = useState(false)
   const [authError, setAuthError] = useState('')
   const [name, setName] = useState('')
+  
+  // Form extensions
   const [stepError, setStepError] = useState('')
   const [workerSkills, setWorkerSkills] = useState([])
   const [workerExperience, setWorkerExperience] = useState('')
   const [workerDailyRate, setWorkerDailyRate] = useState('')
   const [officialDepartment, setOfficialDepartment] = useState('Ward Office')
   const [officialDesignation, setOfficialDesignation] = useState('')
+
+  // Theme support
+  const theme = {
+    bg: 'var(--bg)',
+    surface: 'var(--surface)',
+    surface2: 'var(--surface-2)',
+    text: 'var(--text)',
+    muted: 'var(--text-muted)',
+    border: 'var(--border)',
+    accent: 'var(--accent)',
+    accentSoft: 'var(--accent-soft)',
+  }
 
   // Redirect if already logged in
   useEffect(() => {
@@ -146,131 +158,201 @@ export default function Onboarding() {
     } catch (err) {
       console.warn("Firestore save failed, using local cache fallback:", err)
     }
-
-    localStorage.setItem('vanguard_session_user', JSON.stringify({
-      uid: firebaseUser.uid,
-      displayName: profile.name,
-      email: profile.email,
-      phoneNumber: profile.phone,
-      isLocalGuest: true
-    }))
-    localStorage.setItem('vanguard_session_dbuser', JSON.stringify(profile))
-    localStorage.setItem('vanguard_language', language)
   }
 
-  // LOCATION DETECTION
+  // Location detection
   const detectLocation = () => {
     setLocStatus('loading')
-    setManualEntry(false)
-
+    setStepError('')
     if (!navigator.geolocation) {
       setLocStatus('error')
-      setManualEntry(true)
       return
     }
 
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
-        if (!isMountedRef.current) return
         const { latitude, longitude } = pos.coords
         try {
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1`,
-            { headers: { 'User-Agent': 'VANGUARD/1.0' } }
+          // OpenStreetMap Reverse Geocoding with Nominatim API
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`
           )
-          const data = await res.json()
-          const a = data.address || {}
-          if (!isMountedRef.current) return
-          setLocation({
-            village: a.village || a.suburb || a.neighbourhood || a.town || a.city || '',
-            ward: a.quarter || a.neighbourhood || '',
-            district: a.county || a.city || a.state_district || '',
-            state: a.state || '',
-            lat: latitude,
-            lng: longitude
-          })
-          setLocStatus('success')
-        } catch {
-          if (!isMountedRef.current) return
-          setLocation({ village: '', ward: '', district: '', state: '', lat: latitude, lng: longitude })
-          setLocStatus('success')
-          setManualEntry(true)
+          const data = await response.json()
+          
+          if (data && data.address) {
+            const addr = data.address
+            const village = addr.village || addr.suburb || addr.neighbourhood || addr.town || addr.city || ''
+            const district = addr.county || addr.district || addr.state_district || ''
+            const state = addr.state || ''
+
+            if (isMountedRef.current) {
+              setLocation({
+                village,
+                ward: '6', // default fallback
+                district,
+                state,
+                lat: latitude,
+                lng: longitude
+              })
+              setLocStatus('success')
+            }
+          } else {
+            if (isMountedRef.current) {
+              setLocation(p => ({ ...p, lat: latitude, lng: longitude }))
+              setLocStatus('error')
+            }
+          }
+        } catch (err) {
+          console.error('Reverse geocode error:', err)
+          if (isMountedRef.current) {
+            setLocation(p => ({ ...p, lat: latitude, lng: longitude }))
+            setLocStatus('error')
+          }
         }
       },
       (err) => {
-        if (!isMountedRef.current) return
-        if (err.code === 1) setLocStatus('denied')
-        else setLocStatus('error')
-        setManualEntry(true)
+        console.warn('Geolocation error:', err)
+        if (isMountedRef.current) {
+          setLocStatus('denied')
+        }
       },
-      { timeout: 15000, maximumAge: 0, enableHighAccuracy: false }
+      { timeout: 10000 }
     )
   }
 
-  // PHONE OTP
-  const setupRecaptcha = () => {
-    if (!window.recaptchaVerifier) {
-      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-        size: 'invisible',
-        callback: () => {}
-      })
-    }
-  }
-
+  // OTP triggers
   const sendOTP = async () => {
-    if (phone.length !== 10) {
-      setAuthError('Enter valid 10-digit number')
-      return
-    }
+    if (!phone || phone.length !== 10) return
     setAuthLoading(true)
     setAuthError('')
+
     try {
-      setupRecaptcha()
-      const result = await signInWithPhoneNumber(auth, '+91' + phone, window.recaptchaVerifier)
-      window.confirmationResult = result
+      // ReCAPTCHA container setup
+      if (!window.recaptchaVerifier) {
+        window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+          size: 'invisible',
+          callback: () => {}
+        })
+      }
+      
+      const formatPhone = '+91' + phone
+      const confirmationResult = await signInWithPhoneNumber(auth, formatPhone, window.recaptchaVerifier)
+      window.confirmationResult = confirmationResult
       setOtpSent(true)
     } catch (err) {
-      console.warn('Phone OTP failed, falling back to local simulation:', err)
-      // Fallback local OTP simulation
-      setOtpSent(true)
-      toast.success("Demo OTP sent (Use code: 123456)")
-      window.confirmationResult = {
-        confirm: async (code) => {
-          if (code === '123456') {
-            const mockUid = `local_phone_${Date.now()}`
-            return {
-              user: {
-                uid: mockUid,
-                phoneNumber: '+91' + phone,
-                displayName: name || 'Phone User'
-              }
-            }
-          } else {
-            throw new Error('Invalid OTP')
-          }
-        }
+      console.error(err)
+      setAuthError(err.message || 'Failed to send OTP')
+      if (window.recaptchaVerifier) {
+        window.recaptchaVerifier.clear()
+        window.recaptchaVerifier = null
       }
-      window.recaptchaVerifier = null
+    } finally {
+      setAuthLoading(false)
     }
-    setAuthLoading(false)
   }
 
   const verifyOTP = async () => {
-    if (otp.length !== 6) {
-      setAuthError('Enter 6-digit OTP')
-      return
-    }
+    if (!otp || otp.length !== 6) return
     setAuthLoading(true)
     setAuthError('')
+
     try {
       const result = await window.confirmationResult.confirm(otp)
       await saveProfile(result.user)
-      window.location.href = '/'
+      navigate('/')
     } catch (err) {
       console.error(err)
-      setAuthError('Wrong OTP. Please try again.')
+      setAuthError('Invalid verification code')
+    } finally {
+      setAuthLoading(false)
     }
-    setAuthLoading(false)
+  }
+
+  const loginAsGuest = async () => {
+    setAuthLoading(true)
+    setAuthError('')
+    try {
+      const onboardingData = {
+        name,
+        language,
+        role,
+        village: location.village,
+        ward: location.ward,
+        district: location.district,
+        state: location.state,
+        lat: location.lat,
+        lng: location.lng
+      }
+      
+      const cachedKey = `vanguard_guest_${Date.now()}`
+      const mockUser = {
+        uid: cachedKey,
+        displayName: name || 'Guest User',
+        phoneNumber: '',
+        email: '',
+        isLocalGuest: true
+      }
+      
+      // Cache session locally
+      localStorage.setItem('vanguard_session_user', JSON.stringify(mockUser))
+      
+      const profile = {
+        uid: cachedKey,
+        name: mockUser.displayName,
+        phone: '',
+        email: '',
+        language,
+        role,
+        village: location.village || 'Ramanagara',
+        ward: location.ward || '6',
+        district: location.district || 'Ramanagara',
+        state: location.state || 'Karnataka',
+        lat: location.lat || 12.9716,
+        lng: location.lng || 77.5946,
+        createdAt: new Date().toISOString()
+      }
+
+      if (role === 'worker') {
+        profile.skills = workerSkills.length > 0 ? workerSkills : ['General']
+        profile.experienceYears = Number(workerExperience) || 0
+        profile.dailyRate = Number(workerDailyRate) || 0
+      } else if (role === 'official') {
+        profile.department = officialDepartment
+        profile.designation = officialDesignation
+      }
+
+      localStorage.setItem('vanguard_session_dbuser', JSON.stringify(profile))
+      
+      try {
+        await setDoc(doc(db, 'users', cachedKey), profile)
+        if (role === 'worker') {
+          await setDoc(doc(db, 'workers', cachedKey), {
+            userId: cachedKey,
+            name: profile.name,
+            skills: workerSkills.length > 0 ? workerSkills : ['General'],
+            experienceYears: Number(workerExperience) || 0,
+            dailyRate: Number(workerDailyRate) || 0,
+            bio: `Guest Worker. Skills: ${(workerSkills.length > 0 ? workerSkills : ['General']).join(', ')}`,
+            rating: 5.0,
+            reviewCount: 0,
+            isAvailable: true,
+            village: profile.village,
+            ward: profile.ward,
+            district: profile.district,
+            lat: profile.lat,
+            lng: profile.lng
+          })
+        }
+      } catch (e) {
+        console.warn("Offline guest write fallback:", e)
+      }
+      
+      window.location.href = '/'
+    } catch (err) {
+      setAuthError('Guest setup failed.')
+    } finally {
+      setAuthLoading(false)
+    }
   }
 
   const loginWithGoogle = async () => {
@@ -280,80 +362,41 @@ export default function Onboarding() {
     try {
       const result = await signInWithPopup(auth, provider)
       await saveProfile(result.user)
-      window.location.href = '/'
+      navigate('/')
     } catch (err) {
-      console.warn('Google login failed, using local Google fallback:', err)
-      const mockUid = `local_google_${Date.now()}`
-      const mockUser = {
-        uid: mockUid,
-        displayName: name || 'Google User',
-        email: 'googleuser@gmail.com',
-        isLocalGuest: true
-      }
-      await saveProfile(mockUser)
-      window.location.href = '/'
+      console.error(err)
+      setAuthError('Please use Guest login or Email signup for now')
+    } finally {
+      setAuthLoading(false)
     }
-    setAuthLoading(false)
   }
 
-  const loginAsGuest = async () => {
-    setAuthLoading(true)
-    setAuthError('')
-    try {
-      const { signInAnonymously } = await import('firebase/auth')
-      const result = await signInAnonymously(auth)
-      await saveProfile(result.user)
-      window.location.href = '/'
-    } catch (err) {
-      console.warn('Firebase Anonymous Auth failed, falling back to local guest:', err)
-      const mockUid = `local_guest_${Date.now()}`
-      const mockUser = {
-        uid: mockUid,
-        displayName: name || `Guest Citizen`,
-        isLocalGuest: true
-      }
-      await saveProfile(mockUser)
-      window.location.href = '/'
-    }
-    setAuthLoading(false)
-  }
-
-  const getAuthError = (code) => {
-    const errors = {
-      'auth/too-many-requests': 'Too many attempts. Wait 1 hour.',
-      'auth/invalid-phone-number': 'Invalid phone number.',
-      'auth/quota-exceeded': 'SMS quota exceeded. Use Google login.',
-      'auth/unauthorized-domain': 'Domain not authorized. Contact support.',
-    }
-    return errors[code] || 'Something went wrong. Please try again.'
-  }
-
-  // RENDER
   const styles = {
     container: {
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0F2B4E 0%, #0A1628 100%)',
       display: 'flex',
+      minHeight: '100vh',
+      background: theme.bg,
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '16px',
-      fontFamily: "'Noto Sans', sans-serif"
+      padding: '20px',
+      boxSizing: 'border-box',
+      transition: 'background 0.2s, color 0.2s'
     },
     card: {
-      background: '#142038',
+      background: theme.surface,
       borderRadius: '20px',
       padding: '32px 24px',
       width: '100%',
       maxWidth: '440px',
-      boxShadow: '0 20px 60px rgba(0,0,0,0.4)'
+      border: '1px solid ' + theme.border,
+      boxShadow: 'var(--shadow)'
     },
     header: {
       textAlign: 'center',
       marginBottom: '32px'
     },
-    logo: { fontSize: '32px', marginBottom: '8px' },
-    title: { color: '#fff', fontSize: '22px', fontWeight: 700, margin: 0 },
-    subtitle: { color: '#64748B', fontSize: '14px', marginTop: '4px' },
+    title: { color: theme.text, fontSize: '22px', fontWeight: 700, margin: 0 },
+    subtitle: { color: theme.muted, fontSize: '14px', marginTop: '4px' },
     steps: {
       display: 'flex', gap: '8px', marginBottom: '32px',
       justifyContent: 'center'
@@ -362,11 +405,11 @@ export default function Onboarding() {
       width: active ? '32px' : '10px',
       height: '10px',
       borderRadius: '5px',
-      background: done ? '#1A7F4B' : active ? '#1B6FD8' : '#1E3A5F',
+      background: done ? '#1A7F4B' : active ? '#1B6FD8' : theme.border,
       transition: 'all 0.3s'
     }),
     sectionTitle: {
-      color: '#F1F5F9', fontSize: '18px', fontWeight: 700,
+      color: theme.text, fontSize: '18px', fontWeight: 700,
       marginBottom: '20px', textAlign: 'center'
     },
     langGrid: {
@@ -375,9 +418,9 @@ export default function Onboarding() {
     langBtn: (selected) => ({
       padding: '14px 12px',
       borderRadius: '12px',
-      border: selected ? '2px solid #1B6FD8' : '2px solid #1E3A5F',
-      background: selected ? '#1B3A6B' : '#0F2B4E',
-      color: '#F1F5F9',
+      border: selected ? '2px solid ' + theme.accent : '2px solid ' + theme.border,
+      background: selected ? theme.accentSoft : theme.surface2,
+      color: theme.text,
       cursor: 'pointer',
       textAlign: 'center',
       fontSize: '14px',
@@ -389,9 +432,9 @@ export default function Onboarding() {
     roleBtn: (selected) => ({
       padding: '16px 12px',
       borderRadius: '12px',
-      border: selected ? '2px solid #1B6FD8' : '2px solid #1E3A5F',
-      background: selected ? '#1B3A6B' : '#0F2B4E',
-      color: '#F1F5F9',
+      border: selected ? '2px solid ' + theme.accent : '2px solid ' + theme.border,
+      background: selected ? theme.accentSoft : theme.surface2,
+      color: theme.text,
       cursor: 'pointer',
       textAlign: 'center'
     }),
@@ -399,7 +442,7 @@ export default function Onboarding() {
       width: '100%',
       padding: '16px',
       borderRadius: '12px',
-      background: '#1B6FD8',
+      background: theme.accent,
       color: '#fff',
       border: 'none',
       fontSize: '16px',
@@ -412,8 +455,8 @@ export default function Onboarding() {
       padding: '14px',
       borderRadius: '12px',
       background: 'transparent',
-      color: '#94A3B8',
-      border: '1px solid #1E3A5F',
+      color: theme.muted,
+      border: '1px solid ' + theme.border,
       fontSize: '14px',
       cursor: 'pointer',
       marginTop: '10px'
@@ -422,16 +465,16 @@ export default function Onboarding() {
       width: '100%',
       padding: '14px 16px',
       borderRadius: '12px',
-      background: '#0F2B4E',
-      border: '1px solid #1E3A5F',
-      color: '#F1F5F9',
+      background: theme.surface2,
+      border: '1px solid ' + theme.border,
+      color: theme.text,
       fontSize: '16px',
       outline: 'none',
       boxSizing: 'border-box',
       marginBottom: '12px'
     },
     errorText: {
-      color: '#F87171',
+      color: 'var(--danger)',
       fontSize: '13px',
       textAlign: 'center',
       marginTop: '8px'
@@ -439,8 +482,8 @@ export default function Onboarding() {
     locBox: (status) => ({
       padding: '20px',
       borderRadius: '12px',
-      background: status === 'success' ? '#0F2B1E' : '#0F2B4E',
-      border: `1px solid ${status === 'success' ? '#1A7F4B' : '#1E3A5F'}`,
+      background: status === 'success' ? '#0F2B1E' : theme.surface2,
+      border: `1px solid ${status === 'success' ? '#1A7F4B' : theme.border}`,
       textAlign: 'center',
       marginBottom: '16px'
     })
@@ -450,8 +493,9 @@ export default function Onboarding() {
     <div style={styles.container}>
       <div style={styles.card}>
         {/* Header */}
-        <div style={styles.header}>
-          <div style={styles.logo}>🛡️</div>
+        <div style={{ ...styles.header, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <img src="/vanguard-logo.png" alt="VANGUARD"
+               style={{width:'120px', objectFit:'contain', marginBottom:'16px'}} />
           <h1 style={styles.title}>VANGUARD</h1>
           <p style={styles.subtitle}>Community Protection Platform</p>
         </div>
@@ -466,7 +510,7 @@ export default function Onboarding() {
         {/* STEP 1: Language */}
         {step === 1 && (
           <div>
-            <p style={styles.sectionTitle}>🌐 Choose Your Language</p>
+            <p style={styles.sectionTitle}>Choose Your Language</p>
             <div style={styles.langGrid}>
               {LANGUAGES.map(l => (
                 <button
@@ -479,7 +523,7 @@ export default function Onboarding() {
                   }}
                 >
                   <div style={{fontSize:'18px', marginBottom:'4px'}}>{l.native}</div>
-                  <div style={{fontSize:'12px', color:'#94A3B8'}}>{l.name}</div>
+                  <div style={{fontSize:'12px', color: theme.muted}}>{l.name}</div>
                 </button>
               ))}
             </div>
@@ -492,7 +536,7 @@ export default function Onboarding() {
         {/* STEP 2: Role */}
         {step === 2 && (
           <div>
-            <p style={styles.sectionTitle}>👤 I am a...</p>
+            <p style={styles.sectionTitle}>I am a...</p>
             <div style={styles.roleGrid}>
               {ROLES.map(r => (
                 <button
@@ -502,7 +546,7 @@ export default function Onboarding() {
                 >
                   <div style={{fontSize:'28px', marginBottom:'6px'}}>{r.icon}</div>
                   <div style={{fontWeight:700, fontSize:'14px'}}>{r.label}</div>
-                  <div style={{fontSize:'11px', color:'#94A3B8', marginTop:'4px'}}>{r.desc}</div>
+                  <div style={{fontSize:'11px', color: theme.muted, marginTop:'4px'}}>{r.desc}</div>
                 </button>
               ))}
             </div>
@@ -517,8 +561,8 @@ export default function Onboarding() {
 
             {/* If worker: show skills, experience, daily rate */}
             {role === 'worker' && (
-              <div style={{ marginTop: '16px', borderTop: '1px solid #1E3A5F', paddingTop: '16px' }}>
-                <label style={{ color: '#94A3B8', fontSize: '12px', display: 'block', marginBottom: '8px', textAlign: 'left' }}>
+              <div style={{ marginTop: '16px', borderTop: '1px solid ' + theme.border, paddingTop: '16px' }}>
+                <label style={{ color: theme.muted, fontSize: '12px', display: 'block', marginBottom: '8px', textAlign: 'left' }}>
                   Skills (Select all that apply)
                 </label>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
@@ -541,9 +585,9 @@ export default function Onboarding() {
                           fontSize: '11px',
                           fontWeight: 700,
                           cursor: 'pointer',
-                          background: selected ? '#1B6FD8' : '#0F2B4E',
-                          border: selected ? '1px solid #1B6FD8' : '1px solid #1E3A5F',
-                          color: '#fff'
+                          background: selected ? theme.accent : theme.surface2,
+                          border: selected ? '1px solid ' + theme.accent : '1px solid ' + theme.border,
+                          color: selected ? '#fff' : theme.text
                         }}
                       >
                         {skill}
@@ -571,8 +615,8 @@ export default function Onboarding() {
 
             {/* If official: show department, designation */}
             {role === 'official' && (
-              <div style={{ marginTop: '16px', borderTop: '1px solid #1E3A5F', paddingTop: '16px' }}>
-                <label style={{ color: '#94A3B8', fontSize: '12px', display: 'block', marginBottom: '8px', textAlign: 'left' }}>
+              <div style={{ marginTop: '16px', borderTop: '1px solid ' + theme.border, paddingTop: '16px' }}>
+                <label style={{ color: theme.muted, fontSize: '12px', display: 'block', marginBottom: '8px', textAlign: 'left' }}>
                   Department
                 </label>
                 <select
@@ -582,9 +626,9 @@ export default function Onboarding() {
                     width: '100%',
                     padding: '14px 16px',
                     borderRadius: '12px',
-                    background: '#0F2B4E',
-                    border: '1px solid #1E3A5F',
-                    color: '#F1F5F9',
+                    background: theme.surface2,
+                    border: '1px solid ' + theme.border,
+                    color: theme.text,
                     fontSize: '16px',
                     outline: 'none',
                     marginBottom: '12px'
@@ -632,15 +676,15 @@ export default function Onboarding() {
         {/* STEP 3: Location */}
         {step === 3 && (
           <div>
-            <p style={styles.sectionTitle}>📍 Your Location</p>
+            <p style={styles.sectionTitle}>Your Location</p>
 
             {locStatus === 'idle' && (
               <>
                 <button style={styles.primaryBtn} onClick={detectLocation}>
-                  📍 Detect My Location
+                  Detect My Location
                 </button>
                 <button style={styles.secondaryBtn} onClick={() => setManualEntry(true)}>
-                  ✏️ Enter Manually
+                  Enter Manually
                 </button>
               </>
             )}
@@ -648,8 +692,8 @@ export default function Onboarding() {
             {locStatus === 'loading' && (
               <div style={styles.locBox('loading')}>
                 <div style={{fontSize:'32px', marginBottom:'8px'}}>⏳</div>
-                <div style={{color:'#94A3B8'}}>Detecting your location...</div>
-                <div style={{color:'#64748B', fontSize:'12px', marginTop:'4px'}}>
+                <div style={{color: theme.muted}}>Detecting your location...</div>
+                <div style={{color: theme.muted, fontSize:'12px', marginTop:'4px'}}>
                   Please allow location access if prompted
                 </div>
               </div>
@@ -661,7 +705,7 @@ export default function Onboarding() {
                 <div style={{color:'#4ADE80', fontWeight:700, fontSize:'16px'}}>
                   {location.village || 'Location Detected'}
                 </div>
-                <div style={{color:'#94A3B8', fontSize:'13px', marginTop:'4px'}}>
+                <div style={{color: theme.muted, fontSize:'13px', marginTop:'4px'}}>
                   {[location.district, location.state].filter(Boolean).join(', ')}
                 </div>
               </div>
@@ -671,7 +715,7 @@ export default function Onboarding() {
               <div style={styles.locBox('denied')}>
                 <div style={{fontSize:'32px', marginBottom:'8px'}}>🚫</div>
                 <div style={{color:'#F87171', fontWeight:600}}>Location access denied</div>
-                <div style={{color:'#94A3B8', fontSize:'12px', marginTop:'4px'}}>
+                <div style={{color: theme.muted, fontSize:'12px', marginTop:'4px'}}>
                   Enable location in browser settings or enter manually
                 </div>
                 <button style={{...styles.secondaryBtn, marginTop:'12px'}}
@@ -722,7 +766,7 @@ export default function Onboarding() {
         {/* STEP 4: Auth */}
         {step === 4 && (
           <div>
-            <p style={styles.sectionTitle}>🔐 Verify Your Account</p>
+            <p style={styles.sectionTitle}>Verify Your Account</p>
 
             {/* Guest Login */}
             <button
@@ -736,15 +780,16 @@ export default function Onboarding() {
               onClick={loginAsGuest}
               disabled={authLoading}
             >
-              ⚡ Complete Setup instantly as Guest ({role})
+              Complete Setup instantly as Guest ({role})
             </button>
 
             {/* Google Login */}
             <button
               style={{
                 ...styles.primaryBtn,
-                background: '#fff',
-                color: '#1a1a1a',
+                background: theme.surface,
+                color: theme.text,
+                border: '1px solid ' + theme.border,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -759,10 +804,10 @@ export default function Onboarding() {
             </button>
 
             <div style={{
-              textAlign:'center', color:'#64748B',
+              textAlign:'center', color: theme.muted,
               fontSize:'13px', margin:'16px 0', position:'relative'
             }}>
-              <span style={{background:'#142038', padding:'0 12px'}}>
+              <span style={{background: theme.surface, padding:'0 12px'}}>
                 or use phone number
               </span>
             </div>
@@ -772,9 +817,9 @@ export default function Onboarding() {
               <>
                 <div style={{display:'flex', gap:'8px'}}>
                   <div style={{
-                    padding:'14px 12px', background:'#0F2B4E',
-                    border:'1px solid #1E3A5F', borderRadius:'12px',
-                    color:'#94A3B8', fontSize:'16px', whiteSpace:'nowrap'
+                    padding:'14px 12px', background: theme.surface2,
+                    border:'1px solid ' + theme.border, borderRadius:'12px',
+                    color: theme.muted, fontSize:'16px', whiteSpace:'nowrap'
                   }}>+91</div>
                   <input
                     style={{...styles.input, marginBottom:0, flex:1}}
