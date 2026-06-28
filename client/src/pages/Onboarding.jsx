@@ -34,7 +34,7 @@ const ROLES = [
 
 export default function Onboarding() {
   const navigate = useNavigate()
-  const { currentUser, loginAsGuest, loginWithGoogle, loginWithEmail } = useAuth()
+  const { currentUser } = useAuth()
   const isMountedRef = useRef(true)
 
   // Step states
