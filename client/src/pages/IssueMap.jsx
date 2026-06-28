@@ -21,8 +21,9 @@ import {
   AlertTriangle,
   X
 } from 'lucide-react';
+import { db } from '../lib/firebase';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import useAuth from '../hooks/useAuth';
-import useIssues from '../hooks/useIssues';
 import SeverityBadge from '../components/ui/SeverityBadge';
 
 // Helper component to locate user on load and handle recenter
@@ -76,19 +77,30 @@ export default function IssueMap() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { dbUser } = useAuth();
-  const { issues } = useIssues();
-
+  
   const [activeTab, setActiveTab] = useState('issues'); // 'issues' | 'officials'
   const [filter, setFilter] = useState('all'); // 'all' | 'critical' | 'road' | 'electric' | 'water'
   const [selectedPin, setSelectedPin] = useState(null); // issue or official
   const [showFilters, setShowFilters] = useState(false);
   const [triggerLocate, setTriggerLocate] = useState(false);
+  
+  // Real-time issues from firestore
+  const [issues, setIssues] = useState([]);
 
   // Default coordinate pairs
   const userCoords = [dbUser?.lat || 12.7244, dbUser?.lng || 77.2911];
   const mapCenter = [20.5937, 78.9629]; // center of India
 
-  // 10 sample officials with realistic Indian names and roles
+  // Query issues from firestore on mount
+  useEffect(() => {
+    const q = query(collection(db, 'issues'), where('status', '==', 'open'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setIssues(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // 5 sample officials with realistic Indian names and roles
   const sampleOfficials = [
     { id: 'off_1', name: 'Dr. Srinivas Prasad', role: 'Chief Medical Officer', department: 'Health', lat: userCoords[0] + 0.0015, lng: userCoords[1] + 0.002, phone: '+918023456789', email: 'srinivas.p@karnataka.gov.in' },
     { id: 'off_2', name: 'Kiran Gowda', role: 'Ward 6 Assistant Engineer', department: 'Electricity', lat: userCoords[0] - 0.002, lng: userCoords[1] + 0.001, phone: '+919845012345', email: 'kiran.g@bescom.co.in' },
@@ -99,7 +111,6 @@ export default function IssueMap() {
 
   // Filter Issues logic
   const getFilteredIssues = () => {
-    if (!issues) return [];
     return issues.filter((issue) => {
       // 1. Category filters
       if (filter === 'critical' && issue.severity !== 'red') return false;
@@ -231,7 +242,7 @@ export default function IssueMap() {
             const lat = Number(issue.lat) || userCoords[0];
             const lng = Number(issue.lng) || userCoords[1];
             const color = getSeverityColor(issue.severity);
-            const timeAgoStr = issue.createdAt ? new Date(issue.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now';
+            const timeAgoStr = issue.createdAt ? new Date(issue.createdAt.toDate ? issue.createdAt.toDate() : issue.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now';
             const shortDesc = issue.description ? (issue.description.substring(0, 60) + (issue.description.length > 60 ? '...' : '')) : 'No description';
 
             return (
@@ -248,7 +259,7 @@ export default function IssueMap() {
                 }}
               >
                 <Popup>
-                  <div className="text-slate-800 dark:text-slate-200 p-1 space-y-2 min-w-[200px]">
+                  <div className="text-slate-850 dark:text-slate-200 p-1 space-y-2 min-w-[200px]">
                     <div className="flex items-center justify-between gap-2 border-b pb-1 border-slate-100">
                       <span className="text-[10px] font-black uppercase text-accent">
                         {issue.categoryLabel || issue.category?.replace('_', ' ')}
