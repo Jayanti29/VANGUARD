@@ -13,16 +13,6 @@ import {
   ArrowRight,
   ShieldCheck
 } from 'lucide-react';
-import { auth, db } from '../lib/firebase';
-import { doc, setDoc } from 'firebase/firestore';
-import { 
-  RecaptchaVerifier, 
-  signInWithPhoneNumber, 
-  GoogleAuthProvider, 
-  signInWithPopup,
-  signInAnonymously,
-  createUserWithEmailAndPassword 
-} from 'firebase/auth';
 import useAuth from '../hooks/useAuth';
 import toast from 'react-hot-toast';
 import { useLocation } from '../hooks/useLocation';
@@ -38,7 +28,14 @@ const indianStates = {
 export default function Onboarding() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
-  const { loginAsGuest } = useAuth();
+  const { currentUser, loading, loginAsGuest, loginWithGoogle, loginWithEmail } = useAuth();
+
+  useEffect(() => {
+    // If already logged in, skip onboarding
+    if (!loading && currentUser) {
+      navigate('/', { replace: true })
+    }
+  }, [currentUser, loading, navigate])
 
   const [step, setStep] = useState(1);
   const [selectedLanguage, setSelectedLanguage] = useState(localStorage.getItem('vanguard_language') || 'en');
@@ -92,6 +89,7 @@ export default function Onboarding() {
   };
 
   // Email & Password Sign Up
+  // Email & Password Sign Up
   const handleEmailSignUp = async (e) => {
     e.preventDefault();
     if (!email || !password) {
@@ -100,45 +98,20 @@ export default function Onboarding() {
     }
     const signupToast = toast.loading("Creating account...");
     try {
-      const result = await createUserWithEmailAndPassword(auth, email, password);
-      const userObj = result.user;
-
-      const userProfile = {
-        uid: userObj.uid,
-        name: dbUserTempName(selectedRole) || email.split('@')[0] || 'VANGUARD User',
-        language: selectedLanguage || 'en',
-        role: selectedRole || 'citizen',
-        village: locForm.village || '',
-        ward: locForm.ward || '',
-        district: locForm.district || '',
-        state: locForm.state || '',
-        createdAt: new Date().toISOString()
+      const onboardingData = {
+        name: dbUserTempName(selectedRole) || email.split('@')[0],
+        language: selectedLanguage,
+        role: selectedRole,
+        village: locForm.village,
+        ward: locForm.ward,
+        district: locForm.district,
+        state: locForm.state,
+        lat: coords[0],
+        lng: coords[1]
       };
-
-      await setDoc(doc(db, 'users', userObj.uid), userProfile, { merge: true });
-
-      if (selectedRole === 'Worker') {
-        await setDoc(doc(db, 'workers', userObj.uid), {
-          userId: userObj.uid,
-          name: userProfile.name,
-          skills: ['general'],
-          experienceYears: 1,
-          dailyRate: 400,
-          bio: 'Self-registered daily worker ready to help.',
-          rating: 5.0,
-          reviewCount: 1,
-          isAvailable: true,
-          village: userProfile.village,
-          ward: userProfile.ward,
-          district: userProfile.district,
-          lat: coords[0],
-          lng: coords[1]
-        }, { merge: true });
-      }
-
+      await loginWithEmail(email, password, onboardingData);
       toast.dismiss(signupToast);
       toast.success("Profile onboarding complete!");
-      
       setTimeout(() => {
         navigate('/');
       }, 1000);
@@ -152,50 +125,21 @@ export default function Onboarding() {
   // Google Provider Sign Up / Complete Registration
   const handleGoogleSignUp = async () => {
     setGoogleError('');
-    const provider = new GoogleAuthProvider();
     const signupToast = toast.loading("Registering via Google...");
     try {
-      const result = await signInWithPopup(auth, provider);
-      const userObj = result.user;
-
-      // Save user profile details
-      const userProfile = {
-        uid: userObj.uid,
-        name: userObj.displayName || dbUserTempName(selectedRole) || 'VANGUARD User',
-        language: selectedLanguage || 'en',
-        role: selectedRole || 'citizen',
-        village: locForm.village || '',
-        ward: locForm.ward || '',
-        district: locForm.district || '',
-        state: locForm.state || '',
-        createdAt: new Date().toISOString()
+      const onboardingData = {
+        language: selectedLanguage,
+        role: selectedRole,
+        village: locForm.village,
+        ward: locForm.ward,
+        district: locForm.district,
+        state: locForm.state,
+        lat: coords[0],
+        lng: coords[1]
       };
-
-      await setDoc(doc(db, 'users', userObj.uid), userProfile, { merge: true });
-      
-      // Seed official worker database link if needed
-      if (selectedRole === 'Worker') {
-        await setDoc(doc(db, 'workers', userObj.uid), {
-          userId: userObj.uid,
-          name: userProfile.name,
-          skills: ['general'],
-          experienceYears: 1,
-          dailyRate: 400,
-          bio: 'Self-registered daily worker ready to help.',
-          rating: 5.0,
-          reviewCount: 1,
-          isAvailable: true,
-          village: userProfile.village,
-          ward: userProfile.ward,
-          district: userProfile.district,
-          lat: coords[0],
-          lng: coords[1]
-        }, { merge: true });
-      }
-
+      await loginWithGoogle(onboardingData);
       toast.dismiss(signupToast);
       toast.success("Profile onboarding complete!");
-      
       setTimeout(() => {
         navigate('/');
       }, 1000);
@@ -210,45 +154,20 @@ export default function Onboarding() {
   const handleGuestOnboard = async () => {
     const guestToast = toast.loading("Setting up Guest profile...");
     try {
-      const result = await signInAnonymously(auth);
-      const userObj = result.user;
-
-      const userProfile = {
-        uid: userObj.uid,
+      const onboardingData = {
         name: `Guest ${selectedRole || 'User'}`,
-        language: selectedLanguage || 'en',
-        role: selectedRole || 'citizen',
-        village: locForm.village || '',
-        ward: locForm.ward || '',
-        district: locForm.district || '',
-        state: locForm.state || '',
-        createdAt: new Date().toISOString()
+        language: selectedLanguage,
+        role: selectedRole,
+        village: locForm.village,
+        ward: locForm.ward,
+        district: locForm.district,
+        state: locForm.state,
+        lat: coords[0],
+        lng: coords[1]
       };
-
-      await setDoc(doc(db, 'users', userObj.uid), userProfile, { merge: true });
-
-      if (selectedRole === 'Worker') {
-        await setDoc(doc(db, 'workers', userObj.uid), {
-          userId: userObj.uid,
-          name: userProfile.name,
-          skills: ['general'],
-          experienceYears: 1,
-          dailyRate: 400,
-          bio: 'Self-registered daily worker ready to help.',
-          rating: 5.0,
-          reviewCount: 1,
-          isAvailable: true,
-          village: userProfile.village,
-          ward: userProfile.ward,
-          district: userProfile.district,
-          lat: coords[0],
-          lng: coords[1]
-        }, { merge: true });
-      }
-
+      await loginAsGuest(onboardingData);
       toast.dismiss(guestToast);
       toast.success("Guest Onboarding successfully complete!");
-      
       setTimeout(() => {
         navigate('/');
       }, 1000);

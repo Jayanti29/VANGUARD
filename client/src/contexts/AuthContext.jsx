@@ -1,279 +1,159 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { auth, db } from '../lib/firebase';
-import { 
-  onAuthStateChanged,
-  signOut,
-  signInWithPhoneNumber,
-  GoogleAuthProvider,
-  signInWithCredential
-} from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { createContext, useContext, useEffect, useState } from 'react'
+import { onAuthStateChanged, signInAnonymously,
+         signInWithPopup, GoogleAuthProvider,
+         createUserWithEmailAndPassword,
+         signInWithEmailAndPassword, signOut } from 'firebase/auth'
+import { doc, setDoc, getDoc } from 'firebase/firestore'
+import { auth, db } from '../lib/firebase'
+import i18n from '../lib/i18n'
 
-const AuthContext = createContext();
+const AuthContext = createContext(null)
 
-export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [dbUser, setDbUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [confirmationResult, setConfirmationResult] = useState(null);
-
-  // Sign out helper
-  const logout = async () => {
-    setLoading(true);
-    try {
-      await signOut(auth);
-      setUser(null);
-      setDbUser(null);
-      localStorage.removeItem('vanguard_session_user');
-      localStorage.removeItem('vanguard_session_dbuser');
-    } catch (error) {
-      console.error("Error signing out: ", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Google sign in helper
-  const loginWithGoogle = async () => {
-    setLoading(true);
-    try {
-      if (auth.isMock) {
-        const res = await auth.signInWithGoogle();
-        setUser(res.user);
-        await syncUserWithFirestore(res.user);
-        return res.user;
-      } else {
-        // Standard Firebase Google Auth (client redirect or popup)
-        const provider = new GoogleAuthProvider();
-        // Since we may run inside custom IDE view, popup is best
-        const { signInWithPopup } = await import('firebase/auth');
-        const res = await signInWithPopup(auth, provider);
-        setUser(res.user);
-        await syncUserWithFirestore(res.user);
-        return res.user;
-      }
-    } catch (err) {
-      console.error("Google sign in failed: ", err);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Phone Authentication: Send OTP
-  const loginWithPhone = async (phoneNumber, recaptchaVerifier) => {
-    setLoading(true);
-    try {
-      // Format number if not prefixed
-      let formattedPhone = phoneNumber;
-      if (!phoneNumber.startsWith('+')) {
-        formattedPhone = '+91' + phoneNumber;
-      }
-
-      if (auth.isMock) {
-        const mockResult = await auth.signInWithPhoneNumber(formattedPhone, recaptchaVerifier);
-        setConfirmationResult(mockResult);
-        return mockResult;
-      } else {
-        const result = await signInWithPhoneNumber(auth, formattedPhone, recaptchaVerifier);
-        setConfirmationResult(result);
-        return result;
-      }
-    } catch (error) {
-      console.error("Phone verification failed: ", error);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Phone Authentication: Verify OTP
-  const confirmOTP = async (otpCode) => {
-    setLoading(true);
-    try {
-      if (!confirmationResult) {
-        throw new Error("No pending verification. Request OTP first.");
-      }
-      const result = await confirmationResult.confirm(otpCode);
-      const authenticatedUser = result.user;
-      setUser(authenticatedUser);
-      await syncUserWithFirestore(authenticatedUser);
-      return authenticatedUser;
-    } catch (error) {
-      console.error("OTP Confirmation failed: ", error);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Sync / create user profile document in Firestore
-  const syncUserWithFirestore = async (firebaseUser, forceData = {}) => {
-    if (!firebaseUser) return;
-    
-    try {
-      const userRef = doc(db, 'users', firebaseUser.uid);
-      
-      let existingProfile = null;
-      if (db.isMock) {
-        const snap = await db.getDoc(userRef);
-        if (snap.exists()) existingProfile = snap.data();
-      } else {
-        const snap = await getDoc(userRef);
-        if (snap.exists()) existingProfile = snap.data();
-      }
-
-      const defaultProfile = {
-        name: firebaseUser.displayName || existingProfile?.name || 'Citizen',
-        phone: firebaseUser.phoneNumber || existingProfile?.phone || '',
-        role: existingProfile?.role || 'Citizen', // default role
-        language: localStorage.getItem('vanguard_language') || existingProfile?.language || 'en',
-        state: existingProfile?.state || '',
-        district: existingProfile?.district || '',
-        village: existingProfile?.village || '',
-        ward: existingProfile?.ward || '',
-        houseNo: existingProfile?.houseNo || '',
-        lat: existingProfile?.lat || 12.9716, // fallback Bangalore lat
-        lng: existingProfile?.lng || 77.5946, // fallback Bangalore lng
-        profileImageUrl: firebaseUser.photoURL || existingProfile?.profileImageUrl || 'https://api.dicebear.com/7.x/bottts/svg?seed=' + firebaseUser.uid,
-        fcmToken: existingProfile?.fcmToken || '',
-        createdAt: existingProfile?.createdAt || new Date().toISOString(),
-        ...forceData
-      };
-
-      if (db.isMock) {
-        await db.setDoc(userRef, defaultProfile);
-      } else {
-        await setDoc(userRef, defaultProfile);
-      }
-      
-      setDbUser(defaultProfile);
-      localStorage.setItem('vanguard_session_user', JSON.stringify(firebaseUser));
-      localStorage.setItem('vanguard_session_dbuser', JSON.stringify(defaultProfile));
-    } catch (error) {
-      console.error("Failed to sync user with Firestore: ", error);
-    }
-  };
-
-  // Update user profile properties
-  const updateProfile = async (profileData) => {
-    if (!user) return;
-    setLoading(true);
-    try {
-      const userRef = doc(db, 'users', user.uid);
-      const updatedData = { ...dbUser, ...profileData, updatedAt: new Date().toISOString() };
-      
-      if (db.isMock) {
-        await db.setDoc(userRef, updatedData);
-      } else {
-        await setDoc(userRef, updatedData);
-      }
-      
-      setDbUser(updatedData);
-      localStorage.setItem('vanguard_session_dbuser', JSON.stringify(updatedData));
-    } catch (error) {
-      console.error("Error updating profile: ", error);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  };
+export function AuthProvider({ children }) {
+  const [currentUser, setCurrentUser] = useState(undefined)
+  const [userProfile, setUserProfile] = useState(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Check if session exists in storage for faster loads
-    const cachedUser = localStorage.getItem('vanguard_session_user');
-    const cachedDbUser = localStorage.getItem('vanguard_session_dbuser');
-    if (cachedUser && cachedDbUser) {
-      setUser(JSON.parse(cachedUser));
-      setDbUser(JSON.parse(cachedDbUser));
-      setLoading(false);
-    }
-
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        setUser(firebaseUser);
-        await syncUserWithFirestore(firebaseUser);
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setCurrentUser(user)
+      if (user) {
+        // Load profile from Firestore
+        try {
+          const profileDoc = await getDoc(doc(db, 'users', user.uid))
+          if (profileDoc.exists()) {
+            const profile = profileDoc.data()
+            setUserProfile(profile)
+            // Restore language from profile
+            if (profile.language) {
+              i18n.changeLanguage(profile.language)
+              localStorage.setItem('vanguard_language', profile.language)
+            }
+          }
+        } catch (err) {
+          console.error('Profile load error:', err)
+        }
       } else {
-        setUser(null);
-        setDbUser(null);
+        setUserProfile(null)
       }
-      setLoading(false);
-    });
+      setLoading(false)
+    })
+    return unsubscribe
+  }, [])
 
-    return () => unsubscribe();
-  }, []);
-
-  // Guest Sign In (completely bypasses Firebase Auth)
-  const loginAsGuest = async (role = 'Citizen') => {
-    setLoading(true);
-    try {
-      const guestId = `guest_${Date.now()}`;
-      const guestUser = {
-        uid: guestId,
-        displayName: `Guest ${role}`,
-        phoneNumber: '+91-9999999999',
-        email: 'guest@vanguard.org',
-        isAnonymous: true
-      };
-
-      const guestDbUser = {
-        uid: guestId,
-        name: `Guest ${role}`,
-        phone: '+91-9999999999',
-        language: 'en',
-        role: role,
-        state: 'Karnataka',
-        district: 'Bangalore',
-        village: 'Rajajinagar',
-        ward: '6',
-        houseNo: 'Flat 101',
-        lat: 12.9716,
-        lng: 77.5946,
-        profileImageUrl: `https://api.dicebear.com/7.x/bottts/svg?seed=${guestId}`,
-        createdAt: new Date().toISOString()
-      };
-
-      // Set user document in Firestore so that any queries targeting the user document don't throw missing doc errors
-      try {
-        await setDoc(doc(db, 'users', guestId), guestDbUser);
-      } catch (err) {
-        console.warn("Could not save guest to Firestore. Bypassing silently:", err);
-      }
-
-      setUser(guestUser);
-      setDbUser(guestDbUser);
-      localStorage.setItem('vanguard_session_user', JSON.stringify(guestUser));
-      localStorage.setItem('vanguard_session_dbuser', JSON.stringify(guestDbUser));
-      return guestUser;
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
+  const saveProfile = async (uid, profileData) => {
+    const profile = {
+      ...profileData,
+      updatedAt: new Date().toISOString()
     }
-  };
+    await setDoc(doc(db, 'users', uid), profile, { merge: true })
+    
+    // Seed official worker database link if needed
+    if (profileData.role === 'Worker') {
+      await setDoc(doc(db, 'workers', uid), {
+        userId: uid,
+        name: profileData.name || 'Helper',
+        skills: ['general'],
+        experienceYears: 1,
+        dailyRate: 400,
+        bio: 'Self-registered daily worker ready to help.',
+        rating: 5.0,
+        reviewCount: 1,
+        isAvailable: true,
+        village: profileData.village || '',
+        ward: profileData.ward || '',
+        district: profileData.district || '',
+        lat: profileData.lat || 12.9716,
+        lng: profileData.lng || 77.5946
+      }, { merge: true })
+    }
+    
+    setUserProfile(profile)
+  }
+
+  const loginAsGuest = async (onboardingData) => {
+    const result = await signInAnonymously(auth)
+    await saveProfile(result.user.uid, {
+      uid: result.user.uid,
+      name: onboardingData.name || 'Guest User',
+      language: onboardingData.language || 'en',
+      role: onboardingData.role || 'citizen',
+      village: onboardingData.village || '',
+      ward: onboardingData.ward || '',
+      district: onboardingData.district || '',
+      state: onboardingData.state || '',
+      isGuest: true,
+      createdAt: new Date().toISOString()
+    })
+    return result
+  }
+
+  const loginWithGoogle = async (onboardingData) => {
+    const provider = new GoogleAuthProvider()
+    const result = await signInWithPopup(auth, provider)
+    await saveProfile(result.user.uid, {
+      uid: result.user.uid,
+      name: result.user.displayName || 'User',
+      email: result.user.email,
+      language: onboardingData?.language || 
+                localStorage.getItem('vanguard_language') || 'en',
+      role: onboardingData?.role || 'citizen',
+      village: onboardingData?.village || '',
+      ward: onboardingData?.ward || '',
+      district: onboardingData?.district || '',
+      state: onboardingData?.state || '',
+      createdAt: new Date().toISOString()
+    })
+    return result
+  }
+
+  const loginWithEmail = async (email, password, onboardingData) => {
+    let result
+    try {
+      result = await createUserWithEmailAndPassword(auth, email, password)
+    } catch (err) {
+      if (err.code === 'auth/email-already-in-use') {
+        result = await signInWithEmailAndPassword(auth, email, password)
+      } else throw err
+    }
+    await saveProfile(result.user.uid, {
+      uid: result.user.uid,
+      name: onboardingData?.name || email.split('@')[0],
+      email: email,
+      language: onboardingData?.language || 
+                localStorage.getItem('vanguard_language') || 'en',
+      role: onboardingData?.role || 'citizen',
+      village: onboardingData?.village || '',
+      ward: onboardingData?.ward || '',
+      district: onboardingData?.district || '',
+      state: onboardingData?.state || '',
+      createdAt: new Date().toISOString()
+    })
+    return result
+  }
+
+  const logout = async () => {
+    await signOut(auth)
+    localStorage.removeItem('vanguard_language')
+    setUserProfile(null)
+  }
 
   return (
     <AuthContext.Provider value={{
-      user,
-      dbUser,
+      currentUser,
+      user: currentUser, // backwards compatibility
+      userProfile,
+      dbUser: userProfile, // backwards compatibility
       loading,
-      loginWithPhone,
-      confirmOTP,
-      loginWithGoogle,
       loginAsGuest,
-      logout,
-      updateProfile,
-      syncUserWithFirestore
+      loginWithGoogle,
+      loginWithEmail,
+      saveProfile,
+      logout
     }}>
       {children}
     </AuthContext.Provider>
-  );
-};
+  )
+}
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
+export const useAuth = () => useContext(AuthContext)
