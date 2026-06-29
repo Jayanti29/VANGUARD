@@ -252,7 +252,7 @@ export default function Emergency() {
             onClick={() => { setAlertSent(false); setSelectedCategory(null); setDescription(''); }}
             className="px-6 h-11 bg-white/10 hover:bg-white/20 text-white text-xs font-bold rounded-xl cursor-pointer"
           >
-            Report Another Alert
+            {t('report_another_alert', 'Report Another Alert')}
           </button>
         </div>
       )}
@@ -260,11 +260,11 @@ export default function Emergency() {
       {/* Active Emergencies Listing */}
       <div className="space-y-3 border-t border-white/10 pt-5">
         <h3 className="text-sm font-black text-red-500 uppercase tracking-widest flex items-center gap-1.5">
-          Active Alerts Nearby
+          {t('active_emergencies')}
         </h3>
         
         {activeEmergencies.length === 0 ? (
-          <p className="text-xs text-slate-400 font-bold">No active emergencies reported nearby.</p>
+          <p className="text-xs text-slate-400 font-bold">{t('no_active_emergencies', 'No active emergencies reported nearby.')}</p>
         ) : (
           <div className="grid grid-cols-1 gap-3">
             {activeEmergencies.map(emerg => {
@@ -273,7 +273,7 @@ export default function Emergency() {
                 <div key={emerg.id} className="p-4 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-between gap-4 animate-fadeIn">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-black text-red-500 uppercase">{emerg.category} Alert</span>
+                      <span className="text-xs font-black text-red-500 uppercase">{t(emerg.category.toLowerCase())} Alert</span>
                       <span className="text-[9px] text-slate-400 font-bold">Time: {timeAgo}</span>
                     </div>
                     <p className="text-xs text-slate-200 leading-relaxed font-semibold">
@@ -302,23 +302,23 @@ export default function Emergency() {
         <div className="fixed inset-0 bg-black/80 z-[9999] flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-red-800 rounded-3xl p-6 max-w-sm w-full space-y-4 text-center">
             <AlertTriangle className="w-12 h-12 text-red-500 mx-auto animate-bounce" />
-            <h4 className="text-base font-black text-white uppercase">Confirm Emergency Alert</h4>
+            <h4 className="text-base font-black text-white uppercase">{t('confirm_alert_title', 'Confirm Emergency Alert')}</h4>
             <p className="text-xs text-slate-350 leading-relaxed">
-              This will send a live siren push alert broadcast to all community members and rescue services in ward {dbUser?.ward || 'N/A'}. Are you sure?
+              {t('confirm_alert')}
             </p>
             <div className="flex gap-3 pt-2">
               <button
                 onClick={() => setShowConfirm(false)}
                 className="flex-1 h-12 bg-white/10 hover:bg-white/20 text-white text-xs font-bold rounded-xl cursor-pointer"
               >
-                Cancel
+                {t('cancel')}
               </button>
               <button
                 onClick={handleSendAlert}
                 disabled={sending}
                 className="flex-1 h-12 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1 cursor-pointer disabled:opacity-50"
               >
-                {sending && <Loader2 className="w-4 h-4 animate-spin" />} Send Siren Alert
+                {sending && <Loader2 className="w-4 h-4 animate-spin" />} {t('confirm')}
               </button>
             </div>
           </div>
