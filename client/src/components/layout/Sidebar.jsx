@@ -37,18 +37,18 @@ export default function Sidebar() {
   };
 
   const menuItems = [
-    { path: '/', label: t('common.home', 'Home'), icon: Home },
-    { path: '/map', label: t('common.map', 'Live Map'), icon: Map },
-    { path: '/community', label: t('common.community', 'Community Chat'), icon: MessageSquare },
-    { path: '/workers', label: t('common.workers', 'Worker Market'), icon: Users },
-    { path: '/emergency', label: t('common.emergency', 'Emergency Alert'), icon: AlertTriangle, badge: 'Alert' },
-    { path: '/ai', label: t('common.ai', 'AI Assistant'), icon: ShieldAlert },
-    { path: '/officials', label: t('common.officials', 'Officials Directory'), icon: Building },
-    { path: '/profile', label: t('common.profile', 'Profile'), icon: User }
+    { path: '/', label: t('nav_home'), icon: Home },
+    { path: '/map', label: t('nav_map'), icon: Map },
+    { path: '/community', label: t('nav_community'), icon: MessageSquare },
+    { path: '/workers', label: t('nav_workers'), icon: Users },
+    { path: '/emergency', label: t('nav_emergency'), icon: AlertTriangle, badge: 'Alert' },
+    { path: '/ai', label: t('nav_ai'), icon: ShieldAlert },
+    { path: '/officials', label: t('nav_officials'), icon: Building },
+    { path: '/profile', label: t('nav_profile'), icon: User }
   ];
 
   if ((dbUser?.role || '').toLowerCase() === 'official') {
-    menuItems.push({ path: '/admin', label: t('common.admin', 'Admin Panel'), icon: ShieldCheck });
+    menuItems.push({ path: '/admin', label: t('nav_officials'), icon: ShieldCheck });
   }
 
   return (
