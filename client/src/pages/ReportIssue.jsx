@@ -290,26 +290,26 @@ export default function ReportIssue() {
       { id: 4, label: t('ai_report', 'AI Report') }
     ];
     return (
-      <div className="flex items-center justify-between border-b pb-4 border-slate-200 dark:border-slate-700">
+      <div className="flex items-center justify-between border-b pb-4 border-[var(--border)]">
         {stepsList.map((s, idx) => (
           <React.Fragment key={s.id}>
             <div className="flex items-center gap-2">
               <span className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition ${
                 step >= s.id 
                   ? 'bg-accent text-white shadow-sm' 
-                  : 'bg-slate-100 text-slate-400 dark:bg-slate-800'
+                  : 'bg-[var(--surface-2)] text-[var(--text-muted)]'
               }`}>
                 {step > s.id ? <Check className="w-4 h-4" /> : s.id}
               </span>
               <span className={`text-xs font-bold hidden sm:inline ${
-                step === s.id ? 'text-text dark:text-white' : 'text-slate-400'
+                step === s.id ? 'text-[var(--text)]' : 'text-slate-400'
               }`}>
                 {s.label}
               </span>
             </div>
             {idx < stepsList.length - 1 && (
               <div className={`flex-1 h-0.5 mx-2 transition ${
-                step > s.id ? 'bg-accent' : 'bg-slate-200 dark:bg-slate-700'
+                step > s.id ? 'bg-accent' : 'bg-[var(--border)]'
               }`} />
             )}
           </React.Fragment>
@@ -339,21 +339,21 @@ export default function ReportIssue() {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       {/* progress card */}
-      <div className="bg-surface dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-border dark:border-slate-700">
+      <div className="bg-[var(--surface)] p-4 rounded-2xl shadow-sm border border-[var(--border)]">
         {renderProgress()}
       </div>
 
       {step === 1 && (
-        <div className="bg-surface dark:bg-slate-800 p-6 rounded-2xl border border-border dark:border-slate-700 shadow-sm space-y-6">
-          <h2 className="text-lg font-black text-text dark:text-white flex items-center gap-2">
-            <Camera className="w-5 h-5 text-accent" /> {t('step_1_upload', 'Step 1: Upload Civic Hazard Photo')}
+        <div className="bg-[var(--surface)] p-6 rounded-2xl border border-[var(--border)] shadow-sm space-y-6">
+          <h2 className="text-lg font-black text-[var(--text)] flex items-center gap-2">
+            <Camera className="w-5 h-5 text-[var(--accent)]" /> {t('step_1_upload', 'Step 1: Upload Civic Hazard Photo')}
           </h2>
 
           {!previewUrl ? (
-            <label className="flex flex-col items-center justify-center border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-accent dark:hover:border-accent rounded-2xl h-[180px] cursor-pointer transition p-4 text-center">
+            <label className="flex flex-col items-center justify-center border-2 border-dashed border-[var(--border)] hover:border-[var(--accent)] rounded-2xl h-[180px] cursor-pointer transition p-4 text-center">
               <Camera className="w-10 h-10 text-slate-400 mb-2" />
-              <span className="text-sm font-bold text-text dark:text-white">{t('take_photo_upload', 'Take Photo or Upload from Gallery')}</span>
-              <span className="text-[10px] text-text-muted mt-1">{t('accepts_images', 'Accepts images (JPEG, PNG) up to 5MB')}</span>
+              <span className="text-sm font-bold text-[var(--text)]">{t('take_photo_upload', 'Take Photo or Upload from Gallery')}</span>
+              <span className="text-[10px] text-[var(--text-muted)] mt-1">{t('accepts_images', 'Accepts images (JPEG, PNG) up to 5MB')}</span>
               <input 
                 type="file" 
                 accept="image/*" 
@@ -363,7 +363,7 @@ export default function ReportIssue() {
             </label>
           ) : (
             <div className="space-y-4">
-              <div className="relative w-full h-[220px] rounded-xl overflow-hidden border border-border dark:border-slate-700">
+              <div className="relative w-full h-[220px] rounded-xl overflow-hidden border border-[var(--border)]">
                 <img 
                   src={previewUrl} 
                   alt="Hazard preview" 
@@ -386,14 +386,14 @@ export default function ReportIssue() {
           <div className="flex justify-between items-center pt-2">
             <button 
               onClick={() => navigate('/')}
-              className="h-12 px-5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 text-text dark:text-white text-xs font-bold rounded-xl cursor-pointer"
+              className="h-12 px-5 bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--text)] text-xs font-bold rounded-xl cursor-pointer"
             >
               {t('cancel', 'Cancel')}
             </button>
             <button 
               disabled={!photoFile}
               onClick={() => setStep(2)}
-              className="h-12 px-6 bg-accent hover:bg-opacity-90 disabled:opacity-50 text-white text-xs font-bold rounded-xl cursor-pointer shadow-sm flex items-center gap-1"
+              className="h-12 px-6 bg-[var(--accent)] hover:bg-opacity-90 disabled:opacity-50 text-white text-xs font-bold rounded-xl cursor-pointer shadow-sm flex items-center gap-1"
             >
               {t('next_step', 'Next Step')}
             </button>
@@ -402,43 +402,43 @@ export default function ReportIssue() {
       )}
 
       {step === 2 && (
-        <div className="bg-surface dark:bg-slate-800 p-6 rounded-2xl border border-border dark:border-slate-700 shadow-sm space-y-6">
-          <h2 className="text-lg font-black text-text dark:text-white flex items-center gap-2">
-            <Mic className="w-5 h-5 text-accent" /> {t('step_2_describe', 'Step 2: Describe the Hazard')}
+        <div className="bg-[var(--surface)] p-6 rounded-2xl border border-[var(--border)] shadow-sm space-y-6">
+          <h2 className="text-lg font-black text-[var(--text)] flex items-center gap-2">
+            <Mic className="w-5 h-5 text-[var(--accent)]" /> {t('step_2_describe', 'Step 2: Describe the Hazard')}
           </h2>
 
           <div className="space-y-4">
-            <label className="text-xs font-bold text-text-muted">{t('describe_using_voice', 'Describe using text or record voice note:')}</label>
+            <label className="text-xs font-bold text-[var(--text-muted)]">{t('describe_using_voice', 'Describe using text or record voice note:')}</label>
             <div className="relative">
               <textarea 
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder={t('textarea_placeholder', 'Describe the issue (e.g. Broken road with dangerous potholes near public park, water pipe leakage creating a massive sinkhole...)')}
-                className="w-full h-32 p-4 bg-slate-50 dark:bg-slate-900 border border-border dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-accent dark:text-white"
+                className="w-full h-32 p-4 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-[var(--accent)] text-[var(--text)]"
                 maxLength={300}
               />
-              <span className="absolute bottom-3 right-3 text-[10px] font-bold text-text-muted">
+              <span className="absolute bottom-3 right-3 text-[10px] font-bold text-[var(--text-muted)]">
                 {description.length}/300
               </span>
             </div>
 
-            <div className="flex flex-col items-center justify-center p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-border dark:border-slate-700">
+            <div className="flex flex-col items-center justify-center p-4 bg-[var(--surface-2)] rounded-xl border border-[var(--border)]">
               <button
                 onClick={toggleListening}
                 className={`w-14 h-14 rounded-full flex items-center justify-center shadow-md transition cursor-pointer ${
                   isListening 
                     ? 'bg-red-600 text-white animate-pulse' 
-                    : 'bg-accent-soft text-accent hover:bg-accent hover:text-white'
+                    : 'bg-[var(--accent-soft)] text-[var(--accent)] hover:bg-[var(--accent)] hover:text-white'
                 }`}
                 title="Tap to speak"
               >
                 <Mic className="w-6 h-6" />
               </button>
-              <span className="text-xs font-bold mt-2 text-text dark:text-white">
+              <span className="text-xs font-bold mt-2 text-[var(--text)]">
                 {isListening ? t('listening_speak', "Listening... Speak now") : t('tap_to_speak', "Tap to Speak (Voice Input)")}
               </span>
               {transcription && (
-                <p className="text-xs text-accent font-bold mt-2 text-center italic">
+                <p className="text-xs text-[var(--accent)] font-bold mt-2 text-center italic">
                   {t('transcribed', 'Transcribed')}: "{transcription}"
                 </p>
               )}
@@ -448,13 +448,13 @@ export default function ReportIssue() {
           <div className="flex justify-between items-center pt-2">
             <button 
               onClick={() => setStep(1)}
-              className="h-12 px-5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 text-text dark:text-white text-xs font-bold rounded-xl cursor-pointer"
+              className="h-12 px-5 bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--text)] text-xs font-bold rounded-xl cursor-pointer"
             >
               {t('back', 'Back')}
             </button>
             <button 
               onClick={() => setStep(3)}
-              className="h-12 px-6 bg-accent hover:bg-opacity-90 text-white text-xs font-bold rounded-xl cursor-pointer shadow-sm"
+              className="h-12 px-6 bg-[var(--accent)] hover:bg-opacity-90 text-white text-xs font-bold rounded-xl cursor-pointer shadow-sm"
             >
               {t('next_step', 'Next Step')}
             </button>
@@ -463,27 +463,27 @@ export default function ReportIssue() {
       )}
 
       {step === 3 && (
-        <div className="bg-surface dark:bg-slate-800 p-6 rounded-2xl border border-border dark:border-slate-700 shadow-sm space-y-6">
-          <h2 className="text-lg font-black text-text dark:text-white flex items-center gap-2">
-            <MapPin className="w-5 h-5 text-accent" /> {t('step_3_confirm', 'Step 3: Confirm GPS Location')}
+        <div className="bg-[var(--surface)] p-6 rounded-2xl border border-[var(--border)] shadow-sm space-y-6">
+          <h2 className="text-lg font-black text-[var(--text)] flex items-center gap-2">
+            <MapPin className="w-5 h-5 text-[var(--accent)]" /> {t('step_3_confirm', 'Step 3: Confirm GPS Location')}
           </h2>
 
           <div className="space-y-4">
-            <div className="flex items-center justify-between p-3.5 bg-slate-50 dark:bg-slate-900 rounded-xl border border-border dark:border-slate-700 gap-2">
+            <div className="flex items-center justify-between p-3.5 bg-[var(--surface-2)] rounded-xl border border-[var(--border)] gap-2">
               <div className="min-w-0 flex-1">
-                <span className="text-xs font-bold text-accent uppercase block">{t('gps_detected', 'GPS Detected Address')}</span>
-                <p className="text-xs font-bold text-text dark:text-white truncate">{address}</p>
+                <span className="text-xs font-bold text-[var(--accent)] uppercase block">{t('gps_detected', 'GPS Detected Address')}</span>
+                <p className="text-xs font-bold text-[var(--text)] truncate">{address}</p>
               </div>
               <button 
                 onClick={detectLocation}
-                className="w-9 h-9 flex items-center justify-center bg-white dark:bg-slate-800 rounded-lg border border-border dark:border-slate-700 text-accent cursor-pointer hover:bg-slate-100"
+                className="w-9 h-9 flex items-center justify-center bg-[var(--surface)] rounded-lg border border-[var(--border)] text-[var(--accent)] cursor-pointer hover:bg-[var(--surface-2)]"
                 title="Refresh location"
               >
                 <RefreshCw className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="h-[200px] w-full rounded-xl overflow-hidden border border-border dark:border-slate-700 relative z-0">
+            <div className="h-[200px] w-full rounded-xl overflow-hidden border border-[var(--border)] relative z-0">
               <MapContainer
                 center={coords}
                 zoom={13}
@@ -504,7 +504,7 @@ export default function ReportIssue() {
                 />
               </MapContainer>
             </div>
-            <p className="text-[10px] text-text-muted font-bold text-center">
+            <p className="text-[10px] text-[var(--text-muted)] font-bold text-center">
               {t('map_drag_instruction', 'Drag or tap anywhere on the map above to manually correct the pin position.')}
             </p>
           </div>
@@ -512,13 +512,13 @@ export default function ReportIssue() {
           <div className="flex justify-between items-center pt-2">
             <button 
               onClick={() => setStep(2)}
-              className="h-12 px-5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 text-text dark:text-white text-xs font-bold rounded-xl cursor-pointer"
+              className="h-12 px-5 bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--text)] text-xs font-bold rounded-xl cursor-pointer"
             >
               {t('back', 'Back')}
             </button>
             <button 
               onClick={runAIAnalysis}
-              className="h-12 px-6 bg-accent hover:bg-opacity-90 text-white text-xs font-bold rounded-xl cursor-pointer shadow-sm flex items-center gap-1.5"
+              className="h-12 px-6 bg-[var(--accent)] hover:bg-opacity-90 text-white text-xs font-bold rounded-xl cursor-pointer shadow-sm flex items-center gap-1.5"
             >
               <Sparkles className="w-4 h-4 text-yellow-300" /> {t('analyze_with_ai', 'Analyze with AI')}
             </button>
@@ -529,7 +529,7 @@ export default function ReportIssue() {
       {step === 4 && aiResult && (
         <div className="space-y-6">
           {/* Results dashboard card */}
-          <div className="bg-surface dark:bg-slate-800 rounded-2xl border border-border dark:border-slate-700 overflow-hidden shadow-md">
+          <div className="bg-[var(--surface)] rounded-2xl border border-[var(--border)] overflow-hidden shadow-md">
             
             {/* Severity Colored banner */}
             <div className={`p-4 text-white font-bold flex items-center justify-between uppercase ${
@@ -548,27 +548,27 @@ export default function ReportIssue() {
             <div className="p-6 space-y-6">
               
               {/* Category info */}
-              <div className="flex items-center justify-between border-b pb-4 border-slate-100 dark:border-slate-700">
+              <div className="flex items-center justify-between border-b pb-4 border-[var(--border)]">
                 <div>
-                  <span className="text-[10px] font-bold text-text-muted block uppercase">{t('civic_category', 'Civic Category')}</span>
-                  <h3 className="text-lg font-black text-text dark:text-white">
+                  <span className="text-[10px] font-bold text-[var(--text-muted)] block uppercase">{t('civic_category', 'Civic Category')}</span>
+                  <h3 className="text-lg font-black text-[var(--text)]">
                     {aiResult.categoryLabel || aiResult.category?.replace('_', ' ')}
                   </h3>
                 </div>
                 <div className="relative w-16 h-16 flex items-center justify-center">
                   {/* Circular progress bar (CSS only) */}
                   <svg className="w-full h-full transform -rotate-90">
-                    <circle cx="32" cy="32" r="28" fill="transparent" stroke="var(--color-border)" strokeWidth="4" />
+                    <circle cx="32" cy="32" r="28" fill="transparent" stroke="var(--border)" strokeWidth="4" />
                     <circle 
                       cx="32" cy="32" r="28" 
                       fill="transparent" 
-                      stroke="var(--color-accent)" 
+                      stroke="var(--accent)" 
                       strokeWidth="4" 
                       strokeDasharray={176} 
                       strokeDashoffset={176 - (176 * aiResult.impactScore) / 100}
                     />
                   </svg>
-                  <span className="absolute text-xs font-black text-text dark:text-white">
+                  <span className="absolute text-xs font-black text-[var(--text)]">
                     {aiResult.impactScore}
                   </span>
                 </div>
@@ -576,14 +576,14 @@ export default function ReportIssue() {
 
               {/* Severity choose explanation reason */}
               <div className="space-y-1">
-                <span className="text-[10px] font-bold text-text-muted block uppercase">{t('analysis_reason', 'Analysis Reason')}</span>
-                <p className="text-xs font-semibold leading-relaxed text-text dark:text-white">
+                <span className="text-[10px] font-bold text-[var(--text-muted)] block uppercase">{t('analysis_reason', 'Analysis Reason')}</span>
+                <p className="text-xs font-semibold leading-relaxed text-[var(--text)]">
                   {aiResult.severityReason}
                 </p>
               </div>
 
               {/* Risk Prediction summary */}
-              <div className="p-3 bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/50 rounded-xl flex items-start gap-2.5">
+              <div className="p-3 bg-[var(--danger)]/10 border border-[var(--danger)]/20 rounded-xl flex items-start gap-2.5">
                 <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
                 <div>
                   <span className="text-[10px] font-bold text-red-700 dark:text-red-400 block uppercase">{t('predicted_risk', 'predicted community risk')}</span>
@@ -592,22 +592,22 @@ export default function ReportIssue() {
               </div>
 
               {/* Recommended Authority */}
-              <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-border dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="p-4 bg-[var(--surface-2)] rounded-xl border border-[var(--border)] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <span className="text-[10px] font-bold text-text-muted block uppercase">{t('dispatch_agency', 'recommended dispatch agency')}</span>
-                  <h4 className="text-sm font-black text-text dark:text-white truncate mt-0.5">{aiResult.recommendedAuthority}</h4>
+                  <span className="text-[10px] font-bold text-[var(--text-muted)] block uppercase">{t('dispatch_agency', 'recommended dispatch agency')}</span>
+                  <h4 className="text-sm font-black text-[var(--text)] truncate mt-0.5">{aiResult.recommendedAuthority}</h4>
                 </div>
                 <div className="flex gap-2">
                   <a 
                     href="tel:100"
-                    className="w-10 h-10 bg-accent-soft text-accent rounded-lg flex items-center justify-center cursor-pointer"
+                    className="w-10 h-10 bg-[var(--accent-soft)] text-[var(--accent)] rounded-lg flex items-center justify-center cursor-pointer"
                     title="Call emergency helpline"
                   >
                     <Phone className="w-4 h-4" />
                   </a>
                   <a 
                     href="mailto:civic@vanguard.in"
-                    className="w-10 h-10 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-lg flex items-center justify-center border border-border dark:border-slate-700 cursor-pointer"
+                    className="w-10 h-10 bg-[var(--surface-2)] text-[var(--text-muted)] rounded-lg flex items-center justify-center border border-[var(--border)] cursor-pointer"
                     title="Send official report"
                   >
                     <Mail className="w-4 h-4" />
@@ -617,8 +617,8 @@ export default function ReportIssue() {
 
               {/* Official complaint paragraph */}
               <div className="space-y-1">
-                <span className="text-[10px] font-bold text-text-muted block uppercase">{t('complaint_text', 'Generated Complaint Text')}</span>
-                <blockquote className="border-l-4 border-slate-300 dark:border-slate-600 pl-4 py-1 italic text-xs text-text-muted leading-relaxed">
+                <span className="text-[10px] font-bold text-[var(--text-muted)] block uppercase">{t('complaint_text', 'Generated Complaint Text')}</span>
+                <blockquote className="border-l-4 border-[var(--border)] pl-4 py-1 italic text-xs text-[var(--text-muted)] leading-relaxed">
                   "{aiResult.reportText}"
                 </blockquote>
               </div>
@@ -627,7 +627,7 @@ export default function ReportIssue() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                 <button
                   onClick={downloadReportPDF}
-                  className="h-12 bg-white dark:bg-slate-800 border border-accent text-accent dark:text-blue-400 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 hover:bg-slate-50 dark:hover:bg-slate-750 cursor-pointer"
+                  className="h-12 bg-[var(--surface)] border border-[var(--accent)] text-[var(--accent)] font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 hover:bg-[var(--surface-2)] cursor-pointer"
                 >
                   <Download className="w-4 h-4" /> {t('download_pdf_report', 'Download PDF Report')}
                 </button>
@@ -646,14 +646,14 @@ export default function ReportIssue() {
           <div className="flex gap-3 justify-end items-center">
             <button
               onClick={() => setStep(3)}
-              className="h-12 px-6 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 text-text dark:text-white text-xs font-bold rounded-xl cursor-pointer"
+              className="h-12 px-6 bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--text)] text-xs font-bold rounded-xl cursor-pointer"
             >
               {t('modify_location', 'Modify Location')}
             </button>
             <button
               disabled={isSaving}
               onClick={() => handleSaveIssue(false)}
-              className="h-12 px-8 bg-accent hover:bg-opacity-95 text-white text-xs font-bold rounded-xl cursor-pointer flex items-center gap-1 disabled:opacity-50 shadow-md"
+              className="h-12 px-8 bg-[var(--accent)] hover:bg-opacity-95 text-white text-xs font-bold rounded-xl cursor-pointer flex items-center gap-1 disabled:opacity-50 shadow-md"
             >
               {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} {t('submit_issue_log', 'Submit Issue Log')}
             </button>
