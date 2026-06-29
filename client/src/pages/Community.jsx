@@ -22,6 +22,7 @@ import { db } from '../lib/firebase';
 import { collection, addDoc, onSnapshot, query, orderBy, serverTimestamp } from 'firebase/firestore';
 import { uploadImage } from '../lib/imageUpload';
 import toast from 'react-hot-toast';
+import LiveBroadcast from '../components/community/LiveBroadcast';
 
 export default function Community() {
   const { t } = useTranslation();
@@ -35,6 +36,7 @@ export default function Community() {
   const [showVoiceRoom, setShowVoiceRoom] = useState(false);
   const [pttSpeaking, setPttSpeaking] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
+  const [showBroadcast, setShowBroadcast] = useState(false);
   
   // Voice recording state
   const mediaRecorderRef = useRef(null);
