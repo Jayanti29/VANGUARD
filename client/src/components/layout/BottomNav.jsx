@@ -9,11 +9,11 @@ export default function BottomNav() {
   const location = useLocation();
 
   const navItems = [
-    { path: '/', label: t('common.home', 'Home'), icon: Home },
-    { path: '/map', label: t('common.map', 'Map'), icon: Map },
-    { path: '/community', label: t('common.community', 'Chat'), icon: MessageSquare },
-    { path: '/ai', label: t('common.ai', 'AI'), icon: Bot },
-    { path: '/profile', label: t('common.profile', 'Profile'), icon: User }
+    { path: '/', label: t('nav_home'), icon: Home },
+    { path: '/map', label: t('nav_map'), icon: Map },
+    { path: '/community', label: t('nav_community'), icon: MessageSquare },
+    { path: '/ai', label: t('nav_ai'), icon: Bot },
+    { path: '/profile', label: t('nav_profile'), icon: User }
   ];
 
   return (
