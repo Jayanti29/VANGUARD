@@ -4,9 +4,9 @@ import { initReactI18next } from 'react-i18next'
 const translations = {
   en: {
     // Navigation
-    nav_home: 'Home', nav_map: 'Live Map', nav_community: 'Community',
-    nav_ai: 'AI Assistant', nav_profile: 'Profile', nav_workers: 'Workers',
-    nav_emergency: 'Emergency', nav_officials: 'Officials',
+    nav_home: 'Home', nav_map: 'Live Map', nav_community: 'Community Chat',
+    nav_ai: 'AI Assistant', nav_profile: 'Profile', nav_workers: 'Worker Market',
+    nav_emergency: 'Emergency Alert', nav_officials: 'Officials Directory',
     
     // Home
     greeting_morning: 'Good morning', greeting_afternoon: 'Good afternoon',
