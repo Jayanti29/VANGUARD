@@ -37,12 +37,14 @@ export default function Community() {
   const [uploadingFile, setUploadingFile] = useState(false);
   
   // Voice recording state
-  const [isRecording, setIsRecording] = useState(false);
-  const [audioBlob, setAudioBlob] = useState(null);
-  const [audioUrl, setAudioUrl] = useState(null);
   const mediaRecorderRef = useRef(null);
   const streamRef = useRef(null);
   const chunksRef = useRef([]);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordedBlob, setRecordedBlob] = useState(null);
+  const [recordedUrl, setRecordedUrl] = useState(null);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const timerRef = useRef(null);
 
   const chatEndRef = useRef(null);
   const fileInputRef = useRef(null);
