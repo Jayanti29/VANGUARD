@@ -56,11 +56,64 @@
 
 ---
 
-## 💡 Founder Story
+## Founder Story
 
-During a visit to a rural village in Karnataka, we witnessed a dangerous electrical wire dangling near an primary school field. Though the villagers immediately noticed the risk, there was no digital channel to record it, estimate safety severity, or report it to local ward officials. Additionally, skilled workers (plumbers, electricians) had to travel to cities for day job postings, leaving the community dry when emergencies hit.
+I was born and raised in Bihar, a place where villages are 
+rich in culture, hard work, and community values, yet often 
+struggle with limited access to technology and opportunities. 
+Growing up, I witnessed problems that many people simply 
+accepted as part of daily life — damaged roads, electricity 
+failures, water issues, lack of communication with authorities, 
+and difficulties in finding workers for farming and construction 
+activities.
 
-We built **Vanguard** to close this rural-digital gap. By fusing **multimodal AI (Gemini Pro)**, real-time Firestore database synchronization, and local languages, Vanguard acts as a civic guardian and labor ecosystem in the pocket of every villager.
+In villages, farmers frequently need laborers during harvesting 
+seasons, families struggle to find electricians or plumbers in 
+emergencies, and community issues often remain unresolved because 
+there is no simple and accessible way to report them. Many people 
+do not know whom to contact, while others lack the confidence or 
+resources to approach officials.
+
+As I moved outside Bihar for higher education and pursued my 
+studies in Data Science, I was exposed to modern technology, 
+artificial intelligence, and digital solutions that make urban 
+life easier. This experience made me realize something important: 
+technology has transformed cities, but millions of people in 
+rural and semi-urban communities still remain disconnected from 
+these benefits.
+
+I began asking myself a simple question:
+
+> "Why should advanced technology only solve urban problems?"
+
+VANGUARD was born from this question.
+
+VANGUARD is not just an issue-reporting platform. It is a 
+community-driven ecosystem where citizens can report problems, 
+communicate with officials, help one another, and create 
+opportunities for local workers. Farmers can find laborers, 
+workers can discover employment opportunities, communities can 
+discuss local issues, and AI can identify risks before they 
+become disasters.
+
+As a student developer with limited resources, I built VANGUARD 
+using freely available technologies, open-source tools, and 
+student-accessible AI resources. My goal was never to create 
+the most expensive solution, but to prove that meaningful 
+innovation can emerge from real experiences and genuine problems.
+
+VANGUARD represents my belief that technology should not be a 
+privilege limited to cities. Every village, every community, and 
+every citizen deserves access to tools that improve safety, 
+opportunities, and quality of life.
+
+This project is not only inspired by my journey from a village 
+in Bihar to higher education — it is dedicated to the millions 
+of communities that continue to wait for solutions designed 
+specifically for them.
+
+**VANGUARD stands for protection, empowerment, and opportunity 
+— for everyone.**
 
 ---
 
