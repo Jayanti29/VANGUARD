@@ -4,27 +4,14 @@ import { Bell, Sun, Moon, Globe } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import useAuth from '../../hooks/useAuth';
 import toast from 'react-hot-toast';
+import { useTheme } from '../../contexts/ThemeContext';
 
 export default function TopBar() {
   const navigate = useNavigate();
   const { dbUser } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const { i18n } = useTranslation();
   const currentLang = i18n.language || localStorage.getItem('vanguard_language') || 'en';
-
-  const [darkMode, setDarkMode] = useState(
-    document.documentElement.classList.contains('dark') ||
-    localStorage.getItem('vanguard_theme') === 'dark'
-  );
-
-  useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('vanguard_theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('vanguard_theme', 'light');
-    }
-  }, [darkMode]);
 
   const handleLanguageChange = (e) => {
     const lang = e.target.value;
@@ -71,13 +58,12 @@ export default function TopBar() {
           </select>
         </div>
 
-        {/* Theme toggler */}
         <button
-          onClick={() => setDarkMode(!darkMode)}
+          onClick={toggleTheme}
           className="w-9 h-9 border border-[var(--border)] rounded-xl flex items-center justify-center bg-[var(--surface-2)] transition cursor-pointer text-[var(--text-muted)] hover:text-[var(--text)]"
           title="Toggle Light/Dark Theme"
         >
-          {darkMode ? <Sun className="w-4 h-4 text-amber-500" /> : <Moon className="w-4 h-4" />}
+          {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-500" /> : <Moon className="w-4 h-4" />}
         </button>
 
         {/* Bell notification */}
