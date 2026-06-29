@@ -1,6 +1,33 @@
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700;800&display=swap');
 @import "leaflet/dist/leaflet.css";
 
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Noto Sans', system-ui, -apple-system, sans-serif;
+  
+  --color-primary: var(--primary);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-hover: var(--accent-hover);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-bg: var(--bg);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-text-light: var(--text-light);
+  --color-border: var(--border);
+  
+  --color-sev-green: #16A34A;
+  --color-sev-yellow: #EAB308;
+  --color-sev-orange: #EA580C;
+  --color-sev-red: #DC2626;
+}
+
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
