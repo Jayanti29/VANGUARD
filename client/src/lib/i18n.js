@@ -103,9 +103,9 @@ const translations = {
     village_area: 'Village / Town / Area', ward_no: 'Ward Number (optional)',
   },
   hi: {
-    nav_home: 'होम', nav_map: 'लाइव मैप', nav_community: 'समुदाय',
-    nav_ai: 'AI सहायक', nav_profile: 'प्रोफाइल', nav_workers: 'कामगार',
-    nav_emergency: 'आपातकाल', nav_officials: 'अधिकारी',
+    nav_home: 'होम', nav_map: 'लाइव मैप', nav_community: 'समुदाय चैट',
+    nav_ai: 'AI सहायक', nav_profile: 'प्रोफाइल', nav_workers: 'कामगार बाजार',
+    nav_emergency: 'आपातकालीन अलर्ट', nav_officials: 'अधिकारी निर्देशिका',
     greeting_morning: 'सुप्रभात', greeting_afternoon: 'नमस्कार',
     greeting_evening: 'शुभ संध्या', greeting_night: 'शुभ रात्रि',
     critical_issues: 'गंभीर समस्याएं', community_updates: 'समुदाय अपडेट',
