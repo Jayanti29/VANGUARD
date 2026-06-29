@@ -248,7 +248,8 @@ i18n.use(initReactI18next).init({
   resources,
   lng: localStorage.getItem('vanguard_language') || 'en',
   fallbackLng: 'en',
-  interpolation: { escapeValue: false }
+  interpolation: { escapeValue: false },
+  react: { useSuspense: false }
 })
 
 export default i18n
