@@ -87,17 +87,37 @@ export default function Community() {
     return () => unsubscribe();
   }, [communityId]);
 
-  // CRITICAL: Cleanup on component unmount
+  // Complete cleanup function - ALWAYS call this
+  const cleanupRecording = () => {
+    if (mediaRecorderRef.current) {
+      if (mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+      }
+      mediaRecorderRef.current = null;
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => {
+        track.stop();
+        track.enabled = false;
+      });
+      streamRef.current = null;
+    }
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    chunksRef.current = [];
+    setIsRecording(false);
+    setRecordingTime(0);
+  };
+
+  // Cleanup on component unmount
   useEffect(() => {
     return () => {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
-      }
-      if (audioUrl) {
-        URL.revokeObjectURL(audioUrl);
-      }
+      cleanupRecording();
+      if (recordedUrl) URL.revokeObjectURL(recordedUrl);
     };
-  }, [audioUrl]);
+  }, [recordedUrl]);
 
   const startRecording = async () => {
     try {
