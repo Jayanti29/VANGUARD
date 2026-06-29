@@ -150,10 +150,10 @@ export default function Emergency() {
         </button>
         <div>
           <h1 className="text-xl font-black uppercase tracking-wider text-red-500">
-            Emergency Alert Dashboard
+            {t('emergency_title')}
           </h1>
           <p className="text-[10px] text-slate-350 font-bold block">
-            Broadcast instantly to all local residents and dispatch authorities.
+            {t('emergency_subtitle')}
           </p>
         </div>
       </div>
@@ -162,7 +162,7 @@ export default function Emergency() {
         <div className="space-y-6 animate-fadeIn">
           {/* Category Select grid */}
           <div className="space-y-3">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Choose Emergency Category</span>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">{t('choose_emergency_category', 'Choose Emergency Category')}</span>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {categories.map(cat => {
                 const isSelected = selectedCategory?.id === cat.id;
@@ -177,7 +177,7 @@ export default function Emergency() {
                     }`}
                   >
                     <cat.icon className="w-8 h-8" />
-                    <span className="text-xs font-black">{cat.label}</span>
+                    <span className="text-xs font-black">{t(cat.id.toLowerCase())}</span>
                   </button>
                 );
               })}
