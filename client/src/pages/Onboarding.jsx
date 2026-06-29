@@ -11,6 +11,7 @@ import { doc, setDoc } from 'firebase/firestore'
 import { auth, db } from '../lib/firebase'
 import { useAuth } from '../contexts/AuthContext'
 import i18n from '../lib/i18n'
+import { useTranslation } from 'react-i18next'
 
 const LANGUAGES = [
   { code: 'en', name: 'English', native: 'English' },
@@ -33,6 +34,7 @@ const ROLES = [
 ]
 
 export default function Onboarding() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const { currentUser } = useAuth()
   const isMountedRef = useRef(true)
@@ -510,7 +512,7 @@ export default function Onboarding() {
         {/* STEP 1: Language */}
         {step === 1 && (
           <div>
-            <p style={styles.sectionTitle}>Choose Your Language</p>
+            <p style={styles.sectionTitle}>{t('select_language')}</p>
             <div style={styles.langGrid}>
               {LANGUAGES.map(l => (
                 <button
@@ -528,7 +530,7 @@ export default function Onboarding() {
               ))}
             </div>
             <button style={styles.primaryBtn} onClick={() => setStep(2)}>
-              Continue →
+              {t('continue')} →
             </button>
           </div>
         )}
@@ -536,7 +538,7 @@ export default function Onboarding() {
         {/* STEP 2: Role */}
         {step === 2 && (
           <div>
-            <p style={styles.sectionTitle}>I am a...</p>
+            <p style={styles.sectionTitle}>{t('i_am_a')}</p>
             <div style={styles.roleGrid}>
               {ROLES.map(r => (
                 <button
@@ -545,7 +547,7 @@ export default function Onboarding() {
                   onClick={() => setRole(r.id)}
                 >
                   <div style={{fontSize:'28px', marginBottom:'6px'}}>{r.icon}</div>
-                  <div style={{fontWeight:700, fontSize:'14px'}}>{r.label}</div>
+                  <div style={{fontWeight:700, fontSize:'14px'}}>{t(r.id.toLowerCase())}</div>
                   <div style={{fontSize:'11px', color: theme.muted, marginTop:'4px'}}>{r.desc}</div>
                 </button>
               ))}
@@ -553,7 +555,7 @@ export default function Onboarding() {
             
             <input
               style={{...styles.input, marginTop: '16px'}}
-              placeholder="Your full name *"
+              placeholder={`${t('your_name')} *`}
               value={name}
               onChange={e => { setName(e.target.value); setStepError(''); }}
               required
