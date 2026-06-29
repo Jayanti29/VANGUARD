@@ -189,18 +189,18 @@ export default function Emergency() {
               
               {/* Optional brief details */}
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase">Brief Description (Optional)</label>
+                <label className="text-[10px] font-bold text-slate-400 uppercase">{t('brief_description', 'Brief Description (Optional)')}</label>
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Describe emergency details (e.g. Fire in secondary electrical meter, water flash flooding blocking the bypass street...)"
+                  placeholder={t('describe_emergency_details', 'Describe emergency details (e.g. Fire in secondary electrical meter, water flash flooding blocking the bypass street...)')}
                   className="w-full h-20 p-3 bg-black/40 border border-white/10 focus:border-red-650 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none"
                 />
               </div>
 
               {/* Live Location coordinates check */}
               <div className="space-y-1.5">
-                <span className="text-[10px] font-bold text-slate-400 uppercase block">Alert Dispatch Address</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase block">{t('alert_dispatch_address', 'Alert Dispatch Address')}</span>
                 <p className="text-xs text-slate-200 font-semibold">{address}</p>
                 <div className="h-[140px] w-full rounded-xl overflow-hidden border border-white/10 relative z-0">
                   <MapContainer
@@ -228,7 +228,7 @@ export default function Emergency() {
                 onClick={() => setShowConfirm(true)}
                 className="w-full h-14 bg-red-600 hover:bg-red-700 text-white font-black text-xs rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow-lg active:scale-98 transition uppercase tracking-widest mt-4"
               >
-                Send Emergency Alert
+                {t('send_alert')}
               </button>
             </div>
           )}
@@ -243,9 +243,9 @@ export default function Emergency() {
             <CheckCircle className="w-16 h-16 text-green-500 relative z-10" />
           </div>
           <div>
-            <h2 className="text-xl font-black text-green-400">Emergency Alert Sent!</h2>
+            <h2 className="text-xl font-black text-green-400">{t('alert_sent')}</h2>
             <p className="text-xs text-slate-350 mt-1 max-w-sm font-semibold mx-auto">
-              Broadcast successfully delivered to local residents and rescue channels. Dispatch crews are being geolocated.
+              {t('alert_broadcast_success', 'Broadcast successfully delivered to local residents and rescue channels. Dispatch crews are being geolocated.')}
             </p>
           </div>
           <button
