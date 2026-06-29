@@ -67,12 +67,17 @@ export default function Sidebar() {
         className="p-4 flex items-center justify-between min-h-[72px]"
       >
         {!collapsed && (
-          <img src="/vanguard-logo.png" alt="VANGUARD" 
-               style={{height:'48px', objectFit:'contain'}} />
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-[var(--accent)] text-white flex items-center justify-center rounded-xl shadow-md">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <span className="font-extrabold text-lg text-[var(--text)] tracking-wider">VANGUARD</span>
+          </div>
         )}
         {collapsed && (
-          <img src="/vanguard-logo.png" alt="V" 
-               style={{height:'32px', objectFit:'contain', margin:'0 auto'}} />
+          <div className="w-8 h-8 bg-[var(--accent)] text-white flex items-center justify-center rounded-xl mx-auto">
+            <ShieldCheck className="w-5 h-5" />
+          </div>
         )}
         <button 
           onClick={() => setCollapsed(!collapsed)}
