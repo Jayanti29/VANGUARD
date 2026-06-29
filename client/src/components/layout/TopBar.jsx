@@ -10,7 +10,7 @@ export default function TopBar() {
   const navigate = useNavigate();
   const { dbUser } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const currentLang = i18n.language || localStorage.getItem('vanguard_language') || 'en';
 
   const handleLanguageChange = (e) => {
