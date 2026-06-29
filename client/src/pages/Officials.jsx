@@ -90,13 +90,13 @@ export default function Officials() {
     <div className="space-y-6">
       {/* Search Input Bar */}
       <div className="relative">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted w-5 h-5" />
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)] w-5 h-5" />
         <input
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search by name or department..."
-          className="w-full min-h-[56px] pl-12 pr-4 bg-surface dark:bg-slate-800 border-2 border-border dark:border-slate-700 rounded-2xl text-sm font-semibold text-text dark:text-white outline-none focus:border-accent"
+          className="w-full min-h-[56px] pl-12 pr-4 bg-[var(--surface)] border-2 border-[var(--border)] rounded-2xl text-sm font-semibold text-[var(--text)] outline-none focus:border-[var(--accent)]"
         />
       </div>
 
@@ -108,8 +108,8 @@ export default function Officials() {
             onClick={() => setActiveFilter(tab.toLowerCase())}
             className={`flex-shrink-0 px-4 py-2.5 rounded-full text-xs font-bold border transition cursor-pointer min-h-[38px] ${
               activeFilter === tab.toLowerCase()
-                ? 'bg-accent border-accent text-white shadow-sm'
-                : 'bg-surface dark:bg-slate-800 border-border dark:border-slate-700 text-text-muted hover:text-text'
+                ? 'bg-[var(--accent)] border-[var(--accent)] text-white shadow-sm'
+                : 'bg-[var(--surface)] border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)]'
             }`}
           >
             {tab}
@@ -120,12 +120,12 @@ export default function Officials() {
       {/* Officials List */}
       {loading ? (
         <div className="flex items-center justify-center p-12">
-          <Loader2 className="w-8 h-8 animate-spin text-accent" />
+          <Loader2 className="w-8 h-8 animate-spin text-[var(--accent)]" />
         </div>
       ) : filtered.length === 0 ? (
-        <div className="card-vanguard text-center p-8 space-y-2">
-          <ShieldAlert className="w-10 h-10 text-text-muted mx-auto opacity-45" />
-          <p className="font-bold text-sm text-text-muted">No officials matched search criteria</p>
+        <div className="card text-center p-8 space-y-2">
+          <ShieldAlert className="w-10 h-10 text-[var(--text-muted)] mx-auto opacity-45" />
+          <p className="font-bold text-sm text-[var(--text-muted)]">No officials matched search criteria</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
