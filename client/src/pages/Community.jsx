@@ -120,99 +120,133 @@ export default function Community() {
   }, [recordedUrl]);
 
   const startRecording = async () => {
+    // Clean up any previous recording
+    if (recordedUrl) {
+      URL.revokeObjectURL(recordedUrl);
+      setRecordedUrl(null);
+      setRecordedBlob(null);
+    }
+    cleanupRecording();
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
+      const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
-          sampleRate: 44100
-        }
+          sampleRate: 44100,
+          channelCount: 1
+        },
+        video: false
       });
-      
+
       streamRef.current = stream;
       chunksRef.current = [];
-      
-      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-        ? 'audio/webm;codecs=opus'
-        : MediaRecorder.isTypeSupported('audio/webm')
-        ? 'audio/webm'
-        : 'audio/mp4';
-      
-      const mediaRecorder = new MediaRecorder(stream, { mimeType });
-      mediaRecorderRef.current = mediaRecorder;
-      
-      mediaRecorder.ondataavailable = (e) => {
+
+      // Pick best supported format
+      const mimeType = [
+        'audio/webm;codecs=opus',
+        'audio/webm',
+        'audio/ogg;codecs=opus',
+        'audio/mp4',
+      ].find(t => MediaRecorder.isTypeSupported(t)) || '';
+
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : {});
+      mediaRecorderRef.current = recorder;
+
+      recorder.ondataavailable = (e) => {
         if (e.data && e.data.size > 0) {
           chunksRef.current.push(e.data);
         }
       };
-      
-      mediaRecorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: mimeType });
-        const url = URL.createObjectURL(blob);
-        setAudioBlob(blob);
-        setAudioUrl(url);
-        chunksRef.current = [];
-        
+
+      recorder.onstop = () => {
+        if (chunksRef.current.length > 0) {
+          const blob = new Blob(chunksRef.current, { type: mimeType || 'audio/webm' });
+          const url = URL.createObjectURL(blob);
+          setRecordedBlob(blob);
+          setRecordedUrl(url);
+        }
+        // Stop all tracks after recording stops
         if (streamRef.current) {
-          streamRef.current.getTracks().forEach(track => {
-            track.stop();
-            track.enabled = false;
-          });
+          streamRef.current.getTracks().forEach(t => t.stop());
           streamRef.current = null;
         }
       };
-      
-      mediaRecorder.start(100);
+
+      recorder.onerror = (e) => {
+        console.error('MediaRecorder error:', e);
+        cleanupRecording();
+      };
+
+      recorder.start(250);
       setIsRecording(true);
-      
+
+      // Timer
+      timerRef.current = setInterval(() => {
+        setRecordingTime(t => {
+          if (t >= 60) { stopRecording(); return 0; }
+          return t + 1;
+        });
+      }, 1000);
+
     } catch (err) {
-      console.error('Mic error:', err);
+      cleanupRecording();
       if (err.name === 'NotAllowedError') {
-        alert('Microphone permission denied. Please allow mic access.');
+        alert('Microphone permission denied. Please allow mic access in browser settings.');
+      } else if (err.name === 'NotFoundError') {
+        alert('No microphone found on this device.');
+      } else {
+        alert('Could not start recording: ' + err.message);
       }
     }
   };
 
   const stopRecording = () => {
-    if (mediaRecorderRef.current && 
-        mediaRecorderRef.current.state !== 'inactive') {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
     }
     setIsRecording(false);
+    setRecordingTime(0);
+    // Stream tracks stopped in recorder.onstop
+  };
+
+  const cancelRecording = () => {
+    cleanupRecording();
+    if (recordedUrl) URL.revokeObjectURL(recordedUrl);
+    setRecordedBlob(null);
+    setRecordedUrl(null);
   };
 
   const sendVoiceMessage = async () => {
-    if (!audioBlob) return;
-    
-    const uploadToast = toast.loading("Sending voice note...");
+    if (!recordedBlob) return;
+
     const reader = new FileReader();
-    reader.readAsDataURL(audioBlob);
     reader.onload = async () => {
       const base64Audio = reader.result;
-      
       try {
         await addDoc(collection(db, 'communities', communityId, 'messages'), {
-          senderId: currentUser.uid,
+          senderId: currentUser?.uid || 'guest',
           senderName: dbUser?.name || userProfile?.name || 'User',
           senderRole: dbUser?.role || userProfile?.role || 'citizen',
           audioData: base64Audio,
           type: 'audio',
+          duration: recordingTime,
           channel: activeChannel,
           timestamp: serverTimestamp()
         });
-        toast.dismiss(uploadToast);
-        toast.success("Voice note sent!");
+        // Clear after send
+        if (recordedUrl) URL.revokeObjectURL(recordedUrl);
+        setRecordedBlob(null);
+        setRecordedUrl(null);
       } catch (err) {
-        console.error(err);
-        toast.dismiss(uploadToast);
-        toast.error("Failed to send voice note.");
+        console.error('Failed to send voice message:', err);
       }
-      
-      setAudioBlob(null);
-      if (audioUrl) URL.revokeObjectURL(audioUrl);
-      setAudioUrl(null);
     };
+    reader.readAsDataURL(recordedBlob);
   };
 
   const handleSendMessage = async (e) => {
