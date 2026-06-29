@@ -59,7 +59,7 @@ export default function Sidebar() {
         color: theme.text,
         width: collapsed ? '64px' : '220px'
       }}
-      className="hidden md:flex flex-col h-screen sticky top-0 left-0 transition-all duration-300 z-40"
+      className="hidden md:flex flex-col h-screen sticky top-0 left-0 transition-all duration-300 z-40 shrink-0"
     >
       {/* Title / Logo header */}
       <div 
