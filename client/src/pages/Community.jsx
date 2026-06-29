@@ -535,30 +535,7 @@ export default function Community() {
         </div>
       )}
 
-      {/* Show audio preview before sending */}
-      {audioUrl && !isRecording && (
-        <div 
-          className="p-4 flex gap-3 items-center justify-between"
-          style={{ background: theme.surface, borderTop: '1px solid ' + theme.border }}
-        >
-          <audio controls src={audioUrl} style={{height:'32px', flex:1}} />
-          <div className="flex gap-2">
-            <button 
-              onClick={sendVoiceMessage}
-              className="px-4 py-2 bg-accent text-white font-bold text-xs rounded-xl hover:bg-opacity-90 transition cursor-pointer"
-            >
-              Send
-            </button>
-            <button 
-              onClick={() => { setAudioUrl(null); setAudioBlob(null); }}
-              className="px-4 py-2 font-bold text-xs rounded-xl transition cursor-pointer"
-              style={{ background: theme.surface2, color: theme.text }}
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
+
 
       {/* Bottom Message Input Bar */}
       <div 
