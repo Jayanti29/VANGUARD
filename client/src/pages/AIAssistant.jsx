@@ -195,19 +195,19 @@ export default function AIAssistant() {
   ];
 
   return (
-    <div className="flex flex-col h-[calc(100vh-140px)] md:h-[calc(100vh-100px)] rounded-2xl border border-border dark:border-slate-700 bg-slate-50 dark:bg-slate-900 overflow-hidden shadow-sm">
+    <div className="flex flex-col h-[calc(100vh-140px)] md:h-[calc(100vh-100px)] rounded-2xl border border-[var(--border)] bg-[var(--bg)] overflow-hidden shadow-sm">
       
       {/* Assistant Header */}
-      <div className="bg-white dark:bg-slate-800 border-b border-border dark:border-slate-700 px-6 py-4 flex items-center justify-between z-10">
+      <div className="bg-[var(--surface)] border-b border-[var(--border)] px-6 py-4 flex items-center justify-between z-10">
         <div className="flex items-center gap-2.5">
-          <div className="w-10 h-10 rounded-xl bg-accent-soft text-accent flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-[var(--accent-soft)] text-[var(--accent)] flex items-center justify-center">
             <Bot className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-sm font-black text-text dark:text-white">
+            <h2 className="text-sm font-black text-[var(--text)]">
               VANGUARD AI Assistant
             </h2>
-            <span className="text-[10px] text-text-muted font-bold block mt-0.5">
+            <span className="text-[10px] text-[var(--text-muted)] font-bold block mt-0.5">
               Ask anything about civic procedures, authorities, and safety risks.
             </span>
           </div>
@@ -216,7 +216,7 @@ export default function AIAssistant() {
         {messages.length > 0 && (
           <button
             onClick={clearChat}
-            className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 flex items-center justify-center text-red-650 cursor-pointer"
+            className="w-10 h-10 rounded-xl bg-[var(--surface-2)] hover:bg-[var(--surface-3)] flex items-center justify-center text-red-600 cursor-pointer"
             title="Clear Chat History"
           >
             <Trash2 className="w-4 h-4" />
@@ -235,12 +235,12 @@ export default function AIAssistant() {
       <div className="flex-1 overflow-y-auto p-6 space-y-4">
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center max-w-md mx-auto space-y-6">
-            <div className="w-16 h-16 rounded-3xl bg-accent-soft text-accent flex items-center justify-center">
+            <div className="w-16 h-16 rounded-3xl bg-[var(--accent-soft)] text-[var(--accent)] flex items-center justify-center">
               <Bot className="w-8 h-8" />
             </div>
             <div className="space-y-1.5">
-              <h3 className="text-sm font-black text-text dark:text-white">How can I assist you today?</h3>
-              <p className="text-xs text-text-muted leading-relaxed font-semibold">
+              <h3 className="text-sm font-black text-[var(--text)]">How can I assist you today?</h3>
+              <p className="text-xs text-[var(--text-muted)] leading-relaxed font-semibold">
                 I can guide you on local department responsibilities, predicted risks, or help compose a formal civic report.
               </p>
             </div>
@@ -251,7 +251,7 @@ export default function AIAssistant() {
                 <button
                   key={chip}
                   onClick={() => handleSendMessage(chip)}
-                  className="w-full text-left py-2.5 px-4 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-750 border border-border dark:border-slate-700 rounded-xl text-xs font-bold text-text dark:text-white transition cursor-pointer"
+                  className="w-full text-left py-2.5 px-4 bg-[var(--surface)] hover:bg-[var(--surface-2)] border border-[var(--border)] rounded-xl text-xs font-bold text-[var(--text)] transition cursor-pointer"
                 >
                   💡 "{chip}"
                 </button>
@@ -265,19 +265,19 @@ export default function AIAssistant() {
               return (
                 <div key={msg.id} className={`flex gap-3 ${isOwn ? 'justify-end' : 'justify-start'} animate-fadeIn`}>
                   {!isOwn && (
-                    <div className="w-8 h-8 rounded-lg bg-accent-soft text-accent flex items-center justify-center flex-shrink-0">
+                    <div className="w-8 h-8 rounded-lg bg-[var(--accent-soft)] text-[var(--accent)] flex items-center justify-center flex-shrink-0">
                       <Bot className="w-4.5 h-4.5" />
                     </div>
                   )}
                   <div className={`max-w-[75%] p-3.5 rounded-2xl text-xs leading-relaxed ${
                     isOwn 
-                      ? 'bg-accent text-white rounded-tr-none shadow-sm' 
-                      : 'bg-white dark:bg-slate-800 text-text dark:text-white rounded-tl-none shadow-sm border border-border dark:border-slate-700 font-semibold'
+                      ? 'bg-[var(--accent)] text-white rounded-tr-none shadow-sm' 
+                      : 'bg-[var(--surface)] text-[var(--text)] rounded-tl-none shadow-sm border border-[var(--border)] font-semibold'
                   }`}>
                     {msg.text}
                   </div>
                   {isOwn && (
-                    <div className="w-8 h-8 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-350 flex items-center justify-center flex-shrink-0">
+                    <div className="w-8 h-8 rounded-lg bg-[var(--surface-2)] text-[var(--text-muted)] flex items-center justify-center flex-shrink-0">
                       <User className="w-4.5 h-4.5" />
                     </div>
                   )}
@@ -287,13 +287,13 @@ export default function AIAssistant() {
 
             {loading && (
               <div className="flex gap-3 justify-start items-center animate-fadeIn">
-                <div className="w-8 h-8 rounded-lg bg-accent-soft text-accent flex items-center justify-center flex-shrink-0">
+                <div className="w-8 h-8 rounded-lg bg-[var(--accent-soft)] text-[var(--accent)] flex items-center justify-center flex-shrink-0">
                   <Bot className="w-4.5 h-4.5" />
                 </div>
-                <div className="bg-white dark:bg-slate-800 border border-border dark:border-slate-700 p-3.5 rounded-2xl rounded-tl-none flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 bg-accent rounded-full animate-bounce delay-75" />
-                  <span className="w-1.5 h-1.5 bg-accent rounded-full animate-bounce delay-150" />
-                  <span className="w-1.5 h-1.5 bg-accent rounded-full animate-bounce delay-300" />
+                <div className="bg-[var(--surface)] border border-[var(--border)] p-3.5 rounded-2xl rounded-tl-none flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 bg-[var(--accent)] rounded-full animate-bounce delay-75" />
+                  <span className="w-1.5 h-1.5 bg-[var(--accent)] rounded-full animate-bounce delay-150" />
+                  <span className="w-1.5 h-1.5 bg-[var(--accent)] rounded-full animate-bounce delay-300" />
                 </div>
               </div>
             )}
@@ -305,7 +305,7 @@ export default function AIAssistant() {
       {/* Input controls bar */}
       <form 
         onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }}
-        className="bg-white dark:bg-slate-800 border-t border-border dark:border-slate-700 p-4 flex items-center gap-3"
+        className="bg-[var(--surface)] border-t border-[var(--border)] p-4 flex items-center gap-3"
       >
         <button
           type="button"
@@ -313,24 +313,24 @@ export default function AIAssistant() {
           className={`w-11 h-11 rounded-xl flex items-center justify-center cursor-pointer border ${
             isListening 
               ? 'bg-red-600 text-white animate-pulse border-red-650' 
-              : 'bg-slate-100 dark:bg-slate-700 text-text-muted border-border dark:border-slate-650'
+              : 'bg-[var(--surface-2)] text-[var(--text-muted)] border-[var(--border)]'
           }`}
           title="Voice input"
         >
-          <Mic className="w-5 h-5 text-accent" />
+          <Mic className="w-5 h-5 text-[var(--accent)]" />
         </button>
 
         <input
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
           placeholder="Ask a question..."
-          className="flex-1 h-11 px-4 bg-slate-50 dark:bg-slate-900 border border-border dark:border-slate-700 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-accent dark:text-white"
+          className="flex-1 h-11 px-4 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-[var(--accent)] text-[var(--text)]"
         />
 
         <button
           type="submit"
           disabled={!inputText.trim()}
-          className="w-11 h-11 bg-accent disabled:opacity-40 text-white rounded-xl flex items-center justify-center cursor-pointer shadow-sm animate-fadeIn"
+          className="w-11 h-11 bg-[var(--accent)] disabled:opacity-40 text-white rounded-xl flex items-center justify-center cursor-pointer shadow-sm animate-fadeIn"
         >
           <Send className="w-4 h-4" />
         </button>
