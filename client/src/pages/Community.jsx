@@ -552,45 +552,93 @@ export default function Community() {
           <Paperclip className="w-5 h-5 text-accent" />
         </button>
 
-        <button
-          onMouseDown={startRecording}
-          onMouseUp={stopRecording}
-          onTouchStart={startRecording}
-          onTouchEnd={stopRecording}
-          style={{
-            background: isRecording ? '#DC2626' : '#1B6FD8',
-            border: 'none',
-            borderRadius: '50%',
-            width: '44px', height: '44px',
-            cursor: 'pointer',
-            fontSize: '18px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#fff'
-          }}
-          title="Hold to speak"
-        >
-          {isRecording ? '⏹' : '🎤'}
-        </button>
-
-        <form onSubmit={handleSendMessage} className="flex-1 flex gap-2">
-          <input
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            placeholder={`Message #${activeChannel}...`}
-            style={{ background: theme.surface2, borderColor: theme.border, color: theme.text }}
-            className="flex-1 h-11 px-4 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-accent"
-          />
-
-          <button
-            type="submit"
-            disabled={!inputText.trim()}
-            className="w-11 h-11 bg-accent disabled:opacity-40 text-white rounded-xl flex items-center justify-center cursor-pointer shadow-sm"
-          >
-            <Send className="w-4 h-4" />
-          </button>
-        </form>
+        {!isRecording && !recordedUrl ? (
+          <>
+            <button
+              onClick={startRecording}
+              style={{
+                width: 44, height: 44, borderRadius: '50%',
+                background: 'var(--accent)', border: 'none',
+                color: 'white', cursor: 'pointer', fontSize: 18,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0
+              }}
+            >
+              <Mic size={18} />
+            </button>
+            <form onSubmit={handleSendMessage} className="flex-1 flex gap-2">
+              <input
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                placeholder={`Message #${activeChannel}...`}
+                style={{ background: theme.surface2, borderColor: theme.border, color: theme.text }}
+                className="flex-1 h-11 px-4 border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-accent"
+              />
+              <button
+                type="submit"
+                disabled={!inputText.trim()}
+                className="w-11 h-11 bg-accent disabled:opacity-40 text-white rounded-xl flex items-center justify-center cursor-pointer shadow-sm"
+              >
+                <Send className="w-4 h-4" />
+              </button>
+            </form>
+          </>
+        ) : isRecording ? (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 12,
+            flex: 1, padding: '8px 16px',
+            background: 'var(--surface-2)', borderRadius: 12
+          }}>
+            <div style={{
+              width: 10, height: 10, borderRadius: '50%',
+              background: '#DC2626',
+              animation: 'pulse 1s infinite'
+            }} />
+            <span style={{color: 'var(--text)', fontSize: 14}}>
+              Recording... {recordingTime}s
+            </span>
+            <button onClick={stopRecording} style={{
+              marginLeft: 'auto', padding: '6px 16px',
+              background: '#DC2626', color: 'white',
+              border: 'none', borderRadius: 8, cursor: 'pointer',
+              fontSize: 13, fontWeight: 600
+            }}>
+              Stop
+            </button>
+            <button onClick={cancelRecording} style={{
+              padding: '6px 12px', background: 'var(--surface)',
+              color: 'var(--text-muted)', border: '1px solid var(--border)',
+              borderRadius: 8, cursor: 'pointer', fontSize: 13
+            }}>
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 8,
+            flex: 1, padding: '8px 12px',
+            background: 'var(--surface-2)', borderRadius: 12
+          }}>
+            <audio controls src={recordedUrl}
+                   style={{height: 32, flex: 1, minWidth: 0}} />
+            <button onClick={sendVoiceMessage} style={{
+              padding: '6px 14px', background: 'var(--accent)',
+              color: 'white', border: 'none', borderRadius: 8,
+              cursor: 'pointer', fontSize: 13, fontWeight: 600,
+              flexShrink: 0
+            }}>
+              Send
+            </button>
+            <button onClick={cancelRecording} style={{
+              padding: '6px 10px', background: 'transparent',
+              color: 'var(--text-muted)', border: '1px solid var(--border)',
+              borderRadius: 8, cursor: 'pointer', fontSize: 13,
+              flexShrink: 0
+            }}>
+              ✕
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
