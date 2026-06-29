@@ -74,11 +74,10 @@ export default function TopBar() {
           <Bell className="w-4 h-4" />
         </button>
 
-        {/* User profile */}
         <div className="hidden sm:flex flex-col items-end text-right">
-          <span className="text-xs font-bold text-[var(--text)]">{dbUser?.name || 'Citizen'}</span>
+          <span className="text-xs font-bold text-[var(--text)]">{dbUser?.name || t('citizen')}</span>
           <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border mt-0.5 capitalize ${getRoleBadgeColor(role)}`}>
-            {role}
+            {t(role.toLowerCase())}
           </span>
         </div>
 
