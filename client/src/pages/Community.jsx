@@ -306,11 +306,11 @@ export default function Community() {
   };
 
   const channelsList = [
-    { id: 'General', label: 'General' },
-    { id: 'Emergency', label: 'Emergency' },
-    { id: 'Workers', label: 'Workers' },
-    { id: 'Announcements', label: 'Announcements' },
-    { id: 'Agriculture', label: 'Agriculture' }
+    { id: 'General', label: t('general') },
+    { id: 'Emergency', label: t('emergency_ch') },
+    { id: 'Workers', label: t('workers_ch') },
+    { id: 'Announcements', label: t('announcements') },
+    { id: 'Agriculture', label: t('agriculture') }
   ];
 
   const getRoleBadge = (role) => {
