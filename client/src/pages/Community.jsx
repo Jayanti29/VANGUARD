@@ -343,52 +343,22 @@ export default function Community() {
           </span>
         </div>
         
-        <button
-          onClick={() => setShowVoiceRoom(!showVoiceRoom)}
-          className="min-h-[40px] px-3 bg-red-50 hover:bg-red-100 dark:bg-red-950/20 text-red-600 text-xs font-bold rounded-xl flex items-center gap-1.5 cursor-pointer"
-        >
-          <Radio className="w-4 h-4 animate-pulse" /> Live Voice Room
+        <button onClick={() => setShowBroadcast(true)} style={{
+          display:'flex', alignItems:'center', gap:6,
+          padding:'6px 14px', background:'#DC2626',
+          color:'white', border:'none', borderRadius:8,
+          fontSize:13, fontWeight:600, cursor:'pointer'
+        }}>
+          <Radio size={14} />
+          Live Room
         </button>
       </div>
 
-      {/* Voice Room interface if toggled */}
-      {showVoiceRoom && (
-        <div className="bg-red-500 text-white p-4 flex flex-col items-center justify-center gap-4 animate-fadeIn border-b border-red-600">
-          <h4 className="text-xs font-black tracking-wider uppercase flex items-center gap-1.5">
-            <Radio className="w-4 h-4 animate-ping" /> Community Voice Broadcast Room
-          </h4>
-          <div className="flex items-center gap-4">
-            <div className="relative">
-              <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center border-2 border-white">
-                <img 
-                  src={dbUser?.profileImageUrl || 'https://api.dicebear.com/7.x/bottts/svg?seed=user'} 
-                  alt="avatar" 
-                  className="w-12 h-12 rounded-full object-cover"
-                />
-              </div>
-              {pttSpeaking && (
-                <span className="absolute -top-1 -right-1 flex h-4 w-4">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-4 w-4 bg-green-500"></span>
-                </span>
-              )}
-            </div>
-            <button
-              onMouseDown={() => setPttSpeaking(true)}
-              onMouseUp={() => setPttSpeaking(false)}
-              className="px-6 py-3 bg-white text-red-600 text-xs font-bold rounded-xl shadow-lg cursor-pointer flex items-center gap-1 active:scale-95 transition"
-            >
-              Hold to Speak
-            </button>
-            <button
-              onClick={() => { setShowVoiceRoom(false); setPttSpeaking(false); }}
-              className="w-10 h-10 bg-red-700 text-white rounded-lg flex items-center justify-center cursor-pointer"
-              title="Leave Room"
-            >
-              <PhoneOff className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
+      {showBroadcast && (
+        <LiveBroadcast
+          communityId={communityId}
+          onClose={() => setShowBroadcast(false)}
+        />
       )}
 
       {/* Horizontal Scrollable Channel Tabs */}
