@@ -477,12 +477,24 @@ export default function Community() {
                   )}
 
                   {msg.type === 'audio' && msg.audioData && (
-                    <audio 
-                      controls 
-                      src={msg.audioData}
-                      style={{maxWidth:'200px', height:'36px'}}
-                      preload="metadata"
-                    />
+                    <div style={{
+                      background: 'var(--surface)', borderRadius: 12,
+                      padding: '8px 12px', maxWidth: 260
+                    }}>
+                      <audio
+                        controls
+                        src={msg.audioData}
+                        style={{width: '100%', height: 36}}
+                        preload="metadata"
+                        onError={(e) => console.error('Audio playback error:', e)}
+                      />
+                      <div style={{
+                        fontSize: 11, color: 'var(--text-muted)',
+                        marginTop: 4
+                      }}>
+                        Voice message
+                      </div>
+                    </div>
                   )}
 
                   <span className="text-[8px] block text-right font-black mt-1" style={{ color: isOwn ? '#EFF6FF' : theme.muted }}>
