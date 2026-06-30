@@ -76,7 +76,13 @@ export default function AIResultCard({
   const strokeDashoffset = circumference - (score / 100) * circumference;
 
   return (
-    <div className="space-y-6">
+    <div style={{
+      background: 'var(--surface)',
+      borderRadius: 16,
+      padding: 24,
+      border: '1px solid var(--border)',
+      overflow: 'visible',
+    }} className="space-y-6">
       {/* 1. Header Banner */}
       <div className={`rounded-xl overflow-hidden border ${theme.bgLight}`}>
         <div className={`px-4 py-3 font-extrabold text-sm uppercase tracking-wider flex items-center gap-2 ${theme.bar}`}>
