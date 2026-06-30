@@ -135,48 +135,71 @@ export default function Home() {
           <img src={dbUser?.profileImageUrl || 'https://api.dicebear.com/7.x/bottts/svg?seed=citizen'} alt="avatar" style={{ width: '48px', height: '48px', borderRadius: '50%', border: '1px solid ' + theme.border }} />
         </div>
 
+        <style>{`
+          @media (max-width: 640px) {
+            .quick-grid { grid-template-columns: repeat(2, 1fr) !important; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
+            .stats-grid-official { grid-template-columns: repeat(2, 1fr) !important; }
+            .quick-grid-volunteer { grid-template-columns: repeat(2, 1fr) !important; }
+          }
+        `}</style>
+
         {/* Stats Row */}
-        <div className="grid grid-cols-3 gap-4">
+        <div className="stats-grid" style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, 1fr)',
+          gap: 16,
+          marginBottom: 16,
+        }}>
           <div style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', textAlign: 'center', boxShadow: 'var(--shadow)' }}>
-            <span style={{ fontSize: '24px', fontWeight: 800, color: 'var(--danger)', block: true }}>{openIssuesCount}</span>
+            <span style={{ fontSize: '24px', fontWeight: 800, color: 'var(--danger)', display: 'block' }}>{openIssuesCount}</span>
             <span style={{ fontSize: '11px', color: theme.muted, fontWeight: 700, display: 'block', marginTop: '4px' }}>Open Issues</span>
           </div>
           <div style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', textAlign: 'center', boxShadow: 'var(--shadow)' }}>
-            <span style={{ fontSize: '24px', fontWeight: 800, color: 'var(--accent)', block: true }}>{myReportsCount}</span>
+            <span style={{ fontSize: '24px', fontWeight: 800, color: 'var(--accent)', display: 'block' }}>{myReportsCount}</span>
             <span style={{ fontSize: '11px', color: theme.muted, fontWeight: 700, display: 'block', marginTop: '4px' }}>My Reports</span>
           </div>
           <div style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', textAlign: 'center', boxShadow: 'var(--shadow)' }}>
-            <span style={{ fontSize: '24px', fontWeight: 800, color: 'var(--success)', block: true }}>{communityCount}</span>
+            <span style={{ fontSize: '24px', fontWeight: 800, color: 'var(--success)', display: 'block' }}>{communityCount}</span>
             <span style={{ fontSize: '11px', color: theme.muted, fontWeight: 700, display: 'block', marginTop: '4px' }}>Members</span>
           </div>
         </div>
 
         {/* Quick Actions Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-          <button onClick={() => navigate('/report')} style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', boxShadow: 'var(--shadow)' }}>
-            <AlertTriangle size={28} color="#DC2626" />
-            <span style={{ fontSize: '12px', fontWeight: 800, color: theme.text }}>Report Issue</span>
-          </button>
-          <button onClick={() => navigate('/community')} style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', boxShadow: 'var(--shadow)' }}>
-            <MessageSquare size={28} color="#1B6FD8" />
-            <span style={{ fontSize: '12px', fontWeight: 800, color: theme.text }}>Community Chat</span>
-          </button>
-          <button onClick={() => navigate('/map')} style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', boxShadow: 'var(--shadow)' }}>
-            <Map size={28} color="#1B6FD8" />
-            <span style={{ fontSize: '12px', fontWeight: 800, color: theme.text }}>Live Map</span>
-          </button>
-          <button onClick={() => navigate('/emergency')} style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', boxShadow: 'var(--shadow)' }}>
-            <Shield size={28} color="#DC2626" />
-            <span style={{ fontSize: '12px', fontWeight: 800, color: theme.text }}>Emergency Alert</span>
-          </button>
-          <button onClick={() => navigate('/ai')} style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', boxShadow: 'var(--shadow)' }}>
-            <Bot size={28} color="#7C3AED" />
-            <span style={{ fontSize: '12px', fontWeight: 800, color: theme.text }}>AI Assistant</span>
-          </button>
-          <button onClick={() => navigate('/officials')} style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', boxShadow: 'var(--shadow)' }}>
-            <Briefcase size={28} color="#D97706" />
-            <span style={{ fontSize: '12px', fontWeight: 800, color: theme.text }}>Officials</span>
-          </button>
+        <div className="quick-grid" style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, 1fr)',
+          gap: 16,
+          marginBottom: 24,
+        }}>
+          {[
+            { path: '/report', icon: AlertTriangle, color: '#DC2626', label: 'Report Issue' },
+            { path: '/community', icon: MessageSquare, color: '#1B6FD8', label: 'Community Chat' },
+            { path: '/map', icon: Map, color: '#1B6FD8', label: 'Live Map' },
+            { path: '/emergency', icon: Shield, color: '#DC2626', label: 'Emergency Alert' },
+            { path: '/ai', icon: Bot, color: '#7C3AED', label: 'AI Assistant' },
+            { path: '/officials', icon: Briefcase, color: '#D97706', label: 'Officials' },
+          ].map(action => (
+            <button key={action.path} onClick={() => navigate(action.path)} style={{
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              borderRadius: 16,
+              padding: '24px 16px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 10,
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              minHeight: 110,
+            }}>
+              <action.icon size={26} color={action.color} />
+              <span style={{fontSize: 13, fontWeight: 600, color: 'var(--text)', textAlign:'center'}}>
+                {action.label}
+              </span>
+            </button>
+          ))}
         </div>
 
         {/* Recent Issues Feed */}
@@ -355,39 +378,59 @@ export default function Home() {
         </div>
 
         {/* Stats Row */}
-        <div className="grid grid-cols-3 gap-4">
+        <div className="stats-grid" style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, 1fr)',
+          gap: 16,
+          marginBottom: 16,
+        }}>
           <div style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', textAlign: 'center', boxShadow: 'var(--shadow)' }}>
-            <span style={{ fontSize: '24px', fontWeight: 800, color: 'var(--accent)', block: true }}>{appliedCount}</span>
+            <span style={{ fontSize: '24px', fontWeight: 800, color: 'var(--accent)', display: 'block' }}>{appliedCount}</span>
             <span style={{ fontSize: '11px', color: theme.muted, fontWeight: 700, display: 'block', marginTop: '4px' }}>Jobs Applied</span>
           </div>
           <div style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', textAlign: 'center', boxShadow: 'var(--shadow)' }}>
-            <span style={{ fontSize: '24px', fontWeight: 800, color: 'var(--success)', block: true }}>{completedCount}</span>
+            <span style={{ fontSize: '24px', fontWeight: 800, color: 'var(--success)', display: 'block' }}>{completedCount}</span>
             <span style={{ fontSize: '11px', color: theme.muted, fontWeight: 700, display: 'block', marginTop: '4px' }}>Jobs Completed</span>
           </div>
           <div style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', textAlign: 'center', boxShadow: 'var(--shadow)' }}>
-            <span style={{ fontSize: '24px', fontWeight: 800, color: '#FBBF24', block: true }}>{avgRating.toFixed(1)}</span>
+            <span style={{ fontSize: '24px', fontWeight: 800, color: '#FBBF24', display: 'block' }}>{avgRating.toFixed(1)}</span>
             <span style={{ fontSize: '11px', color: theme.muted, fontWeight: 700, display: 'block', marginTop: '4px' }}>Average Rating</span>
           </div>
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <button onClick={() => navigate('/workers')} style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', boxShadow: 'var(--shadow)' }}>
-            <Briefcase size={24} className="text-amber-500" />
-            <span style={{ fontSize: '11px', fontWeight: 800, color: theme.text }}>Browse Jobs</span>
-          </button>
-          <button onClick={() => navigate('/workers?tab=applications')} style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', boxShadow: 'var(--shadow)' }}>
-            <FileText size={24} className="text-blue-500" />
-            <span style={{ fontSize: '11px', fontWeight: 800, color: theme.text }}>My Applications</span>
-          </button>
-          <button onClick={() => navigate('/profile')} style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', boxShadow: 'var(--shadow)' }}>
-            <User size={24} className="text-purple-500" />
-            <span style={{ fontSize: '11px', fontWeight: 800, color: theme.text }}>Edit Profile</span>
-          </button>
-          <button onClick={() => navigate('/community')} style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', boxShadow: 'var(--shadow)' }}>
-            <MessageSquare size={24} className="text-blue-500" />
-            <span style={{ fontSize: '11px', fontWeight: 800, color: theme.text }}>Community</span>
-          </button>
+        <div className="quick-grid" style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(4, 1fr)',
+          gap: 16,
+          marginBottom: 24,
+        }}>
+          {[
+            { path: '/workers', icon: Briefcase, color: '#F59E0B', label: 'Browse Jobs' },
+            { path: '/workers?tab=applications', icon: FileText, color: '#3B82F6', label: 'My Applications' },
+            { path: '/profile', icon: User, color: '#8B5CF6', label: 'Edit Profile' },
+            { path: '/community', icon: MessageSquare, color: '#3B82F6', label: 'Community' },
+          ].map(action => (
+            <button key={action.path} onClick={() => navigate(action.path)} style={{
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              borderRadius: 16,
+              padding: '16px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              minHeight: 110,
+            }}>
+              <action.icon size={24} color={action.color} />
+              <span style={{fontSize: 11, fontWeight: 800, color: theme.text, textAlign: 'center'}}>
+                {action.label}
+              </span>
+            </button>
+          ))}
         </div>
 
         {/* Available Jobs Feed */}
@@ -648,7 +691,12 @@ export default function Home() {
         </div>
 
         {/* Stats Row */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="stats-grid-official" style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(4, 1fr)',
+          gap: 16,
+          marginBottom: 16,
+        }}>
           <div 
             onClick={() => setFilter('critical')}
             style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '16px', padding: '20px', textAlign: 'center', cursor: 'pointer', boxShadow: 'var(--shadow)', transition: 'transform 0.2s' }}
@@ -1061,39 +1109,59 @@ export default function Home() {
         </div>
 
         {/* Stats Row */}
-        <div className="grid grid-cols-3 gap-4">
+        <div className="stats-grid" style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, 1fr)',
+          gap: 16,
+          marginBottom: 16,
+        }}>
           <div style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', textAlign: 'center', boxShadow: 'var(--shadow)' }}>
-            <span style={{ fontSize: '24px', fontWeight: 800, color: 'var(--success)', block: true }}>{confirmedCount}</span>
+            <span style={{ fontSize: '24px', fontWeight: 800, color: 'var(--success)', display: 'block' }}>{confirmedCount}</span>
             <span style={{ fontSize: '11px', color: theme.muted, fontWeight: 700, display: 'block', marginTop: '4px' }}>Issues Confirmed</span>
           </div>
           <div style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', textAlign: 'center', boxShadow: 'var(--shadow)' }}>
-            <span style={{ fontSize: '24px', fontWeight: 800, color: 'var(--accent)', block: true }}>{reportedCount}</span>
+            <span style={{ fontSize: '24px', fontWeight: 800, color: 'var(--accent)', display: 'block' }}>{reportedCount}</span>
             <span style={{ fontSize: '11px', color: theme.muted, fontWeight: 700, display: 'block', marginTop: '4px' }}>Issues Reported</span>
           </div>
           <div style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', textAlign: 'center', boxShadow: 'var(--shadow)' }}>
-            <span style={{ fontSize: '24px', fontWeight: 800, color: 'var(--danger)', block: true }}>{emergenciesResponded}</span>
+            <span style={{ fontSize: '24px', fontWeight: 800, color: 'var(--danger)', display: 'block' }}>{emergenciesResponded}</span>
             <span style={{ fontSize: '11px', color: theme.muted, fontWeight: 700, display: 'block', marginTop: '4px' }}>Responded Alerts</span>
           </div>
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <button onClick={() => navigate('/report')} style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', boxShadow: 'var(--shadow)' }}>
-            <AlertTriangle size={24} className="text-red-500" />
-            <span style={{ fontSize: '11px', fontWeight: 800, color: theme.text }}>Report Issue</span>
-          </button>
-          <button onClick={() => navigate('/emergency')} style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', boxShadow: 'var(--shadow)' }}>
-            <Shield size={24} className="text-red-500" />
-            <span style={{ fontSize: '11px', fontWeight: 800, color: theme.text }}>Active Emergencies</span>
-          </button>
-          <button onClick={() => navigate('/community')} style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', boxShadow: 'var(--shadow)' }}>
-            <MessageSquare size={24} className="text-blue-500" />
-            <span style={{ fontSize: '11px', fontWeight: 800, color: theme.text }}>Community Chat</span>
-          </button>
-          <button onClick={() => navigate('/map')} style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', boxShadow: 'var(--shadow)' }}>
-            <Map size={24} className="text-blue-500" />
-            <span style={{ fontSize: '11px', fontWeight: 800, color: theme.text }}>Live Map</span>
-          </button>
+        <div className="quick-grid-volunteer" style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(4, 1fr)',
+          gap: 16,
+          marginBottom: 24,
+        }}>
+          {[
+            { path: '/report', icon: AlertTriangle, color: '#EF4444', label: 'Report Issue' },
+            { path: '/emergency', icon: Shield, color: '#EF4444', label: 'Active Emergencies' },
+            { path: '/community', icon: MessageSquare, color: '#3B82F6', label: 'Community Chat' },
+            { path: '/map', icon: Map, color: '#3B82F6', label: 'Live Map' },
+          ].map(action => (
+            <button key={action.path} onClick={() => navigate(action.path)} style={{
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              borderRadius: 16,
+              padding: '16px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              minHeight: 110,
+            }}>
+              <action.icon size={24} color={action.color} />
+              <span style={{fontSize: 11, fontWeight: 800, color: theme.text, textAlign: 'center'}}>
+                {action.label}
+              </span>
+            </button>
+          ))}
         </div>
 
         {/* Active Emergencies Feed */}
