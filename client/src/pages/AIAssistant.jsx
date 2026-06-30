@@ -222,7 +222,10 @@ export default function AIAssistant() {
       )}
 
       {/* Messages scrolling view */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-4">
+      <div 
+        className="flex-1 overflow-y-auto p-6 space-y-4"
+        style={{ overflowX: 'hidden', width: '100%', boxSizing: 'border-box' }}
+      >
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center max-w-md mx-auto space-y-6">
             <div className="w-16 h-16 rounded-3xl bg-[var(--accent-soft)] text-[var(--accent)] flex items-center justify-center">
@@ -249,41 +252,84 @@ export default function AIAssistant() {
             </div>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 10,
+            width: '100%',
+            overflowX: 'hidden',
+          }}>
             {messages.map(msg => {
               const isOwn = msg.sender === 'user';
               return (
-                <div key={msg.id} className={`flex gap-3 ${isOwn ? 'justify-end' : 'justify-start'} animate-fadeIn`}>
-                  {!isOwn && (
-                    <div className="w-8 h-8 rounded-lg bg-[var(--accent-soft)] text-[var(--accent)] flex items-center justify-center flex-shrink-0">
-                      <Bot className="w-4.5 h-4.5" />
+                <div 
+                  key={msg.id} 
+                  style={{
+                    display: 'flex',
+                    width: '100%',
+                    justifyContent: isOwn ? 'flex-end' : 'flex-start',
+                  }}
+                  className="animate-fadeIn"
+                >
+                  <div style={{
+                    maxWidth: '75%',
+                    minWidth: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 12,
+                  }}>
+                    {!isOwn && (
+                      <div className="w-8 h-8 rounded-lg bg-[var(--accent-soft)] text-[var(--accent)] flex items-center justify-center flex-shrink-0">
+                        <Bot className="w-4.5 h-4.5" />
+                      </div>
+                    )}
+                    <div 
+                      className="p-3.5 rounded-2xl text-xs leading-relaxed shadow-sm"
+                      style={{
+                        background: isOwn ? 'var(--accent)' : 'var(--surface)',
+                        color: isOwn ? '#fff' : 'var(--text)',
+                        borderRadius: isOwn ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
+                        border: isOwn ? 'none' : '1px solid var(--border)',
+                        wordBreak: 'break-word',
+                        boxSizing: 'border-box',
+                      }}
+                    >
+                      {msg.text}
                     </div>
-                  )}
-                  <div className={`max-w-[75%] p-3.5 rounded-2xl text-xs leading-relaxed ${
-                    isOwn 
-                      ? 'bg-[var(--accent)] text-white rounded-tr-none shadow-sm' 
-                      : 'bg-[var(--surface)] text-[var(--text)] rounded-tl-none shadow-sm border border-[var(--border)] font-semibold'
-                  }`}>
-                    {msg.text}
+                    {isOwn && (
+                      <div className="w-8 h-8 rounded-lg bg-[var(--surface-2)] text-[var(--text-muted)] flex items-center justify-center flex-shrink-0">
+                        <User className="w-4.5 h-4.5" />
+                      </div>
+                    )}
                   </div>
-                  {isOwn && (
-                    <div className="w-8 h-8 rounded-lg bg-[var(--surface-2)] text-[var(--text-muted)] flex items-center justify-center flex-shrink-0">
-                      <User className="w-4.5 h-4.5" />
-                    </div>
-                  )}
                 </div>
               );
             })}
 
             {loading && (
-              <div className="flex gap-3 justify-start items-center animate-fadeIn">
-                <div className="w-8 h-8 rounded-lg bg-[var(--accent-soft)] text-[var(--accent)] flex items-center justify-center flex-shrink-0">
-                  <Bot className="w-4.5 h-4.5" />
-                </div>
-                <div className="bg-[var(--surface)] border border-[var(--border)] p-3.5 rounded-2xl rounded-tl-none flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 bg-[var(--accent)] rounded-full animate-bounce delay-75" />
-                  <span className="w-1.5 h-1.5 bg-[var(--accent)] rounded-full animate-bounce delay-150" />
-                  <span className="w-1.5 h-1.5 bg-[var(--accent)] rounded-full animate-bounce delay-300" />
+              <div 
+                style={{
+                  display: 'flex',
+                  width: '100%',
+                  justifyContent: 'flex-start',
+                }}
+                className="animate-fadeIn"
+              >
+                <div style={{
+                  maxWidth: '75%',
+                  minWidth: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                }}>
+                  <div className="w-8 h-8 rounded-lg bg-[var(--accent-soft)] text-[var(--accent)] flex items-center justify-center flex-shrink-0">
+                    <Bot className="w-4.5 h-4.5" />
+                  </div>
+                  <div className="bg-[var(--surface)] border border-[var(--border)] p-3.5 rounded-2xl rounded-tl-none flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 bg-[var(--accent)] rounded-full animate-bounce delay-75" />
+                    <span className="w-1.5 h-1.5 bg-[var(--accent)] rounded-full animate-bounce delay-150" />
+                    <span className="w-1.5 h-1.5 bg-[var(--accent)] rounded-full animate-bounce delay-300" />
+                  </div>
                 </div>
               </div>
             )}
