@@ -295,6 +295,8 @@ export default function Workers() {
                     <img 
                       src={`https://api.dicebear.com/7.x/bottts/svg?seed=${worker.userId || worker.name}`}
                       alt={worker.name} 
+                      width={56}
+                      height={56}
                       className="w-full h-full object-cover"
                     />
                   </div>
@@ -483,6 +485,8 @@ export default function Workers() {
                 <img 
                   src={`https://api.dicebear.com/7.x/bottts/svg?seed=${selectedWorker.userId || selectedWorker.name}`}
                   alt={selectedWorker.name} 
+                  width={80}
+                  height={80}
                   className="w-full h-full object-cover"
                 />
               </div>
