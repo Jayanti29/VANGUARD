@@ -181,7 +181,7 @@ button { font-family: inherit; cursor: pointer; }
 }
 
 /* Leaflet dark mode */
-[data-theme="dark"] .leaflet-tile { filter: brightness(0.7) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7); }
+[data-theme="dark"] .leaflet-tile { filter: brightness(0.6) contrast(1.2) saturate(0.8) hue-rotate(220deg); }
 [data-theme="dark"] .leaflet-container { background: var(--bg); }
 
 [data-theme="dark"] {
