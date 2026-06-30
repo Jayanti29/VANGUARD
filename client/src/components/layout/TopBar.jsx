@@ -24,7 +24,8 @@ export default function TopBar() {
     }}>
       {/* Left: logo only on mobile/tablet (sidebar has it on desktop) */}
       {!isDesktop ? (
-        <img src="/vanguard-logo.png" alt="" style={{height:24, width:24}} />
+        <img src="/vanguard-logo.png" alt="VANGUARD" 
+             style={{height:24, width:24, flexShrink:0, objectFit:'contain'}} />
       ) : <div />}
 
       <div style={{display:'flex', alignItems:'center', gap: isDesktop ? SPACE.md : SPACE.sm}}>
