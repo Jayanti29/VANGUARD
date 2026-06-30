@@ -28,6 +28,8 @@ import { db } from '../lib/firebase';
 import { collection, query, where, limit, onSnapshot, getDocs, doc, setDoc, addDoc, updateDoc } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 import PageHeader from '../components/ui/PageHeader';
+import Grid from '../components/ui/Grid';
+import Card from '../components/ui/Card';
 
 export default function Home() {
   const { t } = useTranslation();
@@ -124,43 +126,24 @@ export default function Home() {
           subtitle={dbUser?.village ? `${dbUser.village}, Ward ${dbUser.ward || '6'}` : 'Protect your community'} 
         />
 
-        <style>{`
-          @media (max-width: 640px) {
-            .quick-grid { grid-template-columns: repeat(2, 1fr) !important; }
-            .stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
-            .stats-grid-official { grid-template-columns: repeat(2, 1fr) !important; }
-            .quick-grid-volunteer { grid-template-columns: repeat(2, 1fr) !important; }
-          }
-        `}</style>
-
         {/* Stats Row */}
-        <div className="stats-grid" style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
-          gap: 16,
-          marginBottom: 16,
-        }}>
-          <div style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', textAlign: 'center', boxShadow: 'var(--shadow)' }}>
+        <Grid desktopCols={3} mobileCols={2}>
+          <Card padding="16px" style={{ textAlign: 'center' }}>
             <span style={{ fontSize: '24px', fontWeight: 800, color: 'var(--danger)', display: 'block' }}>{openIssuesCount}</span>
             <span style={{ fontSize: '11px', color: theme.muted, fontWeight: 700, display: 'block', marginTop: '4px' }}>Open Issues</span>
-          </div>
-          <div style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', textAlign: 'center', boxShadow: 'var(--shadow)' }}>
+          </Card>
+          <Card padding="16px" style={{ textAlign: 'center' }}>
             <span style={{ fontSize: '24px', fontWeight: 800, color: 'var(--accent)', display: 'block' }}>{myReportsCount}</span>
             <span style={{ fontSize: '11px', color: theme.muted, fontWeight: 700, display: 'block', marginTop: '4px' }}>My Reports</span>
-          </div>
-          <div style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', textAlign: 'center', boxShadow: 'var(--shadow)' }}>
+          </Card>
+          <Card padding="16px" style={{ textAlign: 'center' }}>
             <span style={{ fontSize: '24px', fontWeight: 800, color: 'var(--success)', display: 'block' }}>{communityCount}</span>
             <span style={{ fontSize: '11px', color: theme.muted, fontWeight: 700, display: 'block', marginTop: '4px' }}>Members</span>
-          </div>
-        </div>
+          </Card>
+        </Grid>
 
         {/* Quick Actions Grid */}
-        <div className="quick-grid" style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
-          gap: 16,
-          marginBottom: 24,
-        }}>
+        <Grid desktopCols={3} mobileCols={2}>
           {[
             { path: '/report', icon: AlertTriangle, color: '#DC2626', label: 'Report Issue' },
             { path: '/community', icon: MessageSquare, color: '#1B6FD8', label: 'Community Chat' },
@@ -169,27 +152,26 @@ export default function Home() {
             { path: '/ai', icon: Bot, color: '#7C3AED', label: 'AI Assistant' },
             { path: '/officials', icon: Briefcase, color: '#D97706', label: 'Officials' },
           ].map(action => (
-            <button key={action.path} onClick={() => navigate(action.path)} style={{
-              background: 'var(--surface)',
-              border: '1px solid var(--border)',
-              borderRadius: 16,
-              padding: '24px 16px',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 10,
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-              minHeight: 110,
-            }}>
+            <Card 
+              key={action.path} 
+              onClick={() => navigate(action.path)} 
+              padding="24px 16px" 
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 10,
+                minHeight: 110,
+              }}
+            >
               <action.icon size={26} color={action.color} />
               <span style={{fontSize: 13, fontWeight: 600, color: 'var(--text)', textAlign:'center'}}>
                 {action.label}
               </span>
-            </button>
+            </Card>
           ))}
-        </div>
+        </Grid>
 
         {/* Recent Issues Feed */}
         <div style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '20px', boxShadow: 'var(--shadow)' }}>
@@ -349,60 +331,49 @@ export default function Home() {
         />
 
         {/* Stats Row */}
-        <div className="stats-grid" style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
-          gap: 16,
-          marginBottom: 16,
-        }}>
-          <div style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', textAlign: 'center', boxShadow: 'var(--shadow)' }}>
+        <Grid desktopCols={3} mobileCols={2}>
+          <Card padding="16px" style={{ textAlign: 'center' }}>
             <span style={{ fontSize: '24px', fontWeight: 800, color: 'var(--accent)', display: 'block' }}>{appliedCount}</span>
             <span style={{ fontSize: '11px', color: theme.muted, fontWeight: 700, display: 'block', marginTop: '4px' }}>Jobs Applied</span>
-          </div>
-          <div style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', textAlign: 'center', boxShadow: 'var(--shadow)' }}>
+          </Card>
+          <Card padding="16px" style={{ textAlign: 'center' }}>
             <span style={{ fontSize: '24px', fontWeight: 800, color: 'var(--success)', display: 'block' }}>{completedCount}</span>
             <span style={{ fontSize: '11px', color: theme.muted, fontWeight: 700, display: 'block', marginTop: '4px' }}>Jobs Completed</span>
-          </div>
-          <div style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', textAlign: 'center', boxShadow: 'var(--shadow)' }}>
+          </Card>
+          <Card padding="16px" style={{ textAlign: 'center' }}>
             <span style={{ fontSize: '24px', fontWeight: 800, color: '#FBBF24', display: 'block' }}>{avgRating.toFixed(1)}</span>
             <span style={{ fontSize: '11px', color: theme.muted, fontWeight: 700, display: 'block', marginTop: '4px' }}>Average Rating</span>
-          </div>
-        </div>
+          </Card>
+        </Grid>
 
         {/* Quick Actions */}
-        <div className="quick-grid" style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
-          gap: 16,
-          marginBottom: 24,
-        }}>
+        <Grid desktopCols={4} mobileCols={2}>
           {[
             { path: '/workers', icon: Briefcase, color: '#F59E0B', label: 'Browse Jobs' },
             { path: '/workers?tab=applications', icon: FileText, color: '#3B82F6', label: 'My Applications' },
             { path: '/profile', icon: User, color: '#8B5CF6', label: 'Edit Profile' },
             { path: '/community', icon: MessageSquare, color: '#3B82F6', label: 'Community' },
           ].map(action => (
-            <button key={action.path} onClick={() => navigate(action.path)} style={{
-              background: 'var(--surface)',
-              border: '1px solid var(--border)',
-              borderRadius: 16,
-              padding: '16px',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 8,
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-              minHeight: 110,
-            }}>
+            <Card 
+              key={action.path} 
+              onClick={() => navigate(action.path)} 
+              padding="16px" 
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                minHeight: 110,
+              }}
+            >
               <action.icon size={24} color={action.color} />
               <span style={{fontSize: 11, fontWeight: 800, color: theme.text, textAlign: 'center'}}>
                 {action.label}
               </span>
-            </button>
+            </Card>
           ))}
-        </div>
+        </Grid>
 
         {/* Available Jobs Feed */}
         <div style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '20px', boxShadow: 'var(--shadow)' }}>
@@ -649,45 +620,36 @@ export default function Home() {
         />
 
         {/* Stats Row */}
-        <div className="stats-grid-official" style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
-          gap: 16,
-          marginBottom: 16,
-        }}>
-          <div 
+        <Grid desktopCols={4} mobileCols={2}>
+          <Card 
             onClick={() => setFilter('critical')}
-            style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '16px', padding: '20px', textAlign: 'center', cursor: 'pointer', boxShadow: 'var(--shadow)', transition: 'transform 0.2s' }}
-            className="hover:scale-102"
+            style={{ background: '#FEF2F2', borderColor: '#FECACA', textAlign: 'center' }}
           >
             <span style={{ fontSize: '28px', fontWeight: 800, color: '#DC2626', display: 'block' }}>{criticalCount}</span>
             <span style={{ fontSize: '11px', color: '#B91C1C', fontWeight: 800, display: 'block', marginTop: '4px', textTransform: 'uppercase' }}>Critical Issues</span>
-          </div>
-          <div 
+          </Card>
+          <Card 
             onClick={() => setFilter('open')}
-            style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '16px', padding: '20px', textAlign: 'center', cursor: 'pointer', boxShadow: 'var(--shadow)', transition: 'transform 0.2s' }}
-            className="hover:scale-102"
+            style={{ background: '#FFFBEB', borderColor: '#FDE68A', textAlign: 'center' }}
           >
             <span style={{ fontSize: '28px', fontWeight: 800, color: '#D97706', display: 'block' }}>{pendingCount}</span>
             <span style={{ fontSize: '11px', color: '#B45309', fontWeight: 800, display: 'block', marginTop: '4px', textTransform: 'uppercase' }}>Pending Open</span>
-          </div>
-          <div 
+          </Card>
+          <Card 
             onClick={() => setFilter('resolved')}
-            style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '16px', padding: '20px', textAlign: 'center', cursor: 'pointer', boxShadow: 'var(--shadow)', transition: 'transform 0.2s' }}
-            className="hover:scale-102"
+            style={{ background: '#F0FDF4', borderColor: '#BBF7D0', textAlign: 'center' }}
           >
             <span style={{ fontSize: '28px', fontWeight: 800, color: '#16A34A', display: 'block' }}>{resolvedToday}</span>
             <span style={{ fontSize: '11px', color: '#15803D', fontWeight: 800, display: 'block', marginTop: '4px', textTransform: 'uppercase' }}>Resolved Today</span>
-          </div>
-          <div 
+          </Card>
+          <Card 
             onClick={() => setFilter('all')}
-            style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '16px', padding: '20px', textAlign: 'center', cursor: 'pointer', boxShadow: 'var(--shadow)', transition: 'transform 0.2s' }}
-            className="hover:scale-102"
+            style={{ background: '#EFF6FF', borderColor: '#BFDBFE', textAlign: 'center' }}
           >
             <span style={{ fontSize: '28px', fontWeight: 800, color: '#1D4ED8', display: 'block' }}>{totalReportsThisWeek}</span>
             <span style={{ fontSize: '11px', color: '#1E40AF', fontWeight: 800, display: 'block', marginTop: '4px', textTransform: 'uppercase' }}>Reports This Week</span>
-          </div>
-        </div>
+          </Card>
+        </Grid>
 
         {/* Issue Management Panel */}
         <div style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '20px', boxShadow: 'var(--shadow)' }}>
@@ -1054,60 +1016,49 @@ export default function Home() {
         />
 
         {/* Stats Row */}
-        <div className="stats-grid" style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
-          gap: 16,
-          marginBottom: 16,
-        }}>
-          <div style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', textAlign: 'center', boxShadow: 'var(--shadow)' }}>
+        <Grid desktopCols={3} mobileCols={2}>
+          <Card padding="16px" style={{ textAlign: 'center' }}>
             <span style={{ fontSize: '24px', fontWeight: 800, color: 'var(--success)', display: 'block' }}>{confirmedCount}</span>
             <span style={{ fontSize: '11px', color: theme.muted, fontWeight: 700, display: 'block', marginTop: '4px' }}>Issues Confirmed</span>
-          </div>
-          <div style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', textAlign: 'center', boxShadow: 'var(--shadow)' }}>
+          </Card>
+          <Card padding="16px" style={{ textAlign: 'center' }}>
             <span style={{ fontSize: '24px', fontWeight: 800, color: 'var(--accent)', display: 'block' }}>{reportedCount}</span>
             <span style={{ fontSize: '11px', color: theme.muted, fontWeight: 700, display: 'block', marginTop: '4px' }}>Issues Reported</span>
-          </div>
-          <div style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '16px', textAlign: 'center', boxShadow: 'var(--shadow)' }}>
+          </Card>
+          <Card padding="16px" style={{ textAlign: 'center' }}>
             <span style={{ fontSize: '24px', fontWeight: 800, color: 'var(--danger)', display: 'block' }}>{emergenciesResponded}</span>
             <span style={{ fontSize: '11px', color: theme.muted, fontWeight: 700, display: 'block', marginTop: '4px' }}>Responded Alerts</span>
-          </div>
-        </div>
+          </Card>
+        </Grid>
 
         {/* Quick Actions */}
-        <div className="quick-grid-volunteer" style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
-          gap: 16,
-          marginBottom: 24,
-        }}>
+        <Grid desktopCols={4} mobileCols={2}>
           {[
             { path: '/report', icon: AlertTriangle, color: '#EF4444', label: 'Report Issue' },
             { path: '/emergency', icon: Shield, color: '#EF4444', label: 'Active Emergencies' },
             { path: '/community', icon: MessageSquare, color: '#3B82F6', label: 'Community Chat' },
             { path: '/map', icon: Map, color: '#3B82F6', label: 'Live Map' },
           ].map(action => (
-            <button key={action.path} onClick={() => navigate(action.path)} style={{
-              background: 'var(--surface)',
-              border: '1px solid var(--border)',
-              borderRadius: 16,
-              padding: '16px',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 8,
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-              minHeight: 110,
-            }}>
+            <Card 
+              key={action.path} 
+              onClick={() => navigate(action.path)} 
+              padding="16px" 
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                minHeight: 110,
+              }}
+            >
               <action.icon size={24} color={action.color} />
               <span style={{fontSize: 11, fontWeight: 800, color: theme.text, textAlign: 'center'}}>
                 {action.label}
               </span>
-            </button>
+            </Card>
           ))}
-        </div>
+        </Grid>
 
         {/* Active Emergencies Feed */}
         <div style={{ background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '16px', padding: '20px', boxShadow: 'var(--shadow)' }}>
