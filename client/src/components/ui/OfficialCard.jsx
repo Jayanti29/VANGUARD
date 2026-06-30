@@ -1,5 +1,6 @@
 import React from 'react';
 import { Phone, Mail, Award, Landmark, Zap, Droplet, Shield, Heart } from 'lucide-react';
+import Card from './Card';
 
 export default function OfficialCard({ official }) {
   
@@ -49,7 +50,7 @@ export default function OfficialCard({ official }) {
   const deptInfo = getDeptIcon(official.department);
 
   return (
-    <div className="card flex items-center justify-between gap-4 p-5">
+    <Card padding="20px" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
       <div className="flex gap-4 items-center min-w-0">
         {/* Department Colored Circle */}
         <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-md ${deptInfo.bg}`}>
@@ -88,6 +89,6 @@ export default function OfficialCard({ official }) {
           <Mail className="w-5 h-5" />
         </a>
       </div>
-    </div>
+    </Card>
   );
 }
