@@ -267,16 +267,16 @@ export default function Emergency() {
             {activeEmergencies.map(emerg => {
               const timeAgo = emerg.createdAt?.toDate ? new Date(emerg.createdAt.toDate()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now';
               return (
-                <div key={emerg.id} className="p-4 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-between gap-4 animate-fadeIn">
+                <div key={emerg.id} className="p-4 bg-surface dark:bg-slate-800 border border-border dark:border-slate-700 rounded-2xl flex items-center justify-between gap-4 animate-fadeIn">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-black text-red-500 uppercase">{t(emerg.category.toLowerCase())} Alert</span>
-                      <span className="text-[9px] text-slate-400 font-bold">Time: {timeAgo}</span>
+                      <span className="text-[9px] text-text-muted font-bold">Time: {timeAgo}</span>
                     </div>
-                    <p className="text-xs text-slate-200 leading-relaxed font-semibold">
-                      {emerg.description || "No description provided, check map locations."}
+                    <p className="text-xs text-text leading-relaxed font-semibold">
+                      {emerg.description || `${emerg.category} emergency reported near ${emerg.village || 'this area'} — see map for exact location.`}
                     </p>
-                    <span className="text-[10px] text-slate-400 block font-bold">
+                    <span className="text-[10px] text-text-muted block font-bold">
                       Reported by: {emerg.reporterName}
                     </span>
                   </div>
@@ -297,16 +297,16 @@ export default function Emergency() {
       {/* Confirmation modal */}
       {showConfirm && (
         <div className="fixed inset-0 bg-black/80 z-[9999] flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-red-800 rounded-3xl p-6 max-w-sm w-full space-y-4 text-center">
+          <div className="bg-surface dark:bg-slate-800 border border-border dark:border-slate-700 rounded-3xl p-6 max-w-sm w-full space-y-4 text-center">
             <AlertTriangle className="w-12 h-12 text-red-500 mx-auto animate-bounce" />
-            <h4 className="text-base font-black text-white uppercase">{t('confirm_alert_title', 'Confirm Emergency Alert')}</h4>
-            <p className="text-xs text-slate-350 leading-relaxed">
+            <h4 className="text-base font-black text-text dark:text-white uppercase">{t('confirm_alert_title', 'Confirm Emergency Alert')}</h4>
+            <p className="text-xs text-text-muted leading-relaxed">
               {t('confirm_alert')}
             </p>
             <div className="flex gap-3 pt-2">
               <button
                 onClick={() => setShowConfirm(false)}
-                className="flex-1 h-12 bg-white/10 hover:bg-white/20 text-white text-xs font-bold rounded-xl cursor-pointer"
+                className="flex-1 h-12 bg-surface-2 hover:bg-surface-3 border border-border text-text text-xs font-bold rounded-xl cursor-pointer"
               >
                 {t('cancel')}
               </button>
