@@ -24,6 +24,7 @@ import { uploadImage } from '../lib/imageUpload';
 import toast from 'react-hot-toast';
 import LiveBroadcast from '../components/community/LiveBroadcast';
 import PageHeader from '../components/ui/PageHeader';
+import MessageBubble from '../components/community/MessageBubble';
 
 export default function Community() {
   const { t } = useTranslation();
@@ -375,7 +376,10 @@ export default function Community() {
       </div>
 
       {/* Messages Scroll Panel */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-4">
+      <div 
+        className="flex-1 overflow-y-auto p-6 space-y-4"
+        style={{ overflowX: 'hidden', width: '100%', boxSizing: 'border-box' }}
+      >
         {loading ? (
           <div className="flex flex-col items-center justify-center h-full text-slate-400">
             <Loader2 className="w-8 h-8 animate-spin text-accent" />
@@ -388,86 +392,17 @@ export default function Community() {
             <p className="text-[10px] mt-1">Be the first to start the conversation in #{activeChannel}!</p>
           </div>
         ) : (
-          filteredMessages.map(msg => {
-            const isOwn = msg.senderId === currentUser?.uid;
-            const timeStr = msg.timestamp ? new Date(msg.timestamp.toDate()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now';
-
-            return (
-              <div key={msg.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'} animate-fadeIn`}>
-                <div 
-                  className="max-w-[75%] p-3.5 space-y-1"
-                  style={{
-                    background: isOwn ? theme.accent : theme.surface,
-                    color: isOwn ? '#fff' : theme.text,
-                    borderRadius: isOwn ? '16px 16px 0 16px' : '16px 16px 16px 0',
-                    border: isOwn ? 'none' : '1px solid ' + theme.border,
-                    boxShadow: 'var(--shadow)'
-                  }}
-                >
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="text-[10px] font-black tracking-wide block" style={{ color: isOwn ? '#EFF6FF' : theme.accent }}>
-                      {isOwn ? "You" : msg.senderName}
-                    </span>
-                    {getRoleBadge(msg.senderRole)}
-                  </div>
-
-                  {msg.type === 'text' && (
-                    <p className="text-xs leading-relaxed font-semibold">{msg.text}</p>
-                  )}
-
-                  {msg.type === 'image' && (
-                    <div className="space-y-1">
-                      <div className="rounded-lg overflow-hidden border border-white/20 max-w-[240px]">
-                        <img 
-                          src={msg.mediaUrl} 
-                          alt="shared" 
-                          className="w-full object-cover max-h-[180px] cursor-pointer hover:scale-105 transition"
-                          onClick={() => window.open(msg.mediaUrl, '_blank')}
-                        />
-                      </div>
-                      {msg.text && <p className="text-xs font-medium italic mt-1">{msg.text}</p>}
-                    </div>
-                  )}
-
-                  {msg.type === 'pdf' && (
-                    <a 
-                      href={msg.mediaUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex items-center gap-2 bg-white/20 p-2.5 rounded-lg text-white hover:bg-white/30 transition text-xs font-bold max-w-[240px]"
-                    >
-                      <FileText className="w-5 h-5" /> Download PDF Report
-                    </a>
-                  )}
-
-                  {msg.type === 'audio' && msg.audioData && (
-                    <div style={{
-                      background: 'var(--surface)', borderRadius: 12,
-                      padding: '8px 12px', maxWidth: 260
-                    }}>
-                      <audio
-                        controls
-                        src={msg.audioData}
-                        style={{width: '100%', height: 36}}
-                        preload="metadata"
-                        onError={(e) => console.error('Audio playback error:', e)}
-                      />
-                      <div style={{
-                        fontSize: 11, color: 'var(--text-muted)',
-                        marginTop: 4
-                      }}>
-                        Voice message
-                      </div>
-                    </div>
-                  )}
-
-                  <span className="text-[8px] block text-right font-black mt-1" style={{ color: isOwn ? '#EFF6FF' : theme.muted }}>
-                    {timeStr}
-                  </span>
-                </div>
-              </div>
-            );
-          })
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 10,
+            width: '100%',
+            overflowX: 'hidden',
+          }}>
+            {filteredMessages.map(msg => (
+              <MessageBubble key={msg.id} msg={msg} isOwn={msg.senderId === currentUser?.uid} />
+            ))}
+          </div>
         )}
         <div ref={chatEndRef} />
       </div>
