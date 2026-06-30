@@ -17,6 +17,8 @@ import { db } from '../lib/firebase';
 import { collection, addDoc, onSnapshot, query, where, orderBy, serverTimestamp, getDocs } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 import PageHeader from '../components/ui/PageHeader';
+import Grid from '../components/ui/Grid';
+import Card from '../components/ui/Card';
 
 export default function Workers() {
   const { t } = useTranslation();
@@ -281,12 +283,13 @@ export default function Workers() {
               <p className="text-xs text-text-muted font-bold">No registered workers found in {dbUser?.district || 'this area'}.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Grid desktopCols={1} mobileCols={1} gap={16}>
               {filteredWorkers.map(worker => (
-                <div 
+                <Card 
                   key={worker.id}
-                  className="bg-surface dark:bg-slate-800 border border-border dark:border-slate-700 rounded-2xl p-4 shadow-sm flex gap-4 hover:shadow transition cursor-pointer"
                   onClick={() => setSelectedWorker(worker)}
+                  padding="16px"
+                  style={{ display: 'flex', gap: '16px' }}
                 >
                   <div className="w-14 h-14 bg-slate-100 rounded-full flex-shrink-0 overflow-hidden border border-border dark:border-slate-650">
                     <img 
@@ -309,15 +312,15 @@ export default function Workers() {
                       ))}
                     </div>
                     <span className="text-[10px] text-text-muted font-bold block mt-2">
-                      💰 Rate: ₹{worker.dailyRate}/day
+                       Rate: ₹{worker.dailyRate}/day
                     </span>
                   </div>
                   <button className="h-10 px-4 self-center bg-accent text-white text-[11px] font-black rounded-lg cursor-pointer">
                     Hire
                   </button>
-                </div>
+                </Card>
               ))}
-            </div>
+            </Grid>
           )}
         </div>
       )}
