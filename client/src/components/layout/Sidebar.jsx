@@ -47,7 +47,7 @@ export default function Sidebar() {
         borderBottom: '1px solid var(--border)',
       }}>
         <div style={{display:'flex', alignItems:'center', gap: collapsed ? 0 : 8}}>
-          <img src="/vanguard-logo.png" alt="VANGUARD" 
+          <img src="/vanguard-icon.png" alt="VANGUARD" 
                style={{height:26, width:26, flexShrink:0, objectFit:'contain'}} />
           {!collapsed && (
             <span style={{fontWeight:800, fontSize:16, color:'var(--text)', 
