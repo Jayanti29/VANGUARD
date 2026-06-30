@@ -25,6 +25,7 @@ import { db } from '../lib/firebase';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import useAuth from '../hooks/useAuth';
 import SeverityBadge from '../components/ui/SeverityBadge';
+import PageHeader from '../components/ui/PageHeader';
 
 // Helper component to locate user on load and handle recenter
 function MapController({ triggerLocate, setTriggerLocate, userCoords }) {
@@ -152,6 +153,10 @@ export default function IssueMap() {
 
   return (
     <div className="space-y-4">
+      <PageHeader 
+        title="Interactive Safety Map" 
+        subtitle="View safety hazards, open issues, and local officials in your district" 
+      />
       {/* 1. Header controls overlay */}
       <div className="flex flex-col sm:flex-row gap-3 sm:items-center justify-between">
         
