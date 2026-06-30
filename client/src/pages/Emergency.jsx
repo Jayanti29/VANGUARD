@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { MapContainer, TileLayer, CircleMarker } from 'react-leaflet';
 import useAuth from '../hooks/useAuth';
+import PageHeader from '../components/ui/PageHeader';
 import { db } from '../lib/firebase';
 import { collection, addDoc, onSnapshot, query, where, serverTimestamp, orderBy } from 'firebase/firestore';
 import toast from 'react-hot-toast';
@@ -138,25 +139,20 @@ export default function Emergency() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-100px)] bg-gradient-to-b from-red-950 via-slate-900 to-slate-900 text-white p-6 rounded-3xl border border-red-900/50 shadow-2xl space-y-6">
-      
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <button 
-          onClick={() => navigate('/')}
-          className="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center text-white cursor-pointer"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <div>
-          <h1 className="text-xl font-black uppercase tracking-wider text-red-500">
-            {t('emergency_title')}
-          </h1>
-          <p className="text-[10px] text-slate-350 font-bold block">
-            {t('emergency_subtitle')}
-          </p>
-        </div>
-      </div>
+    <>
+      <PageHeader 
+        title={t('emergency_title')} 
+        subtitle={t('emergency_subtitle')} 
+        action={
+          <button 
+            onClick={() => navigate('/')}
+            className="w-10 h-10 rounded-xl bg-slate-200 dark:bg-white/10 hover:bg-slate-300 dark:hover:bg-white/20 flex items-center justify-center text-text cursor-pointer"
+          >
+            <ArrowLeft className="w-5 h-5 text-[var(--text)]" />
+          </button>
+        }
+      />
+      <div className="space-y-6">
 
       {!alertSent ? (
         <div className="space-y-6 animate-fadeIn">
@@ -325,5 +321,6 @@ export default function Emergency() {
         </div>
       )}
     </div>
+    </>
   );
 }
