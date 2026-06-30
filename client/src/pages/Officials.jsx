@@ -5,6 +5,7 @@ import { db } from '../lib/firebase';
 import { collection, onSnapshot } from 'firebase/firestore';
 import OfficialCard from '../components/ui/OfficialCard';
 import PageHeader from '../components/ui/PageHeader';
+import Grid from '../components/ui/Grid';
 
 export default function Officials() {
   const { t } = useTranslation();
@@ -133,11 +134,11 @@ export default function Officials() {
           <p className="font-bold text-sm text-[var(--text-muted)]">No officials matched search criteria</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+        <Grid desktopCols={2} mobileCols={1} gap={14}>
           {filtered.map((off) => (
             <OfficialCard key={off.id} official={off} />
           ))}
-        </div>
+        </Grid>
       )}
     </div>
   );
