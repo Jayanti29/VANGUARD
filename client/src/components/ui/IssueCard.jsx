@@ -25,6 +25,7 @@ export default function IssueCard({ issue }) {
   const getCategoryLabel = (category) => {
     return category ? category.replace('_', ' ').toUpperCase() : 'OTHER';
   };
+  const timeAgo = formatTimeAgo;
 
   return (
     <div 
@@ -45,15 +46,13 @@ export default function IssueCard({ issue }) {
       <div className="flex-1 min-w-0 flex flex-col justify-between">
         <div>
           <div className="flex flex-wrap items-center gap-2 mb-1.5">
-            <span className="bg-[var(--surface-2)] text-[var(--text)] text-[10px] font-bold tracking-wider uppercase px-2 py-0.5 rounded">
-              {issue.categoryLabel || getCategoryLabel(issue.category)}
-            </span>
             <SeverityBadge severity={issue.severity} />
           </div>
 
-          <h3 className="text-base font-bold text-[var(--text)] leading-snug truncate group-hover:text-[var(--accent)] transition-colors">
-            {issue.title || issue.description || 'Civic safety complaint'}
-          </h3>
+          <div style={{fontWeight: 700, fontSize: '15px', color: 'var(--text)'}}>{issue.categoryLabel || issue.title}</div>
+          <div style={{fontSize: 12, color: 'var(--text-muted)'}}>
+            {issue.village}, Ward {issue.ward} · {timeAgo(issue.createdAt)}
+          </div>
           <p className="text-xs text-[var(--text-muted)] mt-1 truncate">
             {issue.description || 'No additional description provided.'}
           </p>
@@ -61,18 +60,6 @@ export default function IssueCard({ issue }) {
 
         {/* Card Footer details */}
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-2 text-xs text-[var(--text-muted)] font-medium">
-          <div className="flex items-center gap-1">
-            <MapPin className="w-3.5 h-3.5 text-[var(--accent)]" />
-            <span className="truncate max-w-[120px] md:max-w-[180px]">
-              {issue.village || 'Ramanagara'}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-1">
-            <Clock className="w-3.5 h-3.5" />
-            <span>{formatTimeAgo(issue.createdAt)}</span>
-          </div>
-
           <div className="flex items-center gap-1 text-[var(--accent)] font-bold">
             <Users className="w-3.5 h-3.5" />
             <span>{issue.confirmations?.length || 0} confirmed</span>
