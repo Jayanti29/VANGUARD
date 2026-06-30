@@ -1,105 +1,98 @@
 import React from 'react';
-import { Star, MapPin, CheckCircle, XCircle, Phone } from 'lucide-react';
 
-export default function WorkerCard({ worker, onHireClick }) {
-  // Render star ratings
-  const renderStars = (rating) => {
-    const stars = [];
-    const val = rating || 5;
-    for (let i = 1; i <= 5; i++) {
-      stars.push(
-        <Star 
-          key={i} 
-          className={`w-3.5 h-3.5 ${
-            i <= val 
-              ? 'fill-amber-400 text-amber-400' 
-              : 'text-[var(--border)]'
-          }`} 
-        />
-      );
-    }
-    return stars;
-  };
+export default function WorkerCard({ worker, onHire }) {
+  const initials = (worker.name || 'W')[0].toUpperCase()
 
   return (
-    <div className="card flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5">
-      <div className="flex gap-4 items-center">
-        {/* Worker Avatar with Availability Dot */}
-        <div className="relative flex-shrink-0">
-          <img 
-            src={worker.profileImageUrl || `https://api.dicebear.com/7.x/adventurer/svg?seed=${worker.name || 'worker'}`} 
-            alt={worker.name} 
-            width={64}
-            height={64}
-            className="w-16 h-16 rounded-2xl object-cover border-2 border-[var(--border)] bg-[var(--surface-2)]"
-          />
-          <span 
-            className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-[var(--surface)] ${
-              worker.isAvailable ? 'bg-[var(--success)]' : 'bg-[var(--danger)]'
-            }`} 
-            title={worker.isAvailable ? 'Available' : 'Unavailable'}
-          />
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: 16,
+      padding: '16px 20px',
+      background: 'var(--surface)',
+      border: '1px solid var(--border)',
+      borderRadius: 14,
+      transition: 'box-shadow 0.15s',
+    }}>
+      {/* Avatar circle — NO robot image, just initials */}
+      <div style={{
+        width: 52, height: 52, flexShrink: 0,
+        borderRadius: '50%',
+        background: 'var(--accent-soft)',
+        color: 'var(--accent)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 20, fontWeight: 800,
+      }}>
+        {initials}
+      </div>
+
+      {/* Info */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
+          marginBottom: 4,
+        }}>
+          <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>
+            {worker.name}
+          </span>
+          {worker.isNearYou && (
+            <span style={{
+              fontSize: 11, fontWeight: 600,
+              background: '#DCFCE7', color: '#16A34A',
+              padding: '2px 8px', borderRadius: 20,
+            }}>
+              Near you
+            </span>
+          )}
         </div>
 
-        {/* Worker Info */}
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <h4 className="text-base font-bold text-[var(--text)] truncate">
-              {worker.name}
-            </h4>
-            <span className="text-xs text-[var(--text-muted)] flex items-center font-bold">
-              {worker.isAvailable ? (
-                <span className="text-[var(--success)] flex items-center gap-0.5">
-                  <CheckCircle className="w-3.5 h-3.5 inline" /> Available
-                </span>
-              ) : (
-                <span className="text-[var(--danger)] flex items-center gap-0.5">
-                  <XCircle className="w-3.5 h-3.5 inline" /> Busy
-                </span>
-              )}
-            </span>
-          </div>
+        {/* Stars */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4 }}>
+          {[1,2,3,4,5].map(s => (
+            <span key={s} style={{
+              color: s <= Math.round(worker.rating||0) ? '#FBBF24' : 'var(--border)',
+              fontSize: 14,
+            }}>★</span>
+          ))}
+          <span style={{ fontSize: 13, color: 'var(--text-muted)', marginLeft: 4 }}>
+            ({worker.reviewCount || 0} reviews)
+          </span>
+        </div>
 
-          {/* Rating stars */}
-          <div className="flex items-center gap-1 mt-1 text-xs">
-            <div className="flex">{renderStars(worker.rating)}</div>
-            <span className="text-[var(--text-muted)] font-semibold ml-1">
-              ({worker.reviewCount || 0} reviews)
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          {(worker.skills || []).map(skill => (
+            <span key={skill} style={{
+              fontSize: 12, fontWeight: 700,
+              color: 'var(--text-muted)',
+              textTransform: 'uppercase',
+              letterSpacing: 0.5,
+            }}>
+              {skill}
             </span>
-          </div>
-
-          {/* Skills chips */}
-          <div className="flex flex-wrap gap-1.5 mt-2">
-            {(worker.skills || []).map((skill) => (
-              <span 
-                key={skill} 
-                className="bg-[var(--accent-soft)] text-[var(--accent)] text-[10px] font-bold px-2 py-0.5 rounded-md"
-              >
-                {skill}
-              </span>
-            ))}
-          </div>
-
-          <div className="flex items-center gap-1.5 mt-2.5 text-xs text-[var(--text-muted)]">
-            <MapPin className="w-3.5 h-3.5 text-[var(--accent)]" />
-            <span className="truncate">{worker.village || 'Ramanagara'}</span>
-            <span className="font-bold text-[var(--text)] ml-2">
-              ₹{worker.dailyRate || 400}/day
-            </span>
-          </div>
+          ))}
+          <span style={{ fontSize: 13, color: 'var(--accent)', fontWeight: 600 }}>
+            ₹{worker.dailyRate || 0}/day
+          </span>
         </div>
       </div>
 
-      {/* Hire Action Button */}
-      <div className="w-full sm:w-auto">
-        <button
-          onClick={() => onHireClick && onHireClick(worker)}
-          className="w-full sm:w-auto min-h-[52px] px-6 bg-[var(--accent)] hover:bg-opacity-95 text-white text-sm font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer transition active:scale-95"
-        >
-          <Phone className="w-4 h-4" />
-          Hire Worker
-        </button>
-      </div>
+      {/* Hire button — rectangular, not pill */}
+      <button
+        onClick={() => onHire?.(worker)}
+        style={{
+          flexShrink: 0,
+          padding: '10px 22px',
+          background: 'var(--accent)',
+          color: '#fff',
+          border: 'none',
+          borderRadius: 10,
+          fontSize: 14,
+          fontWeight: 700,
+          cursor: 'pointer',
+        }}
+      >
+        Hire
+      </button>
     </div>
-  );
+  )
 }
