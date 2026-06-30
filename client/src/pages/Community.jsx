@@ -23,6 +23,7 @@ import { collection, addDoc, onSnapshot, query, orderBy, serverTimestamp } from 
 import { uploadImage } from '../lib/imageUpload';
 import toast from 'react-hot-toast';
 import LiveBroadcast from '../components/community/LiveBroadcast';
+import PageHeader from '../components/ui/PageHeader';
 
 export default function Community() {
   const { t } = useTranslation();
@@ -325,34 +326,25 @@ export default function Community() {
   const filteredMessages = messages.filter(m => m.channel === activeChannel);
 
   return (
-    <div 
-      className="flex flex-col h-[calc(100vh-140px)] md:h-[calc(100vh-100px)] rounded-2xl border overflow-hidden shadow-sm"
-      style={{ background: theme.bg, borderColor: theme.border }}
-    >
-      {/* Community Header */}
+    <>
+      <PageHeader 
+        title={`${dbUser?.village || 'Our Village'} Community`} 
+        subtitle={`${dbUser?.district || 'District'} District Community Hub · ${activeChannel}`} 
+        action={
+          <button onClick={() => setShowBroadcast(true)} style={{
+            display:'flex', alignItems:'center', gap:6,
+            padding:'6px 14px', background:'#DC2626',
+            color:'white', border:'none', borderRadius:8,
+            fontSize:13, fontWeight:600, cursor:'pointer'
+          }}>
+            <Radio size={16} /> {t('live_broadcast', 'Live Broadcast')}
+          </button>
+        }
+      />
       <div 
-        className="px-6 py-4 flex items-center justify-between z-10"
-        style={{ background: theme.surface, borderBottom: '1px solid ' + theme.border }}
+        className="flex flex-col h-[calc(100vh-230px)] rounded-2xl border overflow-hidden shadow-sm"
+        style={{ background: theme.bg, borderColor: theme.border }}
       >
-        <div>
-          <h2 className="text-sm font-black capitalize" style={{ color: theme.text }}>
-            {dbUser?.village || 'Our Village'} Community Hub
-          </h2>
-          <span className="text-[10px] font-bold block mt-0.5" style={{ color: theme.muted }}>
-            {dbUser?.district || 'District'} District &bull; {activeChannel} Room
-          </span>
-        </div>
-        
-        <button onClick={() => setShowBroadcast(true)} style={{
-          display:'flex', alignItems:'center', gap:6,
-          padding:'6px 14px', background:'#DC2626',
-          color:'white', border:'none', borderRadius:8,
-          fontSize:13, fontWeight:600, cursor:'pointer'
-        }}>
-          <Radio size={14} />
-          Live Room
-        </button>
-      </div>
 
       {showBroadcast && (
         <LiveBroadcast
@@ -613,5 +605,6 @@ export default function Community() {
         )}
       </div>
     </div>
+    </>
   );
 }
