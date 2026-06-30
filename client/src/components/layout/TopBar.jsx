@@ -2,107 +2,96 @@ import { Bell, Sun, Moon } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useTranslation } from 'react-i18next'
+import { useViewport } from '../../hooks/useViewport'
+import { SIZE, SPACE, RADIUS, FONT } from '../../styles/tokens'
 
 const LANGUAGES = [
-  { code: 'en', label: 'English' }, { code: 'hi', label: 'हिन्दी' },
-  { code: 'kn', label: 'ಕನ್ನಡ' }, { code: 'ta', label: 'தமிழ்' },
-  { code: 'te', label: 'తెలుగు' }, { code: 'ml', label: 'മലയാളം' },
-  { code: 'bn', label: 'বাংলা' }, { code: 'mr', label: 'ಮರಾठी' },
-  { code: 'gu', label: 'ગુજરાતી' }, { code: 'pa', label: 'ਪੰਜਾਬੀ' },
+  {code:'en',label:'English'},{code:'hi',label:'हिन्दी'},
+  {code:'kn',label:'ಕನ್ನಡ'},{code:'ta',label:'தமிழ்'},
+  {code:'te',label:'తెలుగు'},{code:'ml',label:'മലയാളം'},
+  {code:'bn',label:'বাংলা'},{code:'mr',label:'मराठी'},
+  {code:'gu',label:'ગુજરાતી'},{code:'pa',label:'ਪੰਜਾਬੀ'},
 ]
 
 export default function TopBar() {
   const { userProfile } = useAuth()
   const { theme, toggleTheme } = useTheme()
   const { i18n } = useTranslation()
+  const { isDesktop } = useViewport()
+  const h = isDesktop ? SIZE.topbarHeight : SIZE.topbarHeightMobile
 
-  const handleLangChange = (e) => {
-    const lang = e.target.value
-    i18n.changeLanguage(lang)
-    localStorage.setItem('vanguard_language', lang)
+  const handleLang = (e) => {
+    i18n.changeLanguage(e.target.value)
+    localStorage.setItem('vanguard_language', e.target.value)
   }
 
   return (
     <header style={{
-      height: 64,
-      flexShrink: 0,
+      height: h, flex: `0 0 ${h}px`,
       background: 'var(--surface)',
       borderBottom: '1px solid var(--border)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      padding: '0 24px',
-      gap: 16,
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      padding: isDesktop ? `0 ${SPACE.xxl}px` : `0 ${SPACE.md}px`,
+      gap: SPACE.md,
+      position: 'sticky', top: 0, zIndex: 15,
     }}>
-      <div style={{display:'flex', alignItems:'center', gap:8}}>
-        <img src="/vanguard-logo.png" alt="" 
-             style={{height: 26, width: 26, objectFit:'contain'}} />
-        <span style={{fontWeight:700, fontSize:15, color:'var(--text)'}}>
-          VANGUARD
-        </span>
-      </div>
+      {/* Left: logo only on mobile/tablet (sidebar has it on desktop) */}
+      {!isDesktop ? (
+        <img src="/vanguard-logo.png" alt="" style={{height:24, width:24}} />
+      ) : <div />}
 
-      <div style={{display:'flex', alignItems:'center', gap:12, flexShrink:0}}>
-        <select
-          value={i18n.language}
-          onChange={handleLangChange}
-          style={{
-            background: 'var(--surface-2)',
-            border: '1px solid var(--border)',
-            borderRadius: 8,
-            padding: '6px 10px',
-            fontSize: 13,
-            color: 'var(--text)',
-            cursor: 'pointer',
-            outline: 'none',
-          }}
-        >
+      <div style={{display:'flex', alignItems:'center', gap: isDesktop ? SPACE.md : SPACE.sm}}>
+        <select value={i18n.language} onChange={handleLang} style={{
+          background:'var(--surface-2)', border:'1px solid var(--border)',
+          borderRadius:RADIUS.sm, padding: isDesktop ? '6px 10px' : '4px 6px',
+          fontSize: isDesktop ? FONT.sm : 10, color:'var(--text)', cursor:'pointer',
+          maxWidth: isDesktop ? 'none' : 56,
+        }}>
           {LANGUAGES.map(l => (
-            <option key={l.code} value={l.code}>{l.label}</option>
+            <option key={l.code} value={l.code}>
+              {isDesktop ? l.label : l.code.toUpperCase()}
+            </option>
           ))}
         </select>
 
-        <button onClick={toggleTheme} style={{
-          width: 36, height: 36, borderRadius: 8,
-          background: 'var(--surface-2)', border: '1px solid var(--border)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          cursor: 'pointer', color: 'var(--text)',
+        <button onClick={toggleTheme} aria-label="Toggle theme" style={{
+          width: isDesktop ? 36 : 32, height: isDesktop ? 36 : 32,
+          borderRadius:RADIUS.sm, background:'var(--surface-2)',
+          border:'1px solid var(--border)', display:'flex',
+          alignItems:'center', justifyContent:'center', cursor:'pointer', color:'var(--text)',
         }}>
-          {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+          {theme==='dark' ? <Sun size={isDesktop?16:14}/> : <Moon size={isDesktop?16:14}/>}
         </button>
 
-        <button style={{
-          width: 36, height: 36, borderRadius: 8,
-          background: 'var(--surface-2)', border: '1px solid var(--border)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          cursor: 'pointer', color: 'var(--text)', position: 'relative',
-        }}>
-          <Bell size={16} />
-        </button>
+        {isDesktop && (
+          <button aria-label="Notifications" style={{
+            width:36, height:36, borderRadius:RADIUS.sm,
+            background:'var(--surface-2)', border:'1px solid var(--border)',
+            display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:'var(--text)',
+          }}><Bell size={16}/></button>
+        )}
 
         <div style={{
-          display:'flex', alignItems:'center', gap:8,
-          paddingLeft: 12, borderLeft: '1px solid var(--border)',
+          display:'flex', alignItems:'center', gap:SPACE.sm,
+          paddingLeft: isDesktop ? SPACE.md : 0,
+          borderLeft: isDesktop ? '1px solid var(--border)' : 'none',
         }}>
-          <div style={{textAlign:'right'}}>
-            <div style={{fontSize:13, fontWeight:600, color:'var(--text)'}}>
-              {userProfile?.name || 'User'}
+          {isDesktop && (
+            <div style={{textAlign:'right'}}>
+              <div style={{fontSize:FONT.sm, fontWeight:700, color:'var(--text)'}}>
+                {userProfile?.name || 'User'}
+              </div>
+              <div style={{fontSize:FONT.xs, color:'var(--accent)', fontWeight:600, textTransform:'capitalize'}}>
+                {userProfile?.role || 'citizen'}
+              </div>
             </div>
-            <div style={{
-              fontSize:10, color:'var(--accent)', fontWeight:600,
-              textTransform:'capitalize',
-            }}>
-              {userProfile?.role || 'citizen'}
-            </div>
-          </div>
+          )}
           <div style={{
-            width: 34, height: 34, borderRadius: '50%',
-            background: 'var(--accent-soft)', color: 'var(--accent)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontWeight: 700, fontSize: 13, flexShrink: 0,
-          }}>
-            {(userProfile?.name || 'U')[0].toUpperCase()}
-          </div>
+            width: isDesktop?34:30, height: isDesktop?34:30, borderRadius:'50%',
+            background:'var(--accent-soft)', color:'var(--accent)',
+            display:'flex', alignItems:'center', justifyContent:'center',
+            fontWeight:700, fontSize: isDesktop?13:12, flexShrink:0,
+          }}>{(userProfile?.name||'U')[0].toUpperCase()}</div>
         </div>
       </div>
     </header>
