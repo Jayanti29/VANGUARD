@@ -43,7 +43,7 @@ export default function LoadingShield({ loadingText }) {
         <div className="absolute inset-0 bg-accent rounded-3xl opacity-10 animate-pulse-ring" />
 
         {/* SVG Shield Icon */}
-        <Shield className="w-16 h-16 text-accent dark:text-blue-400 z-10" />
+        <Shield size={64} className="text-accent dark:text-blue-400 z-10" style={{ width: '64px', height: '64px', minWidth: '64px', minHeight: '64px' }} />
 
         {/* CSS Scanning line overlay */}
         <div className="absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-accent dark:via-blue-400 to-transparent animate-scan-line z-20 shadow-[0_0_10px_#1B6FD8]" />
