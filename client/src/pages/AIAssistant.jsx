@@ -189,25 +189,25 @@ export default function AIAssistant() {
   };
 
   const promptChips = [
-    "Water overflowing near school",
-    "Who handles electricity issues?",
-    "Garbage not collected for 3 days",
-    "How to report a pothole?"
+    t('suggested_1', "Water overflowing near school"),
+    t('suggested_2', "Who handles electricity issues?"),
+    t('suggested_3', "Garbage not collected for 3 days"),
+    t('suggested_4', "How to report a pothole?")
   ];
 
   return (
     <>
       <PageHeader 
-        title="AI Civic Assistant" 
-        subtitle="Ask anything about civic procedures, local guidelines, and safety alerts." 
+        title={t('ai_title', 'AI Assistant')} 
+        subtitle={t('ai_subtitle', 'Ask anything about civic procedures, local guidelines, and safety alerts.')} 
         action={
           messages.length > 0 ? (
             <button
               onClick={clearChat}
               className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg flex items-center gap-2 cursor-pointer transition"
-              title="Clear Chat History"
+              title={t('clear_chat', 'Clear Chat')}
             >
-              <Trash2 className="w-4 h-4" /> Clear Chat
+              <Trash2 className="w-4 h-4" /> {t('clear_chat', 'Clear Chat')}
             </button>
           ) : undefined
         }
@@ -229,9 +229,9 @@ export default function AIAssistant() {
               <Bot className="w-8 h-8" />
             </div>
             <div className="space-y-1.5">
-              <h3 className="text-sm font-black text-[var(--text)]">How can I assist you today?</h3>
+              <h3 className="text-sm font-black text-[var(--text)]">{t('how_can_i_assist', 'How can I assist you today?')}</h3>
               <p className="text-xs text-[var(--text-muted)] leading-relaxed font-semibold">
-                I can guide you on local department responsibilities, predicted risks, or help compose a formal civic report.
+                {t('ai_helper_desc', 'I can guide you on local department responsibilities, predicted risks, or help compose a formal civic report.')}
               </p>
             </div>
             
@@ -305,7 +305,7 @@ export default function AIAssistant() {
               ? 'bg-red-600 text-white animate-pulse border-red-650' 
               : 'bg-[var(--surface-2)] text-[var(--text-muted)] border-[var(--border)]'
           }`}
-          title="Voice input"
+          title={t('voice_input', 'Voice input')}
         >
           <Mic className="w-5 h-5 text-[var(--accent)]" />
         </button>
@@ -313,7 +313,7 @@ export default function AIAssistant() {
         <input
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
-          placeholder="Ask a question..."
+          placeholder={t('ai_placeholder', 'Ask a question...')}
           className="flex-1 h-11 px-4 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-[var(--accent)] text-[var(--text)]"
         />
 
