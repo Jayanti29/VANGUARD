@@ -1,137 +1,138 @@
-import React, { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
-import { 
-  Home, 
-  Map, 
-  MessageSquare, 
-  ShieldAlert, 
-  User, 
-  Users, 
-  PhoneCall, 
-  AlertTriangle,
-  Building,
-  Menu,
-  ChevronLeft,
-  ChevronRight,
-  ShieldCheck
-} from 'lucide-react';
-import useAuth from '../../hooks/useAuth';
+import { NavLink } from 'react-router-dom'
+import { Home, Map, MessageSquare, Users, AlertTriangle, 
+         Bot, Building2, User, ChevronLeft, ChevronRight } from 'lucide-react'
+import { useState } from 'react'
+import { useAuth } from '../../contexts/AuthContext'
+import { useTranslation } from 'react-i18next'
 
 export default function Sidebar() {
-  const { t } = useTranslation();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { dbUser } = useAuth();
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(false)
+  const { userProfile } = useAuth()
+  const { t } = useTranslation()
 
-  const theme = {
-    bg: 'var(--bg)',
-    surface: 'var(--surface)',
-    surface2: 'var(--surface-2)',
-    text: 'var(--text)',
-    muted: 'var(--text-muted)',
-    border: 'var(--border)',
-    accent: 'var(--accent)',
-    accentSoft: 'var(--accent-soft)',
-  };
-
-  const menuItems = [
-    { path: '/', label: t('nav_home'), icon: Home },
-    { path: '/map', label: t('nav_map'), icon: Map },
-    { path: '/community', label: t('nav_community'), icon: MessageSquare },
-    { path: '/workers', label: t('nav_workers'), icon: Users },
-    { path: '/emergency', label: t('nav_emergency'), icon: AlertTriangle, badge: 'Alert' },
-    { path: '/ai', label: t('nav_ai'), icon: ShieldAlert },
-    { path: '/officials', label: t('nav_officials'), icon: Building },
-    { path: '/profile', label: t('nav_profile'), icon: User }
-  ];
-
-  if ((dbUser?.role || '').toLowerCase() === 'official') {
-    menuItems.push({ path: '/admin', label: t('nav_officials'), icon: ShieldCheck });
-  }
+  const navItems = [
+    { path: '/', icon: Home, label: t('nav_home'), exact: true },
+    { path: '/map', icon: Map, label: t('nav_map') },
+    { path: '/community', icon: MessageSquare, label: t('nav_community') },
+    { path: '/workers', icon: Users, label: t('nav_workers') },
+    { path: '/emergency', icon: AlertTriangle, label: t('nav_emergency') },
+    { path: '/ai', icon: Bot, label: t('nav_ai') },
+    { path: '/officials', icon: Building2, label: t('nav_officials') },
+    { path: '/profile', icon: User, label: t('nav_profile') },
+  ]
 
   return (
-    <div 
-      style={{
-        background: theme.surface,
-        borderRight: '1px solid ' + theme.border,
-        color: theme.text,
-        width: collapsed ? '64px' : '220px'
-      }}
-      className="hidden md:flex flex-col h-screen sticky top-0 left-0 transition-all duration-300 z-40 shrink-0"
-    >
-      {/* Title / Logo header */}
-      <div 
-        style={{ borderBottom: '1px solid ' + theme.border }}
-        className="p-4 flex items-center justify-between min-h-[72px]"
-      >
+    <aside style={{
+      width: collapsed ? 72 : 220,
+      flexShrink: 0,
+      height: '100vh',
+      background: 'var(--surface)',
+      borderRight: '1px solid var(--border)',
+      display: 'flex',
+      flexDirection: 'column',
+      position: 'sticky',
+      top: 0,
+      transition: 'width 0.2s ease',
+      zIndex: 10,
+    }}>
+      {/* Logo header */}
+      <div style={{
+        height: 64,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: collapsed ? 'center' : 'space-between',
+        padding: collapsed ? '0' : '0 16px',
+        borderBottom: '1px solid var(--border)',
+        flexShrink: 0,
+      }}>
         {!collapsed && (
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-[var(--accent)] text-white flex items-center justify-center rounded-xl shadow-md">
-              <ShieldCheck className="w-5 h-5" />
-            </div>
-            <span className="font-extrabold text-lg text-[var(--text)] tracking-wider">VANGUARD</span>
+          <div style={{display:'flex', alignItems:'center', gap:8}}>
+            <img src="/vanguard-logo.png" alt="VANGUARD" 
+                 style={{height: 28, width: 28, objectFit:'contain'}} />
+            <span style={{fontWeight: 800, fontSize: 16, color: 'var(--text)', letterSpacing: 0.5}}>
+              VANGUARD
+            </span>
           </div>
         )}
-        {collapsed && (
-          <div className="w-8 h-8 bg-[var(--accent)] text-white flex items-center justify-center rounded-xl mx-auto">
-            <ShieldCheck className="w-5 h-5" />
-          </div>
-        )}
-        <button 
+        <button
           onClick={() => setCollapsed(!collapsed)}
-          style={{ color: theme.muted }}
-          className="hover:text-text p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer"
+          style={{
+            background: 'transparent', border: 'none', cursor: 'pointer',
+            color: 'var(--text-muted)', padding: 4, display: 'flex',
+          }}
         >
-          {collapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
+          {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
         </button>
       </div>
 
-      {/* Menu List */}
-      <div className="flex-1 py-4 overflow-y-auto space-y-1 px-3">
-        {menuItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = location.pathname === item.path;
-          return (
-            <button
-              key={item.path}
-              onClick={() => navigate(item.path)}
-              style={{
-                background: isActive ? theme.accentSoft : 'transparent',
-                color: isActive ? theme.accent : theme.muted
-              }}
-              className={`w-full flex items-center gap-3 p-3 rounded-xl font-medium transition duration-200 cursor-pointer`}
-            >
-              <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'scale-105' : ''}`} />
-              {!collapsed && <span className="text-sm truncate">{item.label}</span>}
-              {!collapsed && item.badge && (
-                <span className="ml-auto text-[10px] animate-pulse bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300 px-1.5 py-0.5 rounded-md font-bold uppercase">
-                  {item.badge}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
+      {/* Nav items - vertical stack, NOT grid/floating */}
+      <nav style={{
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 4,
+        padding: '12px 8px',
+        overflowY: 'auto',
+      }}>
+        {navItems.map(({ path, icon: Icon, label, exact }) => (
+          <NavLink
+            key={path}
+            to={path}
+            end={exact}
+            style={({ isActive }) => ({
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              padding: collapsed ? '12px' : '10px 14px',
+              borderRadius: 10,
+              textDecoration: 'none',
+              color: isActive ? 'var(--accent)' : 'var(--text-muted)',
+              background: isActive ? 'var(--accent-soft)' : 'transparent',
+              fontWeight: isActive ? 600 : 500,
+              fontSize: 14,
+              justifyContent: collapsed ? 'center' : 'flex-start',
+              transition: 'background 0.15s, color 0.15s',
+              whiteSpace: 'nowrap',
+            })}
+          >
+            <Icon size={19} style={{flexShrink: 0}} />
+            {!collapsed && <span>{label}</span>}
+          </NavLink>
+        ))}
+      </nav>
 
-      {/* User Summary footer */}
-      {!collapsed && dbUser && (
-        <div 
-          style={{ borderTop: '1px solid ' + theme.border, background: theme.surface2 }}
-          className="p-4 flex items-center gap-3"
-        >
-          <img 
-            src={dbUser.profileImageUrl || 'https://api.dicebear.com/7.x/bottts/svg?seed=user'} 
-            alt="avatar" 
-            className="w-10 h-10 rounded-xl object-cover"
-          />
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold truncate" style={{ color: theme.text }}>{dbUser.name}</p>
-            <p className="text-xs truncate capitalize" style={{ color: theme.muted }}>{dbUser.role}</p>
-          </div>
+      {/* User footer */}
+      <div style={{
+        borderTop: '1px solid var(--border)',
+        padding: 12,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        justifyContent: collapsed ? 'center' : 'flex-start',
+        flexShrink: 0,
+      }}>
+        <div style={{
+          width: 36, height: 36, borderRadius: '50%',
+          background: 'var(--accent-soft)', color: 'var(--accent)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontWeight: 700, fontSize: 14, flexShrink: 0,
+        }}>
+          {(userProfile?.name || 'U')[0].toUpperCase()}
         </div>
-      )}
-    </div>
-  );
+        {!collapsed && (
+          <div style={{minWidth: 0, overflow: 'hidden'}}>
+            <div style={{
+              fontSize: 13, fontWeight: 600, color: 'var(--text)',
+              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
+            }}>
+              {userProfile?.name || 'User'}
+            </div>
+            <div style={{fontSize: 11, color: 'var(--text-muted)', textTransform: 'capitalize'}}>
+              {userProfile?.role || 'citizen'}
+            </div>
+          </div>
+        )}
+      </div>
+    </aside>
+  )
 }
