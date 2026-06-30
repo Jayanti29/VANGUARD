@@ -149,6 +149,7 @@ export default function AIAssistant() {
     const userMsg = {
       id: 'user_' + Date.now(),
       sender: 'user',
+      role: 'user',
       text: cleanText,
       timestamp: new Date().toISOString()
     };
@@ -167,6 +168,7 @@ export default function AIAssistant() {
       setMessages(prev => [...prev, {
         id: 'ai_' + Date.now(),
         sender: 'ai',
+        role: 'ai',
         text: reply,
         timestamp: new Date().toISOString()
       }]);
@@ -175,6 +177,7 @@ export default function AIAssistant() {
       setMessages(prev => [...prev, {
         id: 'ai_err_' + Date.now(),
         sender: 'ai',
+        role: 'ai',
         text: "I experienced a connection issue while communicating with Gemini. Please try again.",
         timestamp: new Date().toISOString()
       }]);
@@ -212,41 +215,96 @@ export default function AIAssistant() {
           ) : undefined
         }
       />
-      <div className="flex flex-col h-[calc(100vh-230px)] rounded-2xl border border-[var(--border)] bg-[var(--bg)] overflow-hidden shadow-sm">
+      <div 
+        className="rounded-2xl border border-[var(--border)] bg-[var(--bg)] overflow-hidden shadow-sm p-4"
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          height: 'calc(100vh - 180px)', // full viewport minus topbar+header
+          minHeight: 500,
+        }}
+      >
 
       {/* Development status block */}
       {isDev && (
-        <div style={{fontSize:'11px', color:'gray', padding:'4px 8px', background: 'var(--surface-2)', borderBottom: '1px solid var(--border)', textAlign: 'center'}}>
+        <div style={{fontSize:'11px', color:'gray', padding:'4px 8px', background: 'var(--surface-2)', borderBottom: '1px solid var(--border)', textAlign: 'center', marginBottom: 8}}>
           AI Status: {aiStatus}
         </div>
       )}
 
-      {/* Messages scrolling view */}
-      <div 
-        className="flex-1 overflow-y-auto p-6 space-y-4"
-        style={{ overflowX: 'hidden', width: '100%', boxSizing: 'border-box' }}
-      >
+      {/* messages area — scrollable */}
+      <div style={{
+        flex: 1,
+        overflowY: 'auto',
+        overflowX: 'hidden',
+        padding: '16px 0',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 16,
+      }}>
         {messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center max-w-md mx-auto space-y-6">
-            <div className="w-16 h-16 rounded-3xl bg-[var(--accent-soft)] text-[var(--accent)] flex items-center justify-center">
-              <Bot className="w-8 h-8" />
+          <div style={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '40px 24px',
+            gap: 20,
+          }}>
+            <div style={{
+              width: 72, height: 72,
+              borderRadius: '50%',
+              background: 'var(--accent-soft)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <Bot size={36} color="var(--accent)" />
             </div>
-            <div className="space-y-1.5">
-              <h3 className="text-sm font-black text-[var(--text)]">{t('how_can_i_assist', 'How can I assist you today?')}</h3>
-              <p className="text-xs text-[var(--text-muted)] leading-relaxed font-semibold">
+
+            <div style={{ textAlign: 'center', maxWidth: 480 }}>
+              <h3 style={{
+                fontSize: 20, fontWeight: 700,
+                color: 'var(--text)', margin: '0 0 8px',
+              }}>
+                {t('how_can_i_assist', 'How can I assist you today?')}
+              </h3>
+              <p style={{
+                fontSize: 15, color: 'var(--text-muted)',
+                lineHeight: 1.6, margin: 0,
+              }}>
                 {t('ai_helper_desc', 'I can guide you on local department responsibilities, predicted risks, or help compose a formal civic report.')}
               </p>
             </div>
-            
-            {/* Suggested prompts chips */}
-            <div className="flex flex-col gap-2 w-full pt-2">
-              {promptChips.map(chip => (
+
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: 10,
+              width: '100%',
+              maxWidth: 560,
+            }}>
+              {[
+                t('suggested_1', 'Water overflowing near school'),
+                t('suggested_2', 'Who handles electricity issues?'),
+                t('suggested_3', 'Garbage not collected for 3 days'),
+                t('suggested_4', 'How to report a pothole?'),
+              ].map(prompt => (
                 <button
-                  key={chip}
-                  onClick={() => handleSendMessage(chip)}
-                  className="w-full text-left py-2.5 px-4 bg-[var(--surface)] hover:bg-[var(--surface-2)] border border-[var(--border)] rounded-xl text-xs font-bold text-[var(--text)] transition cursor-pointer"
+                  key={prompt}
+                  onClick={() => handleSendMessage(prompt)}
+                  style={{
+                    padding: '12px 16px',
+                    background: 'var(--surface-2)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 10,
+                    color: 'var(--text)',
+                    fontSize: 14,
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    lineHeight: 1.5,
+                  }}
                 >
-                  💡 "{chip}"
+                  {prompt}
                 </button>
               ))}
             </div>
@@ -255,81 +313,71 @@ export default function AIAssistant() {
           <div style={{
             display: 'flex',
             flexDirection: 'column',
-            gap: 10,
+            gap: 16,
             width: '100%',
-            overflowX: 'hidden',
           }}>
-            {messages.map(msg => {
-              const isOwn = msg.sender === 'user';
-              return (
-                <div 
-                  key={msg.id} 
-                  style={{
-                    display: 'flex',
-                    width: '100%',
-                    justifyContent: isOwn ? 'flex-end' : 'flex-start',
-                  }}
-                  className="animate-fadeIn"
-                >
+            {messages.map((msg, i) => (
+              <div key={msg.id || i} style={{
+                display: 'flex',
+                justifyContent: (msg.role === 'user' || msg.sender === 'user') ? 'flex-end' : 'flex-start',
+                width: '100%',
+                gap: 10,
+                alignItems: 'flex-start',
+              }}>
+                {!(msg.role === 'user' || msg.sender === 'user') && (
                   <div style={{
-                    maxWidth: '75%',
-                    minWidth: 0,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 12,
+                    width: 32, height: 32, flexShrink: 0,
+                    borderRadius: '50%',
+                    background: 'var(--accent-soft)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
-                    {!isOwn && (
-                      <div className="w-8 h-8 rounded-lg bg-[var(--accent-soft)] text-[var(--accent)] flex items-center justify-center flex-shrink-0">
-                        <Bot className="w-4.5 h-4.5" />
-                      </div>
-                    )}
-                    <div 
-                      className="p-3.5 rounded-2xl text-xs leading-relaxed shadow-sm"
-                      style={{
-                        background: isOwn ? 'var(--accent)' : 'var(--surface)',
-                        color: isOwn ? '#fff' : 'var(--text)',
-                        borderRadius: isOwn ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
-                        border: isOwn ? 'none' : '1px solid var(--border)',
-                        wordBreak: 'break-word',
-                        boxSizing: 'border-box',
-                      }}
-                    >
-                      {msg.text}
-                    </div>
-                    {isOwn && (
-                      <div className="w-8 h-8 rounded-lg bg-[var(--surface-2)] text-[var(--text-muted)] flex items-center justify-center flex-shrink-0">
-                        <User className="w-4.5 h-4.5" />
-                      </div>
-                    )}
+                    <Bot size={16} color="var(--accent)" />
                   </div>
+                )}
+                <div style={{
+                  maxWidth: '72%',
+                  padding: '12px 16px',
+                  borderRadius: (msg.role === 'user' || msg.sender === 'user')
+                    ? '16px 16px 4px 16px'
+                    : '16px 16px 16px 4px',
+                  background: (msg.role === 'user' || msg.sender === 'user') ? 'var(--accent)' : 'var(--surface-2)',
+                  color: (msg.role === 'user' || msg.sender === 'user') ? '#fff' : 'var(--text)',
+                  fontSize: 15,
+                  lineHeight: 1.6,
+                  wordBreak: 'break-word',
+                }}>
+                  {msg.text}
                 </div>
-              );
-            })}
+              </div>
+            ))}
 
             {loading && (
-              <div 
-                style={{
-                  display: 'flex',
-                  width: '100%',
-                  justifyContent: 'flex-start',
-                }}
-                className="animate-fadeIn"
-              >
+              <div style={{
+                display: 'flex',
+                justifyContent: 'flex-start',
+                width: '100%',
+                gap: 10,
+                alignItems: 'flex-start',
+              }}>
                 <div style={{
-                  maxWidth: '75%',
-                  minWidth: 0,
+                  width: 32, height: 32, flexShrink: 0,
+                  borderRadius: '50%',
+                  background: 'var(--accent-soft)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <Bot size={16} color="var(--accent)" />
+                </div>
+                <div style={{
+                  maxWidth: '72%',
+                  padding: '12px 16px',
+                  borderRadius: '16px 16px 16px 4px',
+                  background: 'var(--surface-2)',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 12,
+                  gap: 4,
                 }}>
-                  <div className="w-8 h-8 rounded-lg bg-[var(--accent-soft)] text-[var(--accent)] flex items-center justify-center flex-shrink-0">
-                    <Bot className="w-4.5 h-4.5" />
-                  </div>
-                  <div className="bg-[var(--surface)] border border-[var(--border)] p-3.5 rounded-2xl rounded-tl-none flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 bg-[var(--accent)] rounded-full animate-bounce delay-75" />
-                    <span className="w-1.5 h-1.5 bg-[var(--accent)] rounded-full animate-bounce delay-150" />
-                    <span className="w-1.5 h-1.5 bg-[var(--accent)] rounded-full animate-bounce delay-300" />
-                  </div>
+                  <Loader2 className="w-4 h-4 animate-spin text-[var(--accent)]" />
+                  <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Thinking...</span>
                 </div>
               </div>
             )}
@@ -338,37 +386,67 @@ export default function AIAssistant() {
         <div ref={chatEndRef} />
       </div>
 
-      {/* Input controls bar */}
+      {/* input bar — always at bottom */}
       <form 
         onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }}
-        className="bg-[var(--surface)] border-t border-[var(--border)] p-4 flex items-center gap-3"
+        style={{
+          borderTop: '1px solid var(--border)',
+          padding: '16px 0 0',
+          flexShrink: 0,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+        }}
       >
         <button
           type="button"
           onClick={toggleListening}
-          className={`w-11 h-11 rounded-xl flex items-center justify-center cursor-pointer border ${
-            isListening 
-              ? 'bg-red-600 text-white animate-pulse border-red-650' 
-              : 'bg-[var(--surface-2)] text-[var(--text-muted)] border-[var(--border)]'
-          }`}
+          style={{
+            width: 44, height: 44, borderRadius: 10,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', border: '1px solid var(--border)',
+            background: isListening ? '#DC2626' : 'var(--surface-2)',
+            color: isListening ? '#fff' : 'var(--text-muted)',
+            flexShrink: 0,
+          }}
           title={t('voice_input', 'Voice input')}
         >
-          <Mic className="w-5 h-5 text-[var(--accent)]" />
+          <Mic size={20} color={isListening ? '#fff' : 'var(--accent)'} />
         </button>
 
         <input
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
           placeholder={t('ai_placeholder', 'Ask a question...')}
-          className="flex-1 h-11 px-4 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-[var(--accent)] text-[var(--text)]"
+          style={{
+            flex: 1,
+            height: 44,
+            padding: '0 16px',
+            background: 'var(--surface-2)',
+            border: '1px solid var(--border)',
+            borderRadius: 10,
+            fontSize: 14,
+            outline: 'none',
+            color: 'var(--text)',
+          }}
         />
 
         <button
           type="submit"
           disabled={!inputText.trim()}
-          className="w-11 h-11 bg-[var(--accent)] disabled:opacity-40 text-white rounded-xl flex items-center justify-center cursor-pointer shadow-sm animate-fadeIn"
+          style={{
+            width: 44, height: 44,
+            background: 'var(--accent)',
+            opacity: !inputText.trim() ? 0.4 : 1,
+            color: '#fff',
+            borderRadius: 10,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: !inputText.trim() ? 'default' : 'pointer',
+            border: 'none',
+            flexShrink: 0,
+          }}
         >
-          <Send className="w-4 h-4" />
+          <Send size={16} />
         </button>
       </form>
     </div>
