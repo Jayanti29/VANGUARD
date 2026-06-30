@@ -17,60 +17,46 @@ export default function MessageBubble({ msg, isOwn }) {
       display: 'flex',
       width: '100%',
       justifyContent: isOwn ? 'flex-end' : 'flex-start',
+      paddingInline: 4,
     }}>
       <div style={{
-        maxWidth: '70%',
-        minWidth: 0,
+        maxWidth: '68%',
+        minWidth: 80,
         display: 'flex',
         flexDirection: 'column',
         alignItems: isOwn ? 'flex-end' : 'flex-start',
+        gap: 4,
       }}>
         {!isOwn && (
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-            marginBottom: 2,
+          <span style={{
+            fontSize: 12, fontWeight: 700,
+            color: 'var(--accent)',
             paddingLeft: 4,
           }}>
-            <span style={{
-              fontSize: 11,
-              fontWeight: 800,
-              color: 'var(--accent)',
-            }}>
-              {msg.senderName}
-            </span>
-            {msg.senderRole && (
-              <span className={`text-[8px] font-black px-1.5 py-0.5 rounded uppercase ${
-                msg.senderRole.toLowerCase() === 'official' ? 'bg-purple-650 text-white' :
-                msg.senderRole.toLowerCase() === 'volunteer' ? 'bg-emerald-650 text-white' :
-                'bg-orange-500 text-white'
-              }`}>
-                {msg.senderRole}
-              </span>
-            )}
-          </div>
+            {msg.senderName}
+          </span>
         )}
 
         <div style={{
+          padding: '10px 14px',
+          borderRadius: isOwn
+            ? '16px 16px 4px 16px'
+            : '16px 16px 16px 4px',
           background: isOwn ? 'var(--accent)' : 'var(--surface-2)',
           color: isOwn ? '#fff' : 'var(--text)',
-          borderRadius: isOwn ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
-          padding: (msg.type === 'audio' || msg.type === 'image' || msg.type === 'pdf') ? '10px 12px' : '8px 12px',
+          fontSize: 15,
+          lineHeight: 1.5,
           wordBreak: 'break-word',
           boxSizing: 'border-box',
-          border: isOwn ? 'none' : '1px solid var(--border)',
-          boxShadow: 'var(--shadow)',
         }}>
           {msg.type === 'audio' ? (
-            <div style={{ width: 220, maxWidth: '100%' }}>
+            <div>
               <audio controls src={msg.audioData || msg.audioUrl || msg.mediaUrl}
-                     style={{ width: '100%', height: 32 }} />
+                     style={{ maxWidth: 220, height: 36 }}
+                     preload="metadata" />
               <div style={{
-                fontSize: 10,
-                color: isOwn ? 'rgba(255,255,255,0.8)' : 'var(--text-muted)',
-                marginTop: 4,
-                fontWeight: 700,
+                fontSize: 12, marginTop: 4,
+                color: isOwn ? 'rgba(255,255,255,0.75)' : 'var(--text-muted)',
               }}>
                 Voice message
               </div>
@@ -85,7 +71,7 @@ export default function MessageBubble({ msg, isOwn }) {
                   onClick={() => window.open(msg.mediaUrl, '_blank')}
                 />
               </div>
-              {msg.text && <p style={{ fontSize: 11, fontStyle: 'italic', marginTop: 4 }}>{msg.text}</p>}
+              {msg.text && <p style={{ fontSize: 13, fontStyle: 'italic', marginTop: 4 }}>{msg.text}</p>}
             </div>
           ) : msg.type === 'pdf' ? (
             <a 
@@ -101,8 +87,8 @@ export default function MessageBubble({ msg, isOwn }) {
                 color: isOwn ? '#fff' : 'var(--text)',
                 background: isOwn ? 'rgba(255,255,255,0.2)' : 'var(--surface-3)',
                 textDecoration: 'none',
-                fontSize: 11,
-                fontWeight: 800,
+                fontSize: 13,
+                fontWeight: 750,
                 maxWidth: 240,
                 border: '1px solid var(--border)',
               }}
@@ -123,14 +109,14 @@ export default function MessageBubble({ msg, isOwn }) {
               </div>
             </div>
           ) : (
-            <span style={{ fontSize: 13, fontWeight: 600 }}>{msg.text}</span>
+            msg.text
           )}
         </div>
 
         <span style={{
-          fontSize: 9, color: 'var(--text-muted)',
-          marginTop: 2, paddingInline: 4,
-          fontWeight: 700,
+          fontSize: 11,
+          color: 'var(--text-muted)',
+          paddingInline: 4,
         }}>
           {formatTime(msg.timestamp)}
         </span>
