@@ -93,6 +93,8 @@ export default function Profile() {
           <img 
             src={dbUser?.profileImageUrl || 'https://api.dicebear.com/7.x/bottts/svg?seed=user'} 
             alt="profile" 
+            width={96}
+            height={96}
             className="w-24 h-24 rounded-3xl object-cover border-4 border-[var(--surface)] shadow-md bg-[var(--surface-2)]"
           />
           <span className="absolute bottom-1 right-1 w-5 h-5 bg-[var(--success)] rounded-full border-2 border-[var(--surface)]" />
