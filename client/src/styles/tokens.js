@@ -13,15 +13,22 @@ export const RADIUS = {
 }
 
 export const SIZE = {
-  sidebarWidth: 232,
-  sidebarCollapsed: 72,
-  topbarHeight: 64,
-  topbarHeightMobile: 56,
-  bottomNavHeight: 64,
-  touchTarget: 44,
-  maxContentWidth: 1180,
+  sidebarWidth: 240,        // was 232
+  sidebarCollapsed: 76,
+  topbarHeight: 72,         // was 64
+  topbarHeightMobile: 60,
+  bottomNavHeight: 68,
+  touchTarget: 48,          // was 44
+  maxContentWidth: 1280,    // was 1180, give more room
 }
 
 export const FONT = {
-  xs: 11, sm: 12, base: 14, md: 15, lg: 17, xl: 20, xxl: 24, xxxl: 30,
+  xs: 13,   // was 11
+  sm: 14,   // was 12
+  base: 16, // was 14
+  md: 17,   // was 15
+  lg: 19,   // was 17
+  xl: 23,   // was 20
+  xxl: 28,  // was 24
+  xxxl: 34, // was 30
 }
