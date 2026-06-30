@@ -1,3 +1,7 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700;800&display=swap');
+@import "leaflet/dist/leaflet.css";
+@import "tailwindcss";
+
 * {
   box-sizing: border-box;
 }
@@ -23,11 +27,6 @@ img, svg {
 .app-container * {
   max-width: 100%;
 }
-
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700;800&display=swap');
-@import "leaflet/dist/leaflet.css";
-
-@import "tailwindcss";
 
 @theme {
   --font-sans: 'Noto Sans', system-ui, -apple-system, sans-serif;
