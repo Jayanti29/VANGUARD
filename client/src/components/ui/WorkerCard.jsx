@@ -29,6 +29,8 @@ export default function WorkerCard({ worker, onHireClick }) {
           <img 
             src={worker.profileImageUrl || `https://api.dicebear.com/7.x/adventurer/svg?seed=${worker.name || 'worker'}`} 
             alt={worker.name} 
+            width={64}
+            height={64}
             className="w-16 h-16 rounded-2xl object-cover border-2 border-[var(--border)] bg-[var(--surface-2)]"
           />
           <span 
