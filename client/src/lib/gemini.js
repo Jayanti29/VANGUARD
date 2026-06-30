@@ -1,106 +1,90 @@
 const KEY = import.meta.env.VITE_GEMINI_API_KEY
-const BASE = 'https://generativelanguage.googleapis.com/v1beta'
+const MODEL_PRIMARY = 'gemini-2.5-flash'
+const MODEL_FALLBACK = 'gemini-flash-latest'
+const models = [MODEL_PRIMARY, MODEL_FALLBACK]
+const URL = 'https://generativelanguage.googleapis.com/v1beta'
 
-async function callGemini(model, body) {
-  if (!KEY) throw new Error('Gemini API key not configured')
-  
-  const res = await fetch(`${BASE}/models/${model}:generateContent?key=${KEY}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  })
-  
-  const data = await res.json()
-  
-  if (data.error) {
-    throw new Error(data.error.message || 'Gemini API error')
+export async function chatWithAI(message, location = 'India', language = 'en') {
+  if (!KEY) {
+    console.error('[Gemini] API key missing from environment')
+    return 'AI is not configured correctly. Please contact support.'
   }
-  
-  return data.candidates?.[0]?.content?.parts?.[0]?.text || ''
+
+  const langNames = { en:'English', hi:'Hindi', kn:'Kannada', ta:'Tamil',
+    te:'Telugu', ml:'Malayalam', bn:'Bengali', mr:'Marathi', gu:'Gujarati', pa:'Punjabi' }
+
+  let lastErr = null;
+  for (const m of models) {
+    try {
+      const res = await fetch(`${URL}/models/${m}:generateContent?key=${KEY}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{
+            text: `You are VANGUARD AI, a civic assistant. Respond only in ${langNames[language]||'English'}. Be concise (max 3 sentences). User location: ${location||'India'}. Question: ${message}`
+          }]}],
+          generationConfig: { temperature: 0.7, maxOutputTokens: 300 }
+        })
+      })
+
+      const data = await res.json()
+      console.log('[Gemini] raw response:', data)
+
+      if (data.error) {
+        console.error(`[Gemini] Model ${m} API error:`, data.error.message)
+        throw new Error(data.error.message)
+      }
+
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text
+      if (!text) {
+        console.error(`[Gemini] Model ${m} no text in response:`, data)
+        throw new Error('Empty response')
+      }
+
+      return text
+    } catch (err) {
+      console.warn(`Model ${m} failed:`, err)
+      lastErr = err
+    }
+  }
+
+  return `AI error: ${lastErr?.message || 'Could not connect to AI'}`
 }
 
 export async function analyzeIssueImage(base64Image, description = '', language = 'en') {
-  const prompt = `You are an AI civic safety analyzer for India.
-Analyze this image of a community issue.
-Return ONLY a valid JSON object with no other text.
-{
-  "category": "pothole",
-  "categoryLabel": "Pothole / Road Damage",
-  "severity": "red",
-  "severityLabel": "Dangerous",
-  "severityReason": "Large pothole causing vehicle damage risk",
-  "riskType": "accident",
-  "riskPrediction": "High risk of vehicle accidents especially for two-wheelers",
-  "impactScore": 85,
-  "impactFactors": ["High traffic area", "No warning signs"],
-  "recommendedAuthority": "Roads and Buildings Department",
-  "escalationLevel": "district",
-  "reportText": "A dangerous pothole has been identified requiring immediate attention.",
-  "suggestedAction": "Barricade the area and repair within 24 hours",
-  "isEmergency": false
-}
-Additional context: "${description}"
-Response language: ${language}
-IMPORTANT: Output MUST be valid parseable JSON only.`
-
-  const body = {
-    contents: [{
-      parts: [
-        { text: prompt },
-        {
-          inlineData: {
-            mimeType: 'image/jpeg',
-            data: base64Image
-          }
-        }
-      ]
-    }],
-    generationConfig: {
-      temperature: 0.1,
-      responseMimeType: "application/json"
-    }
+  if (!KEY) {
+    console.error('[Gemini] API key missing')
+    throw new Error('Gemini API key not configured')
   }
 
-  const models = ['gemini-1.5-flash', 'gemini-1.5-flash-latest', 'gemini-pro']
-  let lastErr = null
-  
+  let lastErr = null;
   for (const m of models) {
     try {
-      const text = await callGemini(m, body)
-      const cleaned = text.replace(/```json|```/g, '').trim()
-      return JSON.parse(cleaned)
+      const res = await fetch(`${URL}/models/${m}:generateContent?key=${KEY}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [
+            { text: `Analyze this civic issue image. Return ONLY valid JSON: {"category":"...","categoryLabel":"...","severity":"green|yellow|orange|red","severityLabel":"...","severityReason":"...","riskType":"...","riskPrediction":"...","impactScore":0-100,"impactFactors":["..."],"recommendedAuthority":"...","escalationLevel":"community|ward|district|emergency","reportText":"...","suggestedAction":"...","isEmergency":false}. Context: "${description||''}". Response language: ${language}` },
+            { inline_data: { mime_type: 'image/jpeg', data: base64Image } }
+          ]}],
+          generationConfig: { temperature: 0.1, maxOutputTokens: 1024 }
+        })
+      })
+
+      const data = await res.json()
+      if (data.error) throw new Error(data.error.message)
+
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || ''
+      const match = text.match(/\{[\s\S]*\}/)
+      if (!match) throw new Error('No JSON in Gemini response')
+
+      return JSON.parse(match[0])
     } catch (err) {
       console.warn(`Model ${m} failed:`, err)
       lastErr = err
     }
   }
-  
-  throw lastErr || new Error('All Gemini models failed')
-}
 
-export async function chatWithAI(message, userLocation = 'India', language = 'en') {
-  const prompt = `You are VANGUARD AI, a helpful civic assistant for Indian communities.
-Keep responses under 100 words. Be direct and helpful.
-Answer in the language: ${language}
-User location: ${userLocation}
-Question: ${message}`
-
-  const body = {
-    contents: [{ parts: [{ text: prompt }] }],
-    generationConfig: { temperature: 0.7 }
-  }
-
-  const models = ['gemini-1.5-flash', 'gemini-1.5-flash-latest', 'gemini-pro']
-  let lastErr = null
-  
-  for (const m of models) {
-    try {
-      return await callGemini(m, body)
-    } catch (err) {
-      console.warn(`Model ${m} failed:`, err)
-      lastErr = err
-    }
-  }
-  
   throw lastErr || new Error('All Gemini models failed')
 }
