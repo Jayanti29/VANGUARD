@@ -19,6 +19,7 @@ import useIssues from '../hooks/useIssues';
 import SeverityBadge from '../components/ui/SeverityBadge';
 import { db } from '../lib/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
+import PageHeader from '../components/ui/PageHeader';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -103,17 +104,10 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6">
-      
-      {/* 1. Header Admin banner */}
-      <div className="flex items-center gap-3 border-b border-border dark:border-slate-700 pb-4">
-        <div className="w-10 h-10 bg-accent text-white flex items-center justify-center rounded-xl shadow-md animate-pulse">
-          <ShieldCheck className="w-6 h-6" />
-        </div>
-        <div>
-          <h2 className="text-xl font-extrabold text-text dark:text-white leading-tight">Official Admin Dashboard</h2>
-          <p className="text-xs text-text-muted mt-0.5 font-bold">Review incoming complaints and dispatch local boards.</p>
-        </div>
-      </div>
+      <PageHeader 
+        title="Admin Control Center" 
+        subtitle="Review incoming complaints, dispatch local workers, and track safety logs" 
+      />
 
       {/* 2. Count Panels Row */}
       <div className="grid grid-cols-3 gap-4">
