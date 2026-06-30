@@ -21,6 +21,7 @@ import useAuth from '../hooks/useAuth';
 import useIssues from '../hooks/useIssues';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
+import PageHeader from '../components/ui/PageHeader';
 
 export default function Profile() {
   const navigate = useNavigate();
@@ -79,7 +80,8 @@ export default function Profile() {
   };
 
   return (
-    <div className="max-w-xl mx-auto space-y-6 pb-20 md:pb-6">
+    <div className="space-y-6">
+      <PageHeader title="Profile" subtitle="Manage your account settings" />
       
       {/* 1. Header Profile details Card */}
       <div className="card p-6 flex flex-col items-center text-center space-y-4 relative overflow-hidden">
