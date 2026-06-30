@@ -18,6 +18,7 @@ import {
 import { MapContainer, TileLayer, CircleMarker } from 'react-leaflet';
 import useAuth from '../hooks/useAuth';
 import PageHeader from '../components/ui/PageHeader';
+import Grid from '../components/ui/Grid';
 import { db } from '../lib/firebase';
 import { collection, addDoc, onSnapshot, query, where, serverTimestamp, orderBy } from 'firebase/firestore';
 import toast from 'react-hot-toast';
@@ -159,7 +160,7 @@ export default function Emergency() {
           {/* Category Select grid */}
           <div className="space-y-3">
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">{t('choose_emergency_category', 'Choose Emergency Category')}</span>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <Grid desktopCols={3} mobileCols={2} gap={12}>
               {categories.map(cat => {
                 const isSelected = selectedCategory?.id === cat.id;
                 return (
@@ -177,7 +178,7 @@ export default function Emergency() {
                   </button>
                 );
               })}
-            </div>
+            </Grid>
           </div>
 
           {selectedCategory && (
