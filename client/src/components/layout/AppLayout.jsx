@@ -1,58 +1,43 @@
-import { Outlet, useLocation } from 'react-router-dom'
+import { Outlet } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import TopBar from './TopBar'
 import BottomNav from './BottomNav'
-import { useState, useEffect } from 'react'
+import { useViewport } from '../../hooks/useViewport'
+import { SIZE } from '../../styles/tokens'
 
 export default function AppLayout() {
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
-  const location = useLocation()
-
-  useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 768)
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
-  }, [])
+  const { isDesktop } = useViewport()
 
   return (
     <div style={{
       display: 'flex',
-      minHeight: '100vh',
       width: '100%',
+      minHeight: '100vh',
       background: 'var(--bg)',
-      overflow: 'hidden'
     }}>
-      {/* Sidebar - desktop only */}
-      {!isMobile && (
-        <Sidebar />
-      )}
+      {isDesktop && <Sidebar />}
 
-      {/* Main content area */}
       <div style={{
         display: 'flex',
         flexDirection: 'column',
-        flex: 1,
+        flex: '1 1 0%',
         minWidth: 0,
-        height: '100vh',
-        overflow: 'hidden'
+        minHeight: '100vh',
       }}>
         <TopBar />
-        
+
         <main style={{
-          flex: 1,
-          overflowY: 'auto',
-          overflowX: 'hidden',
-          padding: isMobile ? '16px 16px 80px 16px' : '24px 32px',
+          flex: '1 1 auto',
           width: '100%',
-          maxWidth: '1200px',
-          marginLeft: 'auto',
-          marginRight: 'auto',
+          maxWidth: SIZE.maxContentWidth,
+          marginInline: 'auto',
+          padding: isDesktop ? '28px 32px' : '16px 16px 88px',
+          boxSizing: 'border-box',
         }}>
           <Outlet />
         </main>
 
-        {/* Bottom nav - mobile only */}
-        {isMobile && <BottomNav />}
+        {!isDesktop && <BottomNav />}
       </div>
     </div>
   )
