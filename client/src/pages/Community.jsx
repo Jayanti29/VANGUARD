@@ -395,12 +395,16 @@ export default function Community() {
           <div style={{
             display: 'flex',
             flexDirection: 'column',
-            gap: 10,
-            width: '100%',
+            gap: 12,
             overflowX: 'hidden',
+            width: '100%',
           }}>
             {filteredMessages.map(msg => (
-              <MessageBubble key={msg.id} msg={msg} isOwn={msg.senderId === currentUser?.uid} />
+              <MessageBubble
+                key={msg.id}
+                msg={msg}
+                isOwn={msg.senderId === currentUser?.uid}
+              />
             ))}
           </div>
         )}
