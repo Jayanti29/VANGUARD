@@ -10,7 +10,7 @@ import {
 import { doc, setDoc } from 'firebase/firestore'
 import { auth, db } from '../lib/firebase'
 import { useAuth } from '../contexts/AuthContext'
-import i18n from '../lib/i18n'
+import { useLanguage } from '../contexts/LanguageContext'
 import { useTranslation } from 'react-i18next'
 
 const LANGUAGES = [
@@ -37,6 +37,7 @@ export default function Onboarding() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const { currentUser } = useAuth()
+  const { changeLanguage } = useLanguage()
   const isMountedRef = useRef(true)
 
   // Step states
@@ -521,7 +522,7 @@ export default function Onboarding() {
                   onClick={() => {
                     setLanguage(l.code)
                     localStorage.setItem('vanguard_language', l.code)
-                    i18n.changeLanguage(l.code)
+                    changeLanguage(l.code)
                   }}
                 >
                   <div style={{fontSize:'18px', marginBottom:'4px'}}>{l.native}</div>
