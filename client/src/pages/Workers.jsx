@@ -16,6 +16,7 @@ import useAuth from '../hooks/useAuth';
 import { db } from '../lib/firebase';
 import { collection, addDoc, onSnapshot, query, where, orderBy, serverTimestamp, getDocs } from 'firebase/firestore';
 import toast from 'react-hot-toast';
+import PageHeader from '../components/ui/PageHeader';
 
 export default function Workers() {
   const { t } = useTranslation();
@@ -210,6 +211,7 @@ export default function Workers() {
 
   return (
     <div className="space-y-4">
+      <PageHeader title="Jobs & Workers" subtitle="Find local workers and post job opportunities" />
       {/* Tabs */}
       <div className="bg-slate-100 dark:bg-slate-800 p-1.5 rounded-xl flex gap-1.5 self-start max-w-md">
         <button
