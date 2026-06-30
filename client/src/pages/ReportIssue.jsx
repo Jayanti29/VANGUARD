@@ -24,6 +24,7 @@ import toast from 'react-hot-toast';
 import useAuth from '../hooks/useAuth';
 import { analyzeIssueImage } from '../lib/gemini';
 import { generateIssuePDF } from '../lib/pdfGenerator';
+import PageHeader from '../components/ui/PageHeader';
 
 function ClickMapEvents({ setCoords, setAddress }) {
   useMapEvents({
@@ -337,7 +338,11 @@ export default function ReportIssue() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="space-y-6">
+      <PageHeader 
+        title="Report Civic Issue" 
+        subtitle="Log safety hazards, road blockages, medical concerns, or public safety issues" 
+      />
       {/* progress card */}
       <div className="bg-[var(--surface)] p-4 rounded-2xl shadow-sm border border-[var(--border)]">
         {renderProgress()}
