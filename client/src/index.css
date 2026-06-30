@@ -183,3 +183,26 @@ button { font-family: inherit; cursor: pointer; }
 /* Leaflet dark mode */
 [data-theme="dark"] .leaflet-tile { filter: brightness(0.7) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7); }
 [data-theme="dark"] .leaflet-container { background: var(--bg); }
+
+[data-theme="dark"] {
+  /* Force all inputs/textareas/selects to be visible */
+  input, textarea, select {
+    color: #F1F5F9 !important;
+    background: #1C2E45 !important;
+  }
+  
+  /* Force placeholder text visible */
+  input::placeholder, textarea::placeholder {
+    color: #64748B !important;
+  }
+
+  /* Map tiles: ensure readable in dark mode */
+  .leaflet-tile-pane {
+    filter: brightness(0.75) contrast(1.1);
+  }
+  
+  /* Ensure card borders visible */
+  .card, [style*="var(--surface)"] {
+    border-color: #1E3A5F;
+  }
+}
