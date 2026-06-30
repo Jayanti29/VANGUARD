@@ -1,29 +1,16 @@
 import { Bell, Sun, Moon } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useTheme } from '../../contexts/ThemeContext'
-import { useTranslation } from 'react-i18next'
+import { useLanguage } from '../../contexts/LanguageContext'
 import { useViewport } from '../../hooks/useViewport'
 import { SIZE, SPACE, RADIUS, FONT } from '../../styles/tokens'
-
-const LANGUAGES = [
-  {code:'en',label:'English'},{code:'hi',label:'हिन्दी'},
-  {code:'kn',label:'ಕನ್ನಡ'},{code:'ta',label:'தமிழ்'},
-  {code:'te',label:'తెలుగు'},{code:'ml',label:'മലയാളം'},
-  {code:'bn',label:'বাংলা'},{code:'mr',label:'मराठी'},
-  {code:'gu',label:'ગુજરાતી'},{code:'pa',label:'ਪੰਜਾਬੀ'},
-]
 
 export default function TopBar() {
   const { userProfile } = useAuth()
   const { theme, toggleTheme } = useTheme()
-  const { i18n } = useTranslation()
+  const { currentLang, changeLanguage, languagesList } = useLanguage()
   const { isDesktop } = useViewport()
   const h = isDesktop ? SIZE.topbarHeight : SIZE.topbarHeightMobile
-
-  const handleLang = (e) => {
-    i18n.changeLanguage(e.target.value)
-    localStorage.setItem('vanguard_language', e.target.value)
-  }
 
   return (
     <header style={{
@@ -41,15 +28,15 @@ export default function TopBar() {
       ) : <div />}
 
       <div style={{display:'flex', alignItems:'center', gap: isDesktop ? SPACE.md : SPACE.sm}}>
-        <select value={i18n.language} onChange={handleLang} style={{
+        <select value={currentLang} onChange={(e) => changeLanguage(e.target.value)} style={{
           background:'var(--surface-2)', border:'1px solid var(--border)',
           borderRadius:RADIUS.sm, padding: isDesktop ? '6px 10px' : '4px 6px',
           fontSize: isDesktop ? FONT.sm : 10, color:'var(--text)', cursor:'pointer',
           maxWidth: isDesktop ? 'none' : 56,
         }}>
-          {LANGUAGES.map(l => (
+          {languagesList.map(l => (
             <option key={l.code} value={l.code}>
-              {isDesktop ? l.label : l.code.toUpperCase()}
+              {isDesktop ? l.nativeName : l.code.toUpperCase()}
             </option>
           ))}
         </select>
