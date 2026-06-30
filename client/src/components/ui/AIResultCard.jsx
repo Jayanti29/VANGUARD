@@ -16,6 +16,13 @@ import {
 } from 'lucide-react';
 import SeverityBadge from './SeverityBadge';
 
+function getScoreColor(score) {
+  if (score >= 81) return '#DC2626' // red
+  if (score >= 61) return '#EA580C' // orange  
+  if (score >= 31) return '#D97706' // yellow
+  return '#16A34A' // green
+}
+
 export default function AIResultCard({ 
   result, 
   onDownloadPdf, 
@@ -61,11 +68,12 @@ export default function AIResultCard({
   if (!result) return null;
 
   const theme = getSeverityTheme(result.severity);
+  const score = result.impactScore ?? 0;
 
   // Circular progress ring calculations
   const radius = 36;
   const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - ((result.impactScore || 0) / 100) * circumference;
+  const strokeDashoffset = circumference - (score / 100) * circumference;
 
   return (
     <div className="space-y-6">
@@ -76,13 +84,37 @@ export default function AIResultCard({
           <span>{theme.title}</span>
         </div>
         <div className="p-4 space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="bg-slate-100 dark:bg-slate-700 text-text dark:text-slate-300 text-xs font-bold px-2.5 py-1 rounded-md uppercase">
-              {result.categoryLabel || result.category?.replace('_', ' ')}
-            </span>
-            <span className="text-xs font-bold text-text-muted capitalize">
-              Escalation: <strong className="text-text dark:text-white">{result.escalationLevel}</strong>
-            </span>
+          <div style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'space-between',
+            gap: 20,
+            marginBottom: 16,
+          }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', 
+                             textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                Civic Category
+              </div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)', marginTop: 2 }}>
+                {result.categoryLabel || result.category?.replace('_', ' ')}
+              </div>
+            </div>
+
+            <div style={{
+              flexShrink: 0,
+              width: 64, height: 64,
+              borderRadius: '50%',
+              border: `4px solid ${getScoreColor(score)}`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 22,
+              fontWeight: 800,
+              color: getScoreColor(score),
+            }}>
+              {score}
+            </div>
           </div>
           <p className="text-sm font-semibold text-text dark:text-slate-200">
             {result.severityReason || 'Identified as community hazard by AI inspection.'}
@@ -120,7 +152,7 @@ export default function AIResultCard({
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
               <span className="text-2xl font-black text-text dark:text-white leading-none">
-                {result.impactScore || 0}
+                {score}
               </span>
               <span className="text-[10px] text-text-muted font-bold mt-0.5 uppercase tracking-wider">
                 Impact
