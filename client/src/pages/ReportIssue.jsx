@@ -74,6 +74,7 @@ export default function ReportIssue() {
   const [loadingTextIndex, setLoadingTextIndex] = useState(0);
   const [aiResult, setAiResult] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const recognitionRef = useRef(null);
   const loadingTexts = [
@@ -283,8 +284,57 @@ export default function ReportIssue() {
   };
 
   const handleSubmitIssue = async () => {
-    await handleSaveIssue(false);
-  };
+    if (!aiResult) {
+      toast.error('Please complete AI analysis first')
+      return
+    }
+
+    const currentUser = user;
+    const userProfile = dbUser;
+    const userDescription = description;
+    const uploadedPhotoUrl = photoBase64;
+    const issueLocation = coords ? { lat: coords[0], lng: coords[1] } : null;
+
+    setSubmitting(true)
+    try {
+      const docRef = await addDoc(collection(db, 'issues'), {
+        reporterId: currentUser?.uid || 'guest',
+        reporterName: dbUser?.name || userProfile?.name || 'Citizen',
+        category: aiResult.category || 'other',
+        categoryLabel: aiResult.categoryLabel || 'Community Issue',
+        severity: aiResult.severity || 'yellow',
+        severityLabel: aiResult.severityLabel || 'Needs Attention',
+        severityReason: aiResult.severityReason || '',
+        impactScore: Number(aiResult.impactScore) || 0,
+        riskType: aiResult.riskType || 'none',
+        riskPrediction: aiResult.riskPrediction || '',
+        recommendedAuthority: aiResult.recommendedAuthority || '',
+        escalationLevel: aiResult.escalationLevel || 'ward',
+        reportText: aiResult.reportText || '',
+        suggestedAction: aiResult.suggestedAction || '',
+        isEmergency: aiResult.isEmergency || false,
+        description: userDescription || '',
+        photoUrl: uploadedPhotoUrl || null,
+        lat: issueLocation?.lat || dbUser?.lat || null,
+        lng: issueLocation?.lng || dbUser?.lng || null,
+        village: dbUser?.village || '',
+        ward: dbUser?.ward || '',
+        district: dbUser?.district || '',
+        state: dbUser?.state || '',
+        status: 'open',
+        confirmations: [],
+        createdAt: new Date().toISOString(),
+      })
+      console.log('Issue saved with ID:', docRef.id)
+      toast.success('Issue submitted successfully!')
+      setTimeout(() => navigate('/'), 1500)
+    } catch (err) {
+      console.error('Submit issue error:', err)
+      toast.error('Failed to submit: ' + err.message)
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   // Generate and save local report PDF
   const downloadReportPDF = () => {
@@ -350,7 +400,12 @@ export default function ReportIssue() {
   }
 
   return (
-    <div className="space-y-6">
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      minHeight: 'calc(100vh - 180px)',
+      gap: 24,
+    }}>
       <PageHeader 
         title="Report Civic Issue" 
         subtitle="Log safety hazards, road blockages, medical concerns, or public safety issues" 
@@ -360,357 +415,364 @@ export default function ReportIssue() {
         {renderProgress()}
       </div>
 
-      {step === 1 && (
-        <div className="bg-[var(--surface)] p-6 rounded-2xl border border-[var(--border)] shadow-sm space-y-6">
-          <h2 className="text-lg font-black text-[var(--text)] flex items-center gap-2">
-            <Camera className="w-5 h-5 text-[var(--accent)]" /> {t('step_1_upload', 'Step 1: Upload Civic Hazard Photo')}
-          </h2>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+        {step === 1 && (
+          <div className="bg-[var(--surface)] p-6 rounded-2xl border border-[var(--border)] shadow-sm flex flex-col justify-between flex-1" style={{ minHeight: '400px' }}>
+            <div className="space-y-6">
+              <h2 className="text-lg font-black text-[var(--text)] flex items-center gap-2">
+                <Camera className="w-5 h-5 text-[var(--accent)]" /> {t('step_1_upload', 'Step 1: Upload Civic Hazard Photo')}
+              </h2>
 
-          {!previewUrl ? (
-            <label className="flex flex-col items-center justify-center border-2 border-dashed border-[var(--border)] hover:border-[var(--accent)] rounded-2xl h-[180px] cursor-pointer transition p-4 text-center">
-              <Camera className="w-10 h-10 text-slate-400 mb-2" />
-              <span className="text-sm font-bold text-[var(--text)]">{t('take_photo_upload', 'Take Photo or Upload from Gallery')}</span>
-              <span className="text-[10px] text-[var(--text-muted)] mt-1">{t('accepts_images', 'Accepts images (JPEG, PNG) up to 5MB')}</span>
-              <input 
-                type="file" 
-                accept="image/*" 
-                onChange={handlePhotoUpload} 
-                className="hidden" 
-              />
-            </label>
-          ) : (
-            <div className="space-y-4">
-              <div className="relative w-full h-[220px] rounded-xl overflow-hidden border border-[var(--border)]">
-                <img 
-                  src={previewUrl} 
-                  alt="Hazard preview" 
-                  className="w-full h-full object-cover"
-                />
-                <button 
-                  onClick={() => {
-                    setPhotoFile(null);
-                    setPreviewUrl(null);
-                    setPhotoBase64(null);
-                  }}
-                  className="absolute top-3 right-3 bg-red-600 hover:bg-red-700 text-white rounded-xl px-3 py-1.5 text-xs font-bold shadow-md cursor-pointer"
-                >
-                  {t('change_photo', 'Change Photo')}
-                </button>
-              </div>
-            </div>
-          )}
-
-          <div className="flex justify-between items-center pt-2">
-            <button 
-              onClick={() => navigate('/')}
-              className="h-12 px-5 bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--text)] text-xs font-bold rounded-xl cursor-pointer"
-            >
-              {t('cancel', 'Cancel')}
-            </button>
-            <button 
-              disabled={!photoFile}
-              onClick={() => setStep(2)}
-              className="h-12 px-6 bg-[var(--accent)] hover:bg-opacity-90 disabled:opacity-50 text-white text-xs font-bold rounded-xl cursor-pointer shadow-sm flex items-center gap-1"
-            >
-              {t('next_step', 'Next Step')}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {step === 2 && (
-        <div className="bg-[var(--surface)] p-6 rounded-2xl border border-[var(--border)] shadow-sm space-y-6">
-          <h2 className="text-lg font-black text-[var(--text)] flex items-center gap-2">
-            <Mic className="w-5 h-5 text-[var(--accent)]" /> {t('step_2_describe', 'Step 2: Describe the Hazard')}
-          </h2>
-
-          <div className="space-y-4">
-            <label className="text-xs font-bold text-[var(--text-muted)]">{t('describe_using_voice', 'Describe using text or record voice note:')}</label>
-            <div className="relative">
-              <textarea 
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder={t('textarea_placeholder', 'Describe the issue (e.g. Broken road with dangerous potholes near public park, water pipe leakage creating a massive sinkhole...)')}
-                className="w-full h-32 p-4 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-[var(--accent)] text-[var(--text)]"
-                maxLength={300}
-              />
-              <span className="absolute bottom-3 right-3 text-[10px] font-bold text-[var(--text-muted)]">
-                {description.length}/300
-              </span>
-            </div>
-
-            <div className="flex flex-col items-center justify-center p-4 bg-[var(--surface-2)] rounded-xl border border-[var(--border)]">
-              <button
-                onClick={toggleListening}
-                className={`w-14 h-14 rounded-full flex items-center justify-center shadow-md transition cursor-pointer ${
-                  isListening 
-                    ? 'bg-red-600 text-white animate-pulse' 
-                    : 'bg-[var(--accent-soft)] text-[var(--accent)] hover:bg-[var(--accent)] hover:text-white'
-                }`}
-                title="Tap to speak"
-              >
-                <Mic className="w-6 h-6" />
-              </button>
-              <span className="text-xs font-bold mt-2 text-[var(--text)]">
-                {isListening ? t('listening_speak', "Listening... Speak now") : t('tap_to_speak', "Tap to Speak (Voice Input)")}
-              </span>
-              {transcription && (
-                <p className="text-xs text-[var(--accent)] font-bold mt-2 text-center italic">
-                  {t('transcribed', 'Transcribed')}: "{transcription}"
-                </p>
+              {!previewUrl ? (
+                <label className="flex flex-col items-center justify-center border-2 border-dashed border-[var(--border)] hover:border-[var(--accent)] rounded-2xl h-[180px] cursor-pointer transition p-4 text-center">
+                  <Camera className="w-10 h-10 text-slate-400 mb-2" />
+                  <span className="text-sm font-bold text-[var(--text)]">{t('take_photo_upload', 'Take Photo or Upload from Gallery')}</span>
+                  <span className="text-[10px] text-[var(--text-muted)] mt-1">{t('accepts_images', 'Accepts images (JPEG, PNG) up to 5MB')}</span>
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    onChange={handlePhotoUpload} 
+                    className="hidden" 
+                  />
+                </label>
+              ) : (
+                <div className="space-y-4">
+                  <div className="relative w-full h-[220px] rounded-xl overflow-hidden border border-[var(--border)]">
+                    <img 
+                      src={previewUrl} 
+                      alt="Hazard preview" 
+                      className="w-full h-full object-cover"
+                    />
+                    <button 
+                      onClick={() => {
+                        setPhotoFile(null);
+                        setPreviewUrl(null);
+                        setPhotoBase64(null);
+                      }}
+                      className="absolute top-3 right-3 bg-red-600 hover:bg-red-700 text-white rounded-xl px-3 py-1.5 text-xs font-bold shadow-md cursor-pointer"
+                    >
+                      {t('change_photo', 'Change Photo')}
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
-          </div>
 
-          <div className="flex justify-between items-center pt-2">
-            <button 
-              onClick={() => setStep(1)}
-              className="h-12 px-5 bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--text)] text-xs font-bold rounded-xl cursor-pointer"
-            >
-              {t('back', 'Back')}
-            </button>
-            <button 
-              onClick={() => setStep(3)}
-              className="h-12 px-6 bg-[var(--accent)] hover:bg-opacity-90 text-white text-xs font-bold rounded-xl cursor-pointer shadow-sm"
-            >
-              {t('next_step', 'Next Step')}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {step === 3 && (
-        <div className="bg-[var(--surface)] p-6 rounded-2xl border border-[var(--border)] shadow-sm space-y-6">
-          <h2 className="text-lg font-black text-[var(--text)] flex items-center gap-2">
-            <MapPin className="w-5 h-5 text-[var(--accent)]" /> {t('step_3_confirm', 'Step 3: Confirm GPS Location')}
-          </h2>
-
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-3.5 bg-[var(--surface-2)] rounded-xl border border-[var(--border)] gap-2">
-              <div className="min-w-0 flex-1">
-                <span className="text-xs font-bold text-[var(--accent)] uppercase block">{t('gps_detected', 'GPS Detected Address')}</span>
-                <p className="text-xs font-bold text-[var(--text)] truncate">{address}</p>
-              </div>
+            <div className="flex justify-between items-center pt-6">
               <button 
-                onClick={detectLocation}
-                className="w-9 h-9 flex items-center justify-center bg-[var(--surface)] rounded-lg border border-[var(--border)] text-[var(--accent)] cursor-pointer hover:bg-[var(--surface-2)]"
-                title="Refresh location"
+                onClick={() => navigate('/')}
+                className="h-12 px-5 bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--text)] text-xs font-bold rounded-xl cursor-pointer"
               >
-                <RefreshCw className="w-4 h-4" />
+                {t('cancel', 'Cancel')}
+              </button>
+              <button 
+                disabled={!photoFile}
+                onClick={() => setStep(2)}
+                className="h-12 px-6 bg-[var(--accent)] hover:bg-opacity-90 disabled:opacity-50 text-white text-xs font-bold rounded-xl cursor-pointer shadow-sm flex items-center gap-1"
+              >
+                {t('next_step', 'Next Step')}
               </button>
             </div>
+          </div>
+        )}
 
-            <div className="h-[200px] w-full rounded-xl overflow-hidden border border-[var(--border)] relative z-0">
-              <MapContainer
-                center={coords}
-                zoom={13}
-                style={{ width: '100%', height: '100%' }}
-                zoomControl={false}
+        {step === 2 && (
+          <div className="bg-[var(--surface)] p-6 rounded-2xl border border-[var(--border)] shadow-sm flex flex-col justify-between flex-1" style={{ minHeight: '400px' }}>
+            <div className="space-y-6">
+              <h2 className="text-lg font-black text-[var(--text)] flex items-center gap-2">
+                <Mic className="w-5 h-5 text-[var(--accent)]" /> {t('step_2_describe', 'Step 2: Describe the Hazard')}
+              </h2>
+
+              <div className="space-y-4">
+                <label className="text-xs font-bold text-[var(--text-muted)]">{t('describe_using_voice', 'Describe using text or record voice note:')}</label>
+                <div className="relative">
+                  <textarea 
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder={t('textarea_placeholder', 'Describe the issue (e.g. Broken road with dangerous potholes near public park, water pipe leakage creating a massive sinkhole...)')}
+                    className="w-full h-32 p-4 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-[var(--accent)] text-[var(--text)]"
+                    maxLength={300}
+                  />
+                  <span className="absolute bottom-3 right-3 text-[10px] font-bold text-[var(--text-muted)]">
+                    {description.length}/300
+                  </span>
+                </div>
+
+                <div className="flex flex-col items-center justify-center p-4 bg-[var(--surface-2)] rounded-xl border border-[var(--border)]">
+                  <button
+                    onClick={toggleListening}
+                    className={`w-14 h-14 rounded-full flex items-center justify-center shadow-md transition cursor-pointer ${
+                      isListening 
+                        ? 'bg-red-600 text-white animate-pulse' 
+                        : 'bg-[var(--accent-soft)] text-[var(--accent)] hover:bg-[var(--accent)] hover:text-white'
+                    }`}
+                    title="Tap to speak"
+                  >
+                    <Mic className="w-6 h-6" />
+                  </button>
+                  <span className="text-xs font-bold mt-2 text-[var(--text)]">
+                    {isListening ? t('listening_speak', "Listening... Speak now") : t('tap_to_speak', "Tap to Speak (Voice Input)")}
+                  </span>
+                  {transcription && (
+                    <p className="text-xs text-[var(--accent)] font-bold mt-2 text-center italic">
+                      {t('transcribed', 'Transcribed')}: "{transcription}"
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-between items-center pt-6">
+              <button 
+                onClick={() => setStep(1)}
+                className="h-12 px-5 bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--text)] text-xs font-bold rounded-xl cursor-pointer"
               >
-                <TileLayer
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                />
-                <ClickMapEvents setCoords={setCoords} setAddress={setAddress} />
-                <CircleMarker
-                  center={coords}
-                  radius={10}
-                  fillColor="#1B6FD8"
-                  color="#FFFFFF"
-                  weight={2}
-                  fillOpacity={0.8}
-                />
-              </MapContainer>
+                {t('back', 'Back')}
+              </button>
+              <button 
+                onClick={() => setStep(3)}
+                className="h-12 px-6 bg-[var(--accent)] hover:bg-opacity-90 text-white text-xs font-bold rounded-xl cursor-pointer shadow-sm"
+              >
+                {t('next_step', 'Next Step')}
+              </button>
             </div>
-            <p className="text-[10px] text-[var(--text-muted)] font-bold text-center">
-              {t('map_drag_instruction', 'Drag or tap anywhere on the map above to manually correct the pin position.')}
-            </p>
           </div>
+        )}
 
-          <div className="flex justify-between items-center pt-2">
-            <button 
-              onClick={() => setStep(2)}
-              className="h-12 px-5 bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--text)] text-xs font-bold rounded-xl cursor-pointer"
-            >
-              {t('back', 'Back')}
-            </button>
-            <button 
-              onClick={runAIAnalysis}
-              className="h-12 px-6 bg-[var(--accent)] hover:bg-opacity-90 text-white text-xs font-bold rounded-xl cursor-pointer shadow-sm flex items-center gap-1.5"
-            >
-              <Sparkles className="w-4 h-4 text-yellow-300" /> {t('analyze_with_ai', 'Analyze with AI')}
-            </button>
-          </div>
-        </div>
-      )}
+        {step === 3 && (
+          <div className="bg-[var(--surface)] p-6 rounded-2xl border border-[var(--border)] shadow-sm flex flex-col justify-between flex-1" style={{ minHeight: '400px' }}>
+            <div className="space-y-6">
+              <h2 className="text-lg font-black text-[var(--text)] flex items-center gap-2">
+                <MapPin className="w-5 h-5 text-[var(--accent)]" /> {t('step_3_confirm', 'Step 3: Confirm GPS Location')}
+              </h2>
 
-      {step === 4 && aiResult && (
-        <div style={{ width: '100%', maxWidth: 'none' }} className="space-y-6">
-          {/* Results dashboard card */}
-          <div style={{
-            width: '100%',
-            maxWidth: 'none',
-          }}>
-            
-            {/* Severity Colored banner */}
-            <div style={{
-              height: 52,
-              borderRadius: 14,
-              background: aiResult.severity === 'red' ? '#DC2626' :
-                          aiResult.severity === 'orange' ? '#EA580C' :
-                          aiResult.severity === 'yellow' ? '#D97706' : '#16A34A',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              paddingInline: 20,
-              color: '#fff',
-              marginBottom: 20,
-            }}>
-              <span style={{ fontSize: FONT.lg, fontWeight: 800 }} className="uppercase flex items-center gap-1.5">
-                <AlertTriangle className="w-5 h-5" /> {aiResult.severityLabel || 'Hazard Status'}
-              </span>
-              <span style={{ fontSize: FONT.xs, fontWeight: 800 }} className="uppercase bg-white bg-opacity-20 px-2.5 py-1 rounded">
-                {t('escalated_to', 'Escalated to')}: {aiResult.escalationLevel}
-              </span>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-3.5 bg-[var(--surface-2)] rounded-xl border border-[var(--border)] gap-2">
+                  <div className="min-w-0 flex-1">
+                    <span className="text-xs font-bold text-[var(--accent)] uppercase block">{t('gps_detected', 'GPS Detected Address')}</span>
+                    <p className="text-xs font-bold text-[var(--text)] truncate">{address}</p>
+                  </div>
+                  <button 
+                    onClick={detectLocation}
+                    className="w-9 h-9 flex items-center justify-center bg-[var(--surface)] rounded-lg border border-[var(--border)] text-[var(--accent)] cursor-pointer hover:bg-[var(--surface-2)]"
+                    title="Refresh location"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="h-[200px] w-full rounded-xl overflow-hidden border border-[var(--border)] relative z-0">
+                  <MapContainer
+                    center={coords}
+                    zoom={13}
+                    style={{ width: '100%', height: '100%' }}
+                    zoomControl={false}
+                  >
+                    <TileLayer
+                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    />
+                    <ClickMapEvents setCoords={setCoords} setAddress={setAddress} />
+                    <CircleMarker
+                      center={coords}
+                      radius={10}
+                      fillColor="#1B6FD8"
+                      color="#FFFFFF"
+                      weight={2}
+                      fillOpacity={0.8}
+                    />
+                  </MapContainer>
+                </div>
+                <p className="text-[10px] text-[var(--text-muted)] font-bold text-center">
+                  {t('map_drag_instruction', 'Drag or tap anywhere on the map above to manually correct the pin position.')}
+                </p>
+              </div>
             </div>
 
-            <div style={{
-              background: 'var(--surface)',
-              border: '1px solid var(--border)',
-              borderRadius: 20,
-              padding: 32,
-            }} className="space-y-6">
-              
-              {/* Category info */}
+            <div className="flex justify-between items-center pt-6">
+              <button 
+                onClick={() => setStep(2)}
+                className="h-12 px-5 bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--text)] text-xs font-bold rounded-xl cursor-pointer"
+              >
+                {t('back', 'Back')}
+              </button>
+              <button 
+                onClick={runAIAnalysis}
+                className="h-12 px-6 bg-[var(--accent)] hover:bg-opacity-90 text-white text-xs font-bold rounded-xl cursor-pointer shadow-sm flex items-center gap-1.5"
+              >
+                <Sparkles className="w-4 h-4 text-yellow-300" /> {t('analyze_with_ai', 'Analyze with AI')}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {step === 4 && aiResult && (
+          <div style={{ width: '100%', maxWidth: 'none' }} className="space-y-6 flex-1 flex flex-col justify-between">
+            <div>
+              {/* Severity Colored banner */}
               <div style={{
+                height: 52,
+                borderRadius: 14,
+                background: aiResult.severity === 'red' ? '#DC2626' :
+                            aiResult.severity === 'orange' ? '#EA580C' :
+                            aiResult.severity === 'yellow' ? '#D97706' : '#16A34A',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                borderBottom: '1px solid var(--border)',
-                paddingBottom: 20,
-                marginBottom: 24,
+                paddingInline: 20,
+                color: '#fff',
+                marginBottom: 20,
               }}>
-                <div>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block' }}>
-                    {t('civic_category', 'Civic Category')}
-                  </span>
-                  <h3 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', marginTop: 2 }}>
-                    {aiResult.categoryLabel || aiResult.category?.replace('_', ' ')}
-                  </h3>
-                </div>
+                <span style={{ fontSize: FONT.lg, fontWeight: 800 }} className="uppercase flex items-center gap-1.5">
+                  <AlertTriangle className="w-5 h-5" /> {aiResult.severityLabel || 'Hazard Status'}
+                </span>
+                <span style={{ fontSize: FONT.xs, fontWeight: 800 }} className="uppercase bg-white bg-opacity-20 px-2.5 py-1 rounded">
+                  {t('escalated_to', 'Escalated to')}: {aiResult.escalationLevel}
+                </span>
+              </div>
+
+              <div style={{
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
+                borderRadius: 20,
+                padding: 32,
+              }} className="space-y-6">
+                
+                {/* Category info */}
                 <div style={{
-                  flexShrink: 0,
-                  width: 64, height: 64,
-                  borderRadius: '50%',
-                  border: `4px solid ${getScoreColor(aiResult.impactScore)}`,
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: 22,
-                  fontWeight: 800,
-                  color: getScoreColor(aiResult.impactScore),
+                  justifyContent: 'space-between',
+                  borderBottom: '1px solid var(--border)',
+                  paddingBottom: 20,
+                  marginBottom: 24,
                 }}>
-                  {aiResult.impactScore}
+                  <div>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block' }}>
+                      {t('civic_category', 'Civic Category')}
+                    </span>
+                    <h3 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', marginTop: 2 }}>
+                      {aiResult.categoryLabel || aiResult.category?.replace('_', ' ')}
+                    </h3>
+                  </div>
+                  <div style={{
+                    flexShrink: 0,
+                    width: 64, height: 64,
+                    borderRadius: '50%',
+                    border: `4px solid ${getScoreColor(aiResult.impactScore)}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 22,
+                    fontWeight: 800,
+                    color: getScoreColor(aiResult.impactScore),
+                  }}>
+                    {aiResult.impactScore}
+                  </div>
                 </div>
-              </div>
 
-              {/* Severity choose explanation reason */}
-              <div style={{ marginBottom: 24 }} className="space-y-1.5">
-                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block' }}>
-                  {t('analysis_reason', 'Analysis Reason')}
-                </span>
-                <p style={{ fontSize: 17, fontWeight: 600, color: 'var(--text)', lineHeight: '1.7' }}>
-                  {aiResult.severityReason}
-                </p>
-              </div>
-
-              {/* Risk Prediction summary */}
-              <div style={{ marginBottom: 24 }} className="p-4 bg-[var(--danger)]/10 border border-[var(--danger)]/20 rounded-xl flex items-start gap-3">
-                <AlertTriangle className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" />
-                <div>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--danger)', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block' }}>
-                    {t('predicted_risk', 'predicted community risk')}
+                {/* Severity choose explanation reason */}
+                <div style={{ marginBottom: 24 }} className="space-y-1.5">
+                  <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block' }}>
+                    {t('analysis_reason', 'Analysis Reason')}
                   </span>
-                  <p style={{ fontSize: 17, fontWeight: 700, color: 'var(--danger)', marginTop: 2, lineHeight: '1.6' }}>
-                    {aiResult.riskPrediction}
+                  <p style={{ fontSize: 17, fontWeight: 600, color: 'var(--text)', lineHeight: '1.7' }}>
+                    {aiResult.severityReason}
                   </p>
                 </div>
-              </div>
 
-              {/* Recommended Authority */}
-              <div style={{ marginBottom: 24 }} className="p-4 bg-[var(--surface-2)] rounded-xl border border-[var(--border)] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="min-w-0">
+                {/* Risk Prediction summary */}
+                <div style={{ marginBottom: 24 }} className="p-4 bg-[var(--danger)]/10 border border-[var(--danger)]/20 rounded-xl flex items-start gap-3">
+                  <AlertTriangle className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--danger)', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block' }}>
+                      {t('predicted_risk', 'predicted community risk')}
+                    </span>
+                    <p style={{ fontSize: 17, fontWeight: 700, color: 'var(--danger)', marginTop: 2, lineHeight: '1.6' }}>
+                      {aiResult.riskPrediction}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Recommended Authority */}
+                <div style={{ marginBottom: 24 }} className="p-4 bg-[var(--surface-2)] rounded-xl border border-[var(--border)] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block' }}>
+                      {t('dispatch_agency', 'recommended dispatch agency')}
+                    </span>
+                    <h4 style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)', marginTop: 2 }}>
+                      {aiResult.recommendedAuthority}
+                    </h4>
+                  </div>
+                  <div className="flex gap-2">
+                    <a 
+                      href="tel:100"
+                      className="w-12 h-12 bg-[var(--accent-soft)] text-[var(--accent)] rounded-xl flex items-center justify-center cursor-pointer"
+                      title="Call helpline"
+                    >
+                      <Phone className="w-5 h-5" />
+                    </a>
+                    <a 
+                      href="mailto:civic@vanguard.in"
+                      className="w-12 h-12 bg-[var(--surface-3)] text-[var(--text-muted)] rounded-xl flex items-center justify-center border border-[var(--border)] cursor-pointer"
+                      title="Send official report"
+                    >
+                      <Mail className="w-5 h-5" />
+                    </a>
+                  </div>
+                </div>
+
+                {/* Official complaint paragraph */}
+                <div style={{ marginBottom: 24 }} className="space-y-1.5">
                   <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block' }}>
-                    {t('dispatch_agency', 'recommended dispatch agency')}
+                    {t('complaint_text', 'Generated Complaint Text')}
                   </span>
-                  <h4 style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)', marginTop: 2 }}>
-                    {aiResult.recommendedAuthority}
-                  </h4>
+                  <blockquote style={{ borderLeft: '4px solid var(--accent)', paddingLeft: 16, paddingBlock: 4, fontStyle: 'italic', fontSize: 17, color: 'var(--text-muted)', lineHeight: '1.7' }}>
+                    "{aiResult.reportText}"
+                  </blockquote>
                 </div>
-                <div className="flex gap-2">
-                  <a 
-                    href="tel:100"
-                    className="w-12 h-12 bg-[var(--accent-soft)] text-[var(--accent)] rounded-xl flex items-center justify-center cursor-pointer"
-                    title="Call helpline"
+
+                {/* Action buttons grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                  <button
+                    onClick={downloadReportPDF}
+                    className="h-12 bg-[var(--surface)] border border-[var(--accent)] text-[var(--accent)] font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 hover:bg-[var(--surface-2)] cursor-pointer"
                   >
-                    <Phone className="w-5 h-5" />
-                  </a>
-                  <a 
-                    href="mailto:civic@vanguard.in"
-                    className="w-12 h-12 bg-[var(--surface-3)] text-[var(--text-muted)] rounded-xl flex items-center justify-center border border-[var(--border)] cursor-pointer"
-                    title="Send official report"
+                    <Download className="w-4 h-4" /> {t('download_pdf_report', 'Download PDF Report')}
+                  </button>
+                  <button
+                    disabled={isSaving}
+                    onClick={() => handleSaveIssue(true)}
+                    className="h-12 bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
                   >
-                    <Mail className="w-5 h-5" />
-                  </a>
+                    <Share2 className="w-4 h-4" /> {t('share_with_community', 'Share with Community')}
+                  </button>
                 </div>
-              </div>
-
-              {/* Official complaint paragraph */}
-              <div style={{ marginBottom: 24 }} className="space-y-1.5">
-                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block' }}>
-                  {t('complaint_text', 'Generated Complaint Text')}
-                </span>
-                <blockquote style={{ borderLeft: '4px solid var(--accent)', paddingLeft: 16, paddingBlock: 4, fontStyle: 'italic', fontSize: 17, color: 'var(--text-muted)', lineHeight: '1.7' }}>
-                  "{aiResult.reportText}"
-                </blockquote>
-              </div>
-
-              {/* Action buttons grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-                <button
-                  onClick={downloadReportPDF}
-                  className="h-12 bg-[var(--surface)] border border-[var(--accent)] text-[var(--accent)] font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 hover:bg-[var(--surface-2)] cursor-pointer"
-                >
-                  <Download className="w-4 h-4" /> {t('download_pdf_report', 'Download PDF Report')}
-                </button>
-                <button
-                  disabled={isSaving}
-                  onClick={() => handleSaveIssue(true)}
-                  className="h-12 bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
-                >
-                  <Share2 className="w-4 h-4" /> {t('share_with_community', 'Share with Community')}
-                </button>
               </div>
             </div>
-          </div>
 
-          {/* Core Submit action bar */}
-          <div className="flex gap-3 justify-end items-center">
-            <button
-              onClick={() => setStep(3)}
-              className="h-12 px-6 bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--text)] text-xs font-bold rounded-xl cursor-pointer"
-            >
-              {t('modify_location', 'Modify Location')}
-            </button>
-            <button
-              disabled={isSaving}
-              onClick={handleSubmitIssue}
-              className="h-12 px-8 bg-[var(--accent)] hover:bg-opacity-95 text-white text-xs font-bold rounded-xl cursor-pointer flex items-center gap-1 disabled:opacity-50 shadow-md"
-            >
-              {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} {t('submit_issue_log', 'Submit Issue Log')}
-            </button>
+            {/* Core Submit action bar */}
+            <div className="flex gap-3 justify-end items-center pt-6">
+              <button
+                onClick={() => setStep(3)}
+                className="h-12 px-6 bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--text)] text-xs font-bold rounded-xl cursor-pointer"
+              >
+                {t('modify_location', 'Modify Location')}
+              </button>
+              <button
+                onClick={handleSubmitIssue}
+                disabled={submitting || !aiResult}
+                style={{
+                  opacity: (submitting || !aiResult) ? 0.6 : 1,
+                  cursor: (submitting || !aiResult) ? 'not-allowed' : 'pointer',
+                }}
+                className="h-12 px-8 bg-[var(--accent)] text-white text-xs font-bold rounded-xl flex items-center gap-1 shadow-md"
+              >
+                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} {t('submit_issue_log', 'Submit Issue Log')}
+              </button>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
