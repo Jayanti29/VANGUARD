@@ -659,8 +659,8 @@ export default function Onboarding() {
             <button 
               style={styles.primaryBtn} 
               onClick={() => {
-                if (!name.trim()) {
-                  setStepError('Please enter your name');
+                if (name.trim().length < 2) {
+                  setStepError('Please enter a valid name');
                   return;
                 }
                 setStepError('');
