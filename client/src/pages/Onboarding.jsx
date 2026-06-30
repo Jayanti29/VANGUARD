@@ -497,8 +497,8 @@ export default function Onboarding() {
       <div style={styles.card}>
         {/* Header */}
         <div style={{ ...styles.header, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <img src="/vanguard-logo.png" alt="VANGUARD"
-               style={{width:'120px', objectFit:'contain', marginBottom:'16px'}} />
+          <img src="/vanguard-logo-full.png" alt="VANGUARD"
+               style={{width: 120, height: 'auto', objectFit: 'contain', display: 'block', margin: '0 auto 16px auto'}} />
           <h1 style={styles.title}>VANGUARD</h1>
           <p style={styles.subtitle}>Community Protection Platform</p>
         </div>
