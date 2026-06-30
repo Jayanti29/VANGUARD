@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import useAuth from '../hooks/useAuth';
 import { chatWithAI } from '../lib/gemini';
+import PageHeader from '../components/ui/PageHeader';
 import toast from 'react-hot-toast';
 
 export default function AIAssistant() {
@@ -195,34 +196,23 @@ export default function AIAssistant() {
   ];
 
   return (
-    <div className="flex flex-col h-[calc(100vh-140px)] md:h-[calc(100vh-100px)] rounded-2xl border border-[var(--border)] bg-[var(--bg)] overflow-hidden shadow-sm">
-      
-      {/* Assistant Header */}
-      <div className="bg-[var(--surface)] border-b border-[var(--border)] px-6 py-4 flex items-center justify-between z-10">
-        <div className="flex items-center gap-2.5">
-          <div className="w-10 h-10 rounded-xl bg-[var(--accent-soft)] text-[var(--accent)] flex items-center justify-center">
-            <Bot className="w-5 h-5" />
-          </div>
-          <div>
-            <h2 className="text-sm font-black text-[var(--text)]">
-              VANGUARD AI Assistant
-            </h2>
-            <span className="text-[10px] text-[var(--text-muted)] font-bold block mt-0.5">
-              Ask anything about civic procedures, authorities, and safety risks.
-            </span>
-          </div>
-        </div>
-
-        {messages.length > 0 && (
-          <button
-            onClick={clearChat}
-            className="w-10 h-10 rounded-xl bg-[var(--surface-2)] hover:bg-[var(--surface-3)] flex items-center justify-center text-red-600 cursor-pointer"
-            title="Clear Chat History"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
-        )}
-      </div>
+    <>
+      <PageHeader 
+        title="AI Civic Assistant" 
+        subtitle="Ask anything about civic procedures, local guidelines, and safety alerts." 
+        action={
+          messages.length > 0 ? (
+            <button
+              onClick={clearChat}
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg flex items-center gap-2 cursor-pointer transition"
+              title="Clear Chat History"
+            >
+              <Trash2 className="w-4 h-4" /> Clear Chat
+            </button>
+          ) : undefined
+        }
+      />
+      <div className="flex flex-col h-[calc(100vh-230px)] rounded-2xl border border-[var(--border)] bg-[var(--bg)] overflow-hidden shadow-sm">
 
       {/* Development status block */}
       {isDev && (
@@ -336,5 +326,6 @@ export default function AIAssistant() {
         </button>
       </form>
     </div>
+    </>
   );
 }
