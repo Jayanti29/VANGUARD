@@ -19,6 +19,7 @@ import toast from 'react-hot-toast';
 import PageHeader from '../components/ui/PageHeader';
 import Grid from '../components/ui/Grid';
 import Card from '../components/ui/Card';
+import WorkerCard from '../components/ui/WorkerCard';
 
 export default function Workers() {
   const { t } = useTranslation();
@@ -277,49 +278,14 @@ export default function Workers() {
           ) : (
             <Grid desktopCols={1} mobileCols={1} gap={16}>
               {filteredWorkers.map(worker => (
-                <Card 
+                <WorkerCard
                   key={worker.id}
-                  onClick={() => setSelectedWorker(worker)}
-                  padding="16px"
-                  style={{ display: 'flex', gap: '16px' }}
-                >
-                  <div className="w-14 h-14 bg-slate-100 rounded-full flex-shrink-0 overflow-hidden border border-border dark:border-slate-650">
-                    <img 
-                      src={`https://api.dicebear.com/7.x/bottts/svg?seed=${worker.userId || worker.name}`}
-                      alt={worker.name} 
-                      width={56}
-                      height={56}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <h4 className="text-xs font-bold text-text dark:text-white truncate">{worker.name}</h4>
-                      {worker.district === dbUser?.district && (
-                        <span className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200 text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">
-                          {t('near_you', 'Near You')}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1.5 mt-0.5">
-                      {renderStars(worker.rating)}
-                      <span className="text-[9px] font-bold text-text-muted">({worker.reviewCount || 0} reviews)</span>
-                    </div>
-                    <div className="flex gap-1 flex-wrap mt-1.5">
-                      {worker.skills?.map(skill => (
-                        <span key={skill} className="bg-slate-100 dark:bg-slate-700 text-text dark:text-slate-350 text-[9px] font-bold px-2 py-0.5 rounded uppercase">
-                          {t(skill.toLowerCase(), skill)}
-                        </span>
-                      ))}
-                    </div>
-                    <span className="text-[10px] text-text-muted font-bold block mt-2">
-                       Rate: ₹{worker.dailyRate}/day
-                    </span>
-                  </div>
-                  <button className="h-10 px-4 self-center bg-accent text-white text-[11px] font-black rounded-lg cursor-pointer">
-                    {t('hire', 'Hire')}
-                  </button>
-                </Card>
+                  worker={{
+                    ...worker,
+                    isNearYou: worker.district === dbUser?.district
+                  }}
+                  onHire={(w) => setSelectedWorker(w)}
+                />
               ))}
             </Grid>
           )}
