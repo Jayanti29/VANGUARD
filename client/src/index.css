@@ -2,31 +2,7 @@
 @import "leaflet/dist/leaflet.css";
 @import "tailwindcss";
 
-* {
-  box-sizing: border-box;
-}
 
-html, body {
-  margin: 0;
-  padding: 0;
-  overflow-x: hidden;
-}
-
-#root {
-  min-height: 100vh;
-  width: 100%;
-  overflow-x: hidden;
-}
-
-img, svg {
-  max-width: 100%;
-  height: auto;
-}
-
-/* Prevent any element from breaking layout */
-.app-container * {
-  max-width: 100%;
-}
 
 @theme {
   --font-sans: 'Noto Sans', system-ui, -apple-system, sans-serif;
@@ -106,6 +82,18 @@ img, svg {
   --shadow:      0 4px 12px rgba(0,0,0,0.4);
   --shadow-lg:   0 8px 24px rgba(0,0,0,0.5);
 }
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body, #root { margin:0; padding:0; width:100%; overflow-x:hidden; }
+img, svg, video { max-width:100%; display:block; }
+button { font-family:inherit; }
+input, textarea, select { font-family:inherit; max-width:100%; }
+
+/* Prevent any flex/grid child from blowing out its container */
+.app-safe * { min-width: 0; }
+
+/* safety max-width fallback for unsized images */
+img:not([width]):not([style*="width"]) { max-width: 48px; }
 
 html, body, #root {
   height: 100%;
