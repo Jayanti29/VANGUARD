@@ -46,13 +46,14 @@ export default function Sidebar() {
         padding: collapsed ? 0 : `0 ${SPACE.lg}px`,
         borderBottom: '1px solid var(--border)',
       }}>
-        {!collapsed && (
-          <div style={{display:'flex', alignItems:'center', gap:SPACE.sm, minWidth:0}}>
-            <img src="/vanguard-logo.png" alt="" style={{height:26, width:26, flexShrink:0}} />
-            <span style={{fontWeight:800, fontSize:FONT.lg, color:'var(--text)',
-                          letterSpacing:0.3, whiteSpace:'nowrap'}}>VANGUARD</span>
-          </div>
-        )}
+        <div style={{display:'flex', alignItems:'center', gap: collapsed ? 0 : 8}}>
+          <img src="/vanguard-logo.png" alt="VANGUARD" 
+               style={{height:26, width:26, flexShrink:0, objectFit:'contain'}} />
+          {!collapsed && (
+            <span style={{fontWeight:800, fontSize:16, color:'var(--text)', 
+                           whiteSpace:'nowrap'}}>VANGUARD</span>
+          )}
+        </div>
         <button onClick={() => setCollapsed(c => !c)} aria-label="Toggle sidebar" style={{
           width:32, height:32, flexShrink:0, borderRadius:RADIUS.sm,
           background:'transparent', border:'none', cursor:'pointer',
