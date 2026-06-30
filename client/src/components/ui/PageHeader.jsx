@@ -7,6 +7,7 @@ export default function PageHeader({ title, subtitle, action }) {
       marginBottom: SPACE.xl, gap: SPACE.md, flexWrap:'wrap',
     }}>
       <div>
+        {/* Accessible title utilizing upgraded FONT.xxl scale */}
         <h1 style={{fontSize:FONT.xxl, fontWeight:800, color:'var(--text)', margin:0}}>
           {title}
         </h1>
