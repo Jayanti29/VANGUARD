@@ -27,6 +27,7 @@ import useAuth from '../hooks/useAuth';
 import { db } from '../lib/firebase';
 import { collection, query, where, limit, onSnapshot, getDocs, doc, setDoc, addDoc, updateDoc } from 'firebase/firestore';
 import toast from 'react-hot-toast';
+import PageHeader from '../components/ui/PageHeader';
 
 export default function Home() {
   const { t } = useTranslation();
@@ -117,23 +118,11 @@ export default function Home() {
     }, [dbUser]);
 
     return (
-      <div className="space-y-6" style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px' }}>
-        {/* Header */}
-        <div style={{ background: theme.surface, border: '1px solid ' + theme.border, padding: '20px', borderRadius: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: 'var(--shadow)' }}>
-          <div>
-            <h2 style={{ fontSize: '18px', fontWeight: 800, color: theme.text, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              {getGreeting()}, {dbUser?.name || 'Citizen'}
-              <span style={{ background: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE', fontSize: '10px', fontWeight: 700, padding: '2px 8px', borderRadius: '12px' }}>
-                Citizen
-              </span>
-            </h2>
-            <p style={{ fontSize: '12px', color: theme.muted, marginTop: '4px' }}>Protect your community</p>
-            <div style={{ fontSize: '12px', color: theme.muted, marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 'bold' }}>
-              <MapPin size={14} className="text-accent" /> {dbUser?.village || 'Ramanagara'}, Ward {dbUser?.ward || '6'}
-            </div>
-          </div>
-          <img src={dbUser?.profileImageUrl || 'https://api.dicebear.com/7.x/bottts/svg?seed=citizen'} alt="avatar" style={{ width: '48px', height: '48px', borderRadius: '50%', border: '1px solid ' + theme.border }} />
-        </div>
+      <div className="space-y-6">
+        <PageHeader 
+          title={`${getGreeting()}, ${dbUser?.name || 'Citizen'}`} 
+          subtitle={dbUser?.village ? `${dbUser.village}, Ward ${dbUser.ward || '6'}` : 'Protect your community'} 
+        />
 
         <style>{`
           @media (max-width: 640px) {
@@ -332,30 +321,12 @@ export default function Home() {
     };
 
     return (
-      <div className="space-y-6" style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px' }}>
-        {/* Header */}
-        <div style={{ background: theme.surface, border: '1px solid ' + theme.border, padding: '20px', borderRadius: '16px', boxShadow: 'var(--shadow)' }}>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <h2 style={{ fontSize: '18px', fontWeight: 800, color: theme.text, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                {dbUser?.name}
-                <span style={{ background: '#FFF7ED', color: '#C2410C', border: '1px solid #FED7AA', fontSize: '10px', fontWeight: 700, padding: '2px 8px', borderRadius: '12px' }}>
-                  Worker
-                </span>
-              </h2>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
-                {(dbUser?.skills || ['General']).map(s => (
-                  <span key={s} style={{ background: theme.surface2, color: theme.text, border: '1px solid ' + theme.border, fontSize: '10px', fontWeight: 700, padding: '2px 6px', borderRadius: '4px' }}>
-                    {s}
-                  </span>
-                ))}
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '8px', color: '#FBBF24', fontSize: '13px', fontWeight: 'bold' }}>
-                <Star size={16} fill="#FBBF24" /> {avgRating.toFixed(1)}
-              </div>
-            </div>
-            
-            <div style={{ display: 'flex', itemsCenter: 'center', gap: '12px', background: theme.surface2, padding: '12px 16px', borderRadius: '12px', border: '1px solid ' + theme.border }}>
+      <div className="space-y-6">
+        <PageHeader 
+          title={dbUser?.name || 'Worker'} 
+          subtitle={(dbUser?.skills || []).join(', ') + ` · Rating: ${avgRating.toFixed(1)}`}
+          action={
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: theme.surface2, padding: '12px 16px', borderRadius: '12px', border: '1px solid ' + theme.border }}>
               <div>
                 <span style={{ fontSize: '12px', fontWeight: 800, color: theme.text, display: 'block' }}>Available for Work</span>
                 <span style={{ fontSize: '10px', color: theme.muted }}>Visible to employers nearby</span>
@@ -374,8 +345,8 @@ export default function Home() {
                 }} />
               </button>
             </div>
-          </div>
-        </div>
+          }
+        />
 
         {/* Stats Row */}
         <div className="stats-grid" style={{
@@ -671,24 +642,11 @@ export default function Home() {
     Object.keys(grouped).forEach(k => reportersToday.push(grouped[k]));
 
     return (
-      <div className="space-y-6" style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px' }}>
-        {/* Header */}
-        <div style={{ background: theme.surface, border: '1px solid ' + theme.border, padding: '20px', borderRadius: '16px', boxShadow: 'var(--shadow)' }}>
-          <div className="flex justify-between items-center">
-            <div>
-              <h2 style={{ fontSize: '18px', fontWeight: 800, color: theme.text, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                {dbUser?.name}
-                <span style={{ background: '#F5F3FF', color: '#6D28D9', border: '1px solid #DDD6FE', fontSize: '10px', fontWeight: 700, padding: '2px 8px', borderRadius: '12px' }}>
-                  Official
-                </span>
-              </h2>
-              <p style={{ fontSize: '12px', color: theme.muted, marginTop: '4px' }}>
-                Department: {dbUser?.department || 'Municipality'} &bull; Designation: {dbUser?.designation || 'Ward Officer'}
-              </p>
-            </div>
-            <img src={dbUser?.profileImageUrl || 'https://api.dicebear.com/7.x/bottts/svg?seed=official'} alt="avatar" style={{ width: '48px', height: '48px', borderRadius: '50%', border: '1px solid ' + theme.border }} />
-          </div>
-        </div>
+      <div className="space-y-6">
+        <PageHeader 
+          title={dbUser?.name || 'Official'} 
+          subtitle={`${dbUser?.department || 'Municipality'} · ${dbUser?.designation || 'Ward Officer'}`} 
+        />
 
         {/* Stats Row */}
         <div className="stats-grid-official" style={{
@@ -1089,24 +1047,11 @@ export default function Home() {
     };
 
     return (
-      <div className="space-y-6" style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px' }}>
-        {/* Header */}
-        <div style={{ background: theme.surface, border: '1px solid ' + theme.border, padding: '20px', borderRadius: '16px', boxShadow: 'var(--shadow)' }}>
-          <div className="flex justify-between items-center">
-            <div>
-              <h2 style={{ fontSize: '18px', fontWeight: 800, color: theme.text, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                {dbUser?.name}
-                <span style={{ background: '#F0FDF4', color: '#166534', border: '1px solid #BBF7D0', fontSize: '10px', fontWeight: 700, padding: '2px 8px', borderRadius: '12px' }}>
-                  Volunteer
-                </span>
-              </h2>
-              <p style={{ fontSize: '12px', color: theme.muted, marginTop: '4px' }}>
-                Protecting village of {dbUser?.village || 'Ramanagara'}
-              </p>
-            </div>
-            <img src={dbUser?.profileImageUrl || 'https://api.dicebear.com/7.x/bottts/svg?seed=volunteer'} alt="avatar" style={{ width: '48px', height: '48px', borderRadius: '50%', border: '1px solid ' + theme.border }} />
-          </div>
-        </div>
+      <div className="space-y-6">
+        <PageHeader 
+          title={dbUser?.name || 'Volunteer'} 
+          subtitle={`Protecting village of ${dbUser?.village || 'Ramanagara'}`} 
+        />
 
         {/* Stats Row */}
         <div className="stats-grid" style={{
