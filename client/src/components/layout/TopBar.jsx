@@ -4,12 +4,14 @@ import { useTheme } from '../../contexts/ThemeContext'
 import { useLanguage } from '../../contexts/LanguageContext'
 import { useViewport } from '../../hooks/useViewport'
 import { SIZE, SPACE, RADIUS, FONT } from '../../styles/tokens'
+import { useNavigate } from 'react-router-dom'
 
 export default function TopBar() {
   const { userProfile } = useAuth()
   const { theme, toggleTheme } = useTheme()
   const { currentLang, changeLanguage, languagesList } = useLanguage()
   const { isDesktop } = useViewport()
+  const navigate = useNavigate()
   const h = isDesktop ? SIZE.topbarHeight : SIZE.topbarHeightMobile
 
   return (
@@ -24,7 +26,7 @@ export default function TopBar() {
     }}>
       {/* Left: logo only on mobile/tablet (sidebar has it on desktop) */}
       {!isDesktop ? (
-        <img src="/vanguard-logo.png" alt="VANGUARD" 
+        <img src="/vanguard-icon.png" alt="VANGUARD" 
              style={{height:24, width:24, flexShrink:0, objectFit:'contain'}} />
       ) : <div />}
 
@@ -59,11 +61,19 @@ export default function TopBar() {
           }}><Bell size={16}/></button>
         )}
 
-        <div style={{
-          display:'flex', alignItems:'center', gap:SPACE.sm,
-          paddingLeft: isDesktop ? SPACE.md : 0,
-          borderLeft: isDesktop ? '1px solid var(--border)' : 'none',
-        }}>
+        <button
+          onClick={() => navigate('/profile')}
+          style={{
+            display:'flex', alignItems:'center', gap:SPACE.sm,
+            background:'transparent', border:'none', cursor:'pointer',
+            padding: isDesktop ? '4px 8px' : 0,
+            borderRadius: RADIUS.md,
+            paddingLeft: isDesktop ? SPACE.md : 0,
+            borderLeft: isDesktop ? '1px solid var(--border)' : 'none',
+          }}
+          onMouseEnter={isDesktop ? (e)=>{e.currentTarget.style.background='var(--surface-2)'} : undefined}
+          onMouseLeave={isDesktop ? (e)=>{e.currentTarget.style.background='transparent'} : undefined}
+        >
           {isDesktop && (
             <div style={{textAlign:'right'}}>
               <div style={{fontSize:FONT.sm, fontWeight:700, color:'var(--text)'}}>
@@ -80,7 +90,7 @@ export default function TopBar() {
             display:'flex', alignItems:'center', justifyContent:'center',
             fontWeight:700, fontSize: isDesktop?13:12, flexShrink:0,
           }}>{(userProfile?.name||'U')[0].toUpperCase()}</div>
-        </div>
+        </button>
       </div>
     </header>
   )
