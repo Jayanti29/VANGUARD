@@ -65,7 +65,7 @@ export function AuthProvider({ children }) {
     await setDoc(doc(db, 'users', uid), profile, { merge: true })
     
     // Seed official worker database link if needed
-    if (profileData.role === 'Worker') {
+    if ((profile.role || '').toLowerCase() === 'worker') {
       await setDoc(doc(db, 'workers', uid), {
         userId: uid,
         name: profileData.name || 'Helper',
