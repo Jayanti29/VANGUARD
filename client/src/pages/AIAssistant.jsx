@@ -171,7 +171,7 @@ export default function AIAssistant() {
         timestamp: new Date().toISOString()
       }]);
     } catch (err) {
-      console.error(err);
+      console.error('AI Assistant error:', err);
       setMessages(prev => [...prev, {
         id: 'ai_err_' + Date.now(),
         sender: 'ai',
