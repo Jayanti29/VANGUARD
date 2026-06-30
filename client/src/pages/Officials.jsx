@@ -4,6 +4,7 @@ import { Search, ShieldAlert, Award, SlidersHorizontal, Loader2 } from 'lucide-r
 import { db } from '../lib/firebase';
 import { collection, onSnapshot } from 'firebase/firestore';
 import OfficialCard from '../components/ui/OfficialCard';
+import PageHeader from '../components/ui/PageHeader';
 
 export default function Officials() {
   const { t } = useTranslation();
@@ -88,6 +89,10 @@ export default function Officials() {
 
   return (
     <div className="space-y-6">
+      <PageHeader 
+        title="Local Officials" 
+        subtitle="Quick contact directory for municipal officers, emergency wards, and departments" 
+      />
       {/* Search Input Bar */}
       <div className="relative">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)] w-5 h-5" />
