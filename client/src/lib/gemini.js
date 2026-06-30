@@ -79,7 +79,9 @@ export async function analyzeIssueImage(base64Image, description = '', language 
       const match = text.match(/\{[\s\S]*\}/)
       if (!match) throw new Error('No JSON in Gemini response')
 
-      return JSON.parse(match[0])
+      const parsed = JSON.parse(match[0])
+      parsed.impactScore = Number(parsed.impactScore) || 0
+      return parsed
     } catch (err) {
       console.warn(`Model ${m} failed:`, err)
       lastErr = err
