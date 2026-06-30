@@ -30,6 +30,7 @@ export default function AIResultCard({
   onSubmit, 
   submitting = false 
 }) {
+  // Ensure uppercase section labels use color: 'var(--text-muted)' for dark mode compatibility
   
   const getSeverityTheme = (sev) => {
     switch (sev?.toLowerCase()) {
