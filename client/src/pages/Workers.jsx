@@ -48,33 +48,25 @@ export default function Workers() {
   });
   const [posting, setPosting] = useState(false);
 
-  // Load Workers matching district
+  // Load Workers and sort by district/rating
   useEffect(() => {
     if (!dbUser) return;
     setLoading(true);
 
-    // Fetch workers nearby
-    const workersQuery = query(
-      collection(db, 'workers'),
-      where('district', '==', dbUser.district || 'Bangalore'),
-      orderBy('rating', 'desc')
-    );
+    const workersQuery = query(collection(db, 'workers'));
     const unsubscribeWorkers = onSnapshot(workersQuery, (snapshot) => {
-      setWorkers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const sorted = list.sort((a, b) => {
+        const aMatch = a.district === dbUser.district ? 1 : 0;
+        const bMatch = b.district === dbUser.district ? 1 : 0;
+        if (aMatch !== bMatch) return bMatch - aMatch;
+        return (b.rating || 0) - (a.rating || 0);
+      });
+      setWorkers(sorted);
       setLoading(false);
     }, (err) => {
-      console.warn("Workers ordered listener failed:", err);
-      // Fallback query without orderBy to avoid index requirement issues on first setup
-      const simpleQuery = query(
-        collection(db, 'workers'),
-        where('district', '==', dbUser.district || 'Bangalore')
-      );
-      onSnapshot(simpleQuery, (snap) => {
-        const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        list.sort((a, b) => (b.rating || 0) - (a.rating || 0));
-        setWorkers(list);
-        setLoading(false);
-      });
+      console.warn("Workers listener failed:", err);
+      setLoading(false);
     });
 
     // Fetch Job Posts
@@ -301,7 +293,14 @@ export default function Workers() {
                     />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h4 className="text-xs font-bold text-text dark:text-white truncate">{worker.name}</h4>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <h4 className="text-xs font-bold text-text dark:text-white truncate">{worker.name}</h4>
+                      {worker.district === dbUser?.district && (
+                        <span className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200 text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">
+                          {t('near_you', 'Near You')}
+                        </span>
+                      )}
+                    </div>
                     <div className="flex items-center gap-1.5 mt-0.5">
                       {renderStars(worker.rating)}
                       <span className="text-[9px] font-bold text-text-muted">({worker.reviewCount || 0} reviews)</span>
