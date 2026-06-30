@@ -213,7 +213,7 @@ export default function Workers() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="Jobs & Workers" subtitle="Find local workers and post job opportunities" />
+      <PageHeader title={t('nav_workers', 'Worker Market')} subtitle={t('workers_subtitle', 'Find local workers and post job opportunities')} />
       {/* Tabs */}
       <div className="bg-slate-100 dark:bg-slate-800 p-1.5 rounded-xl flex gap-1.5 self-start max-w-md">
         <button
@@ -222,7 +222,7 @@ export default function Workers() {
             activeTab === 'find' ? 'bg-accent text-white shadow-sm' : 'text-text-muted dark:text-slate-300'
           }`}
         >
-          Find Workers
+          {t('find_workers', 'Find Workers')}
         </button>
         <button
           onClick={() => setActiveTab('post')}
@@ -230,7 +230,7 @@ export default function Workers() {
             activeTab === 'post' ? 'bg-accent text-white shadow-sm' : 'text-text-muted dark:text-slate-300'
           }`}
         >
-          Post a Job
+          {t('post_job', 'Post a Job')}
         </button>
         <button
           onClick={() => setActiveTab('my-posts')}
@@ -238,7 +238,7 @@ export default function Workers() {
             activeTab === 'my-posts' ? 'bg-accent text-white shadow-sm' : 'text-text-muted dark:text-slate-300'
           }`}
         >
-          Open Jobs Board
+          {t('my_posts', 'Open Jobs Board')}
         </button>
       </div>
 
@@ -252,7 +252,7 @@ export default function Workers() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search by worker name or skill..."
+                placeholder={t('search_skill', 'Search by skill...')}
                 className="w-full h-11 pl-9 pr-4 bg-surface dark:bg-slate-850 border border-border dark:border-slate-700 rounded-xl text-xs focus:outline-none dark:text-white"
               />
             </div>
@@ -269,7 +269,7 @@ export default function Workers() {
                     : 'bg-surface dark:bg-slate-850 border-border dark:border-slate-700 text-text-muted hover:text-text'
                 }`}
               >
-                {chip}
+                {t(chip.toLowerCase(), chip)}
               </button>
             ))}
           </div>
@@ -309,7 +309,7 @@ export default function Workers() {
                     <div className="flex gap-1 flex-wrap mt-1.5">
                       {worker.skills?.map(skill => (
                         <span key={skill} className="bg-slate-100 dark:bg-slate-700 text-text dark:text-slate-350 text-[9px] font-bold px-2 py-0.5 rounded uppercase">
-                          {skill}
+                          {t(skill.toLowerCase(), skill)}
                         </span>
                       ))}
                     </div>
@@ -318,7 +318,7 @@ export default function Workers() {
                     </span>
                   </div>
                   <button className="h-10 px-4 self-center bg-accent text-white text-[11px] font-black rounded-lg cursor-pointer">
-                    Hire
+                    {t('hire', 'Hire')}
                   </button>
                 </Card>
               ))}
@@ -330,12 +330,12 @@ export default function Workers() {
       {activeTab === 'post' && (
         <form onSubmit={handlePostJob} className="bg-surface dark:bg-slate-800 border border-border dark:border-slate-700 rounded-2xl p-6 shadow-sm space-y-4 max-w-xl">
           <h3 className="text-sm font-black text-text dark:text-white flex items-center gap-1.5">
-            <PlusCircle className="w-5 h-5 text-accent" /> Post Local Helper Job Requirement
+            <PlusCircle className="w-5 h-5 text-accent" /> {t('post_helper_job_req', 'Post Local Helper Job Requirement')}
           </h3>
 
           <div className="space-y-3">
             <div>
-              <label className="text-[10px] font-bold text-text-muted uppercase">Job Title</label>
+              <label className="text-[10px] font-bold text-text-muted uppercase">{t('job_title', 'Job Title')}</label>
               <input
                 type="text"
                 value={postForm.title}
@@ -347,22 +347,22 @@ export default function Workers() {
 
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="text-[10px] font-bold text-text-muted uppercase">Skill Required</label>
+                <label className="text-[10px] font-bold text-text-muted uppercase">{t('skill_required', 'Skill Required')}</label>
                 <select
                   value={postForm.skillRequired}
                   onChange={(e) => setPostForm({ ...postForm, skillRequired: e.target.value })}
                   className="w-full h-11 px-3 bg-slate-50 dark:bg-slate-900 border border-border dark:border-slate-700 rounded-xl text-xs focus:outline-none dark:text-white font-bold"
                 >
-                  <option value="Electrician">Electrician</option>
-                  <option value="Plumber">Plumber</option>
-                  <option value="Farmer">Farmer</option>
-                  <option value="Construction">Construction</option>
-                  <option value="Carpenter">Carpenter</option>
+                  <option value="Electrician">{t('electrician', 'Electrician')}</option>
+                  <option value="Plumber">{t('plumber', 'Plumber')}</option>
+                  <option value="Farmer">{t('farmer', 'Farmer')}</option>
+                  <option value="Construction">{t('construction', 'Construction')}</option>
+                  <option value="Carpenter">{t('carpenter', 'Carpenter')}</option>
                 </select>
               </div>
 
               <div>
-                <label className="text-[10px] font-bold text-text-muted uppercase">Workers Needed</label>
+                <label className="text-[10px] font-bold text-text-muted uppercase">{t('workers_needed', 'Workers Needed')}</label>
                 <input
                   type="number"
                   min={1}
@@ -374,7 +374,7 @@ export default function Workers() {
             </div>
 
             <div>
-              <label className="text-[10px] font-bold text-text-muted uppercase">Job Description</label>
+              <label className="text-[10px] font-bold text-text-muted uppercase">{t('job_description', 'Job Description')}</label>
               <textarea
                 value={postForm.description}
                 onChange={(e) => setPostForm({ ...postForm, description: e.target.value })}
@@ -385,7 +385,7 @@ export default function Workers() {
 
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="text-[10px] font-bold text-text-muted uppercase">Location</label>
+                <label className="text-[10px] font-bold text-text-muted uppercase">{t('location', 'Location')}</label>
                 <input
                   type="text"
                   value={postForm.location}
@@ -395,7 +395,7 @@ export default function Workers() {
               </div>
 
               <div>
-                <label className="text-[10px] font-bold text-text-muted uppercase">Pay Per Day (₹)</label>
+                <label className="text-[10px] font-bold text-text-muted uppercase">{t('pay_per_day', 'Pay Per Day (₹)')}</label>
                 <input
                   type="number"
                   value={postForm.payPerDay}
@@ -412,7 +412,7 @@ export default function Workers() {
             disabled={posting}
             className="w-full h-12 bg-accent hover:bg-opacity-95 disabled:opacity-50 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
           >
-            {posting && <Loader2 className="w-4 h-4 animate-spin" />} Publish Requirement
+            {posting && <Loader2 className="w-4 h-4 animate-spin" />} {t('publish_requirement', 'Publish Requirement')}
           </button>
         </form>
       )}
@@ -420,11 +420,11 @@ export default function Workers() {
       {activeTab === 'my-posts' && (
         <div className="space-y-4">
           <h3 className="text-sm font-black text-text dark:text-white flex items-center gap-1.5">
-            <Briefcase className="w-5 h-5 text-accent" /> Active Open Community Job Posts
+            <Briefcase className="w-5 h-5 text-accent" /> {t('active_open_job_posts', 'Active Open Community Job Posts')}
           </h3>
           {jobPosts.length === 0 ? (
             <div className="text-center py-10 bg-surface dark:bg-slate-800 rounded-2xl border border-border dark:border-slate-700">
-              <p className="text-xs text-text-muted font-bold">No active job posts online.</p>
+              <p className="text-xs text-text-muted font-bold">{t('no_active_job_posts', 'No active job posts online.')}</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-3">
