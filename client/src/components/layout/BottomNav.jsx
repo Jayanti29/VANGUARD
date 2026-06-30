@@ -1,43 +1,47 @@
-import React from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, Map, MessageSquare, Bot, User } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
+import { NavLink } from 'react-router-dom'
+import { Home, Map, MessageSquare, Bot, User } from 'lucide-react'
 
 export default function BottomNav() {
-  const { t } = useTranslation();
-  const navigate = useNavigate();
-  const location = useLocation();
-
-  const navItems = [
-    { path: '/', label: t('nav_home'), icon: Home },
-    { path: '/map', label: t('nav_map'), icon: Map },
-    { path: '/community', label: t('nav_community'), icon: MessageSquare },
-    { path: '/ai', label: t('nav_ai'), icon: Bot },
-    { path: '/profile', label: t('nav_profile'), icon: User }
-  ];
+  const items = [
+    { path: '/', icon: Home, exact: true },
+    { path: '/map', icon: Map },
+    { path: '/community', icon: MessageSquare },
+    { path: '/ai', icon: Bot },
+    { path: '/profile', icon: User },
+  ]
 
   return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 h-[64px] bg-[var(--surface)] border-t border-[var(--border)] flex items-center justify-around z-50 px-2 pb-safe shadow-lg">
-      {navItems.map((item) => {
-        const Icon = item.icon;
-        const isActive = location.pathname === item.path;
-        return (
-          <button
-            key={item.path}
-            onClick={() => navigate(item.path)}
-            className={`flex flex-col items-center justify-center flex-1 h-full transition-colors relative ${
-              isActive 
-                ? 'text-[var(--accent)] font-bold' 
-                : 'text-[var(--text-muted)]'
-            }`}
-          >
-            <Icon className={`w-5 h-5 ${isActive ? 'scale-110' : 'scale-100'} transition-transform`} />
-            {isActive && (
-              <span className="text-[10px] mt-1 tracking-wide leading-none">{item.label}</span>
-            )}
-          </button>
-        );
-      })}
-    </div>
-  );
+    <nav style={{
+      position: 'fixed',
+      bottom: 0, left: 0, right: 0,
+      height: 64,
+      background: 'var(--surface)',
+      borderTop: '1px solid var(--border)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-around',
+      zIndex: 50,
+      paddingBottom: 'env(safe-area-inset-bottom)',
+    }}>
+      {items.map(({ path, icon: Icon, exact }) => (
+        <NavLink
+          key={path}
+          to={path}
+          end={exact}
+          style={({ isActive }) => ({
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 2,
+            color: isActive ? 'var(--accent)' : 'var(--text-muted)',
+            textDecoration: 'none',
+            flex: 1,
+            padding: '6px 0',
+          })}
+        >
+          <Icon size={22} />
+        </NavLink>
+      ))}
+    </nav>
+  )
 }
