@@ -25,6 +25,14 @@ import useAuth from '../hooks/useAuth';
 import { analyzeIssueImage } from '../lib/gemini';
 import { generateIssuePDF } from '../lib/pdfGenerator';
 import PageHeader from '../components/ui/PageHeader';
+import { FONT, SPACE } from '../styles/tokens';
+
+function getScoreColor(score) {
+  if (score >= 81) return '#DC2626' // red
+  if (score >= 61) return '#EA580C' // orange  
+  if (score >= 31) return '#D97706' // yellow
+  return '#16A34A' // green
+}
 
 function ClickMapEvents({ setCoords, setAddress }) {
   useMapEvents({
@@ -263,7 +271,7 @@ export default function ReportIssue() {
       toast.dismiss(saveToast);
       toast.success("Issue reported successfully!");
       setTimeout(() => {
-        navigate('/map');
+        navigate('/');
       }, 2000);
     } catch (e) {
       console.error(e);
@@ -272,6 +280,10 @@ export default function ReportIssue() {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleSubmitIssue = async () => {
+    await handleSaveIssue(false);
   };
 
   // Generate and save local report PDF
@@ -532,98 +544,132 @@ export default function ReportIssue() {
       )}
 
       {step === 4 && aiResult && (
-        <div className="space-y-6">
+        <div style={{ width: '100%', maxWidth: 'none' }} className="space-y-6">
           {/* Results dashboard card */}
-          <div className="bg-[var(--surface)] rounded-2xl border border-[var(--border)] overflow-hidden shadow-md">
+          <div style={{
+            width: '100%',
+            maxWidth: 'none',
+          }}>
             
             {/* Severity Colored banner */}
-            <div className={`p-4 text-white font-bold flex items-center justify-between uppercase ${
-              aiResult.severity === 'red' ? 'bg-red-600' :
-              aiResult.severity === 'orange' ? 'bg-orange-600' :
-              aiResult.severity === 'yellow' ? 'bg-yellow-500' : 'bg-green-600'
-            }`}>
-              <span className="text-xs font-black tracking-wide flex items-center gap-1">
-                <AlertTriangle className="w-4 h-4" /> {aiResult.severityLabel || 'Hazard Status'}
+            <div style={{
+              height: 52,
+              borderRadius: 14,
+              background: aiResult.severity === 'red' ? '#DC2626' :
+                          aiResult.severity === 'orange' ? '#EA580C' :
+                          aiResult.severity === 'yellow' ? '#D97706' : '#16A34A',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              paddingInline: 20,
+              color: '#fff',
+              marginBottom: 20,
+            }}>
+              <span style={{ fontSize: FONT.lg, fontWeight: 800 }} className="uppercase flex items-center gap-1.5">
+                <AlertTriangle className="w-5 h-5" /> {aiResult.severityLabel || 'Hazard Status'}
               </span>
-              <span className="text-[10px] font-black uppercase bg-white bg-opacity-20 px-2 py-0.5 rounded">
+              <span style={{ fontSize: FONT.xs, fontWeight: 800 }} className="uppercase bg-white bg-opacity-20 px-2.5 py-1 rounded">
                 {t('escalated_to', 'Escalated to')}: {aiResult.escalationLevel}
               </span>
             </div>
 
-            <div className="p-6 space-y-6">
+            <div style={{
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              borderRadius: 20,
+              padding: 32,
+            }} className="space-y-6">
               
               {/* Category info */}
-              <div className="flex items-center justify-between border-b pb-4 border-[var(--border)]">
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                borderBottom: '1px solid var(--border)',
+                paddingBottom: 20,
+                marginBottom: 24,
+              }}>
                 <div>
-                  <span className="text-[10px] font-bold text-[var(--text-muted)] block uppercase">{t('civic_category', 'Civic Category')}</span>
-                  <h3 className="text-lg font-black text-[var(--text)]">
+                  <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block' }}>
+                    {t('civic_category', 'Civic Category')}
+                  </span>
+                  <h3 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', marginTop: 2 }}>
                     {aiResult.categoryLabel || aiResult.category?.replace('_', ' ')}
                   </h3>
                 </div>
-                <div className="relative w-16 h-16 flex items-center justify-center">
-                  {/* Circular progress bar (CSS only) */}
-                  <svg className="w-full h-full transform -rotate-90">
-                    <circle cx="32" cy="32" r="28" fill="transparent" stroke="var(--border)" strokeWidth="4" />
-                    <circle 
-                      cx="32" cy="32" r="28" 
-                      fill="transparent" 
-                      stroke="var(--accent)" 
-                      strokeWidth="4" 
-                      strokeDasharray={176} 
-                      strokeDashoffset={176 - (176 * aiResult.impactScore) / 100}
-                    />
-                  </svg>
-                  <span className="absolute text-xs font-black text-[var(--text)]">
-                    {aiResult.impactScore}
-                  </span>
+                <div style={{
+                  flexShrink: 0,
+                  width: 64, height: 64,
+                  borderRadius: '50%',
+                  border: `4px solid ${getScoreColor(aiResult.impactScore)}`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 22,
+                  fontWeight: 800,
+                  color: getScoreColor(aiResult.impactScore),
+                }}>
+                  {aiResult.impactScore}
                 </div>
               </div>
 
               {/* Severity choose explanation reason */}
-              <div className="space-y-1">
-                <span className="text-[10px] font-bold text-[var(--text-muted)] block uppercase">{t('analysis_reason', 'Analysis Reason')}</span>
-                <p className="text-xs font-semibold leading-relaxed text-[var(--text)]">
+              <div style={{ marginBottom: 24 }} className="space-y-1.5">
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block' }}>
+                  {t('analysis_reason', 'Analysis Reason')}
+                </span>
+                <p style={{ fontSize: 17, fontWeight: 600, color: 'var(--text)', lineHeight: '1.7' }}>
                   {aiResult.severityReason}
                 </p>
               </div>
 
               {/* Risk Prediction summary */}
-              <div className="p-3 bg-[var(--danger)]/10 border border-[var(--danger)]/20 rounded-xl flex items-start gap-2.5">
-                <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+              <div style={{ marginBottom: 24 }} className="p-4 bg-[var(--danger)]/10 border border-[var(--danger)]/20 rounded-xl flex items-start gap-3">
+                <AlertTriangle className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" />
                 <div>
-                  <span className="text-[10px] font-bold text-red-700 dark:text-red-400 block uppercase">{t('predicted_risk', 'predicted community risk')}</span>
-                  <p className="text-xs font-bold text-red-900 dark:text-red-200 mt-0.5 leading-relaxed">{aiResult.riskPrediction}</p>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--danger)', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block' }}>
+                    {t('predicted_risk', 'predicted community risk')}
+                  </span>
+                  <p style={{ fontSize: 17, fontWeight: 700, color: 'var(--danger)', marginTop: 2, lineHeight: '1.6' }}>
+                    {aiResult.riskPrediction}
+                  </p>
                 </div>
               </div>
 
               {/* Recommended Authority */}
-              <div className="p-4 bg-[var(--surface-2)] rounded-xl border border-[var(--border)] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div style={{ marginBottom: 24 }} className="p-4 bg-[var(--surface-2)] rounded-xl border border-[var(--border)] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="min-w-0">
-                  <span className="text-[10px] font-bold text-[var(--text-muted)] block uppercase">{t('dispatch_agency', 'recommended dispatch agency')}</span>
-                  <h4 className="text-sm font-black text-[var(--text)] truncate mt-0.5">{aiResult.recommendedAuthority}</h4>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block' }}>
+                    {t('dispatch_agency', 'recommended dispatch agency')}
+                  </span>
+                  <h4 style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)', marginTop: 2 }}>
+                    {aiResult.recommendedAuthority}
+                  </h4>
                 </div>
                 <div className="flex gap-2">
                   <a 
                     href="tel:100"
-                    className="w-10 h-10 bg-[var(--accent-soft)] text-[var(--accent)] rounded-lg flex items-center justify-center cursor-pointer"
-                    title="Call emergency helpline"
+                    className="w-12 h-12 bg-[var(--accent-soft)] text-[var(--accent)] rounded-xl flex items-center justify-center cursor-pointer"
+                    title="Call helpline"
                   >
-                    <Phone className="w-4 h-4" />
+                    <Phone className="w-5 h-5" />
                   </a>
                   <a 
                     href="mailto:civic@vanguard.in"
-                    className="w-10 h-10 bg-[var(--surface-2)] text-[var(--text-muted)] rounded-lg flex items-center justify-center border border-[var(--border)] cursor-pointer"
+                    className="w-12 h-12 bg-[var(--surface-3)] text-[var(--text-muted)] rounded-xl flex items-center justify-center border border-[var(--border)] cursor-pointer"
                     title="Send official report"
                   >
-                    <Mail className="w-4 h-4" />
+                    <Mail className="w-5 h-5" />
                   </a>
                 </div>
               </div>
 
               {/* Official complaint paragraph */}
-              <div className="space-y-1">
-                <span className="text-[10px] font-bold text-[var(--text-muted)] block uppercase">{t('complaint_text', 'Generated Complaint Text')}</span>
-                <blockquote className="border-l-4 border-[var(--border)] pl-4 py-1 italic text-xs text-[var(--text-muted)] leading-relaxed">
+              <div style={{ marginBottom: 24 }} className="space-y-1.5">
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block' }}>
+                  {t('complaint_text', 'Generated Complaint Text')}
+                </span>
+                <blockquote style={{ borderLeft: '4px solid var(--accent)', paddingLeft: 16, paddingBlock: 4, fontStyle: 'italic', fontSize: 17, color: 'var(--text-muted)', lineHeight: '1.7' }}>
                   "{aiResult.reportText}"
                 </blockquote>
               </div>
@@ -657,7 +703,7 @@ export default function ReportIssue() {
             </button>
             <button
               disabled={isSaving}
-              onClick={() => handleSaveIssue(false)}
+              onClick={handleSubmitIssue}
               className="h-12 px-8 bg-[var(--accent)] hover:bg-opacity-95 text-white text-xs font-bold rounded-xl cursor-pointer flex items-center gap-1 disabled:opacity-50 shadow-md"
             >
               {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} {t('submit_issue_log', 'Submit Issue Log')}
