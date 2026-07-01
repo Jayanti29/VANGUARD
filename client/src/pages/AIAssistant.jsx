@@ -14,12 +14,12 @@ import PageHeader from '../components/ui/PageHeader';
 import toast from 'react-hot-toast';
 
 export default function AIAssistant() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { dbUser } = useAuth();
 
   const [messages, setMessages] = useState([]);
-  const [inputText, setInputText] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [inputValue, setInputValue] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [aiStatus, setAiStatus] = useState('idle');
   
@@ -65,7 +65,7 @@ export default function AIAssistant() {
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, loading]);
+  }, [messages, isLoading]);
 
   // Setup Web Speech API recognition
   useEffect(() => {
@@ -87,7 +87,7 @@ export default function AIAssistant() {
 
       rec.onresult = (event) => {
         const text = event.results[0][0].transcript;
-        setInputText(text);
+        setInputValue(text);
         setIsListening(false);
       };
 
@@ -142,61 +142,144 @@ export default function AIAssistant() {
     }
   };
 
-  const handleSendMessage = async (textToSend) => {
-    const cleanText = textToSend?.trim() || inputText.trim();
-    if (!cleanText) return;
+  const handleQuickPrompt = (text) => {
+    setInputValue(text)
+    handleSend(text) // immediately send without requiring user to click send
+  }
 
-    const userMsg = {
-      id: 'user_' + Date.now(),
-      sender: 'user',
-      role: 'user',
-      text: cleanText,
-      timestamp: new Date().toISOString()
-    };
-    
-    setMessages(prev => [...prev, userMsg]);
-    setInputText('');
-    setLoading(true);
+  const handleSend = async (overrideText) => {
+    const messageText = overrideText || inputValue.trim()
+    if (!messageText) return
+
+    setInputValue('')
+    const userMsg = { role: 'user', text: messageText }
+    setMessages(prev => [...prev, userMsg])
+    setIsLoading(true)
 
     try {
-      const userLocation = `${dbUser?.village || 'Ramanagara'}, ${dbUser?.district || 'Bangalore'}`;
-      const lang = localStorage.getItem('vanguard_language') || 'en';
-
-      const reply = await chatWithAI(cleanText, userLocation, lang);
-      speakText(reply, lang);
-
-      setMessages(prev => [...prev, {
-        id: 'ai_' + Date.now(),
-        sender: 'ai',
-        role: 'ai',
-        text: reply,
-        timestamp: new Date().toISOString()
-      }]);
+      const location = `${dbUser?.village || ''}, ${dbUser?.district || 'India'}`
+      const reply = await chatWithAI(messageText, location, i18n.language)
+      speakText(reply, i18n.language);
+      setMessages(prev => [...prev, { role: 'ai', text: reply }])
     } catch (err) {
-      console.error('AI Assistant error:', err);
-      setMessages(prev => [...prev, {
-        id: 'ai_err_' + Date.now(),
-        sender: 'ai',
-        role: 'ai',
-        text: "I experienced a connection issue while communicating with Gemini. Please try again.",
-        timestamp: new Date().toISOString()
-      }]);
+      console.error('AI error:', err)
+      setMessages(prev => [...prev, { 
+        role: 'ai', 
+        text: 'Unable to connect to AI. Please try again.' 
+      }])
     } finally {
-      setLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   const clearChat = () => {
     setMessages([]);
     toast.success("Chat history cleared");
   };
 
-  const promptChips = [
-    t('suggested_1', "Water overflowing near school"),
-    t('suggested_2', "Who handles electricity issues?"),
-    t('suggested_3', "Garbage not collected for 3 days"),
-    t('suggested_4', "How to report a pothole?")
-  ];
+  const EmptyStateJSX = () => (
+    <div style={{
+      flex: 1,
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '32px 24px',
+      textAlign: 'center',
+      gap: 24,
+    }}>
+      <div style={{
+        width: 80, height: 80, borderRadius: '50%',
+        background: 'var(--accent-soft)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <Bot size={40} color="var(--accent)" />
+      </div>
+
+      <div>
+        <h3 style={{
+          fontSize: 22, fontWeight: 700, color: 'var(--text)',
+          margin: '0 0 10px',
+        }}>
+          How can I assist you today?
+        </h3>
+        <p style={{
+          fontSize: 15, color: 'var(--text-muted)',
+          lineHeight: 1.65, margin: 0, maxWidth: 440,
+        }}>
+          I can guide you on local department responsibilities,
+          predicted risks, or help compose a formal civic report.
+        </p>
+      </div>
+
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr',
+        gap: 12,
+        width: '100%',
+        maxWidth: 540,
+      }}>
+        {[
+          'Water overflowing near school',
+          'Who handles electricity issues?',
+          'Garbage not collected for 3 days',
+          'How to report a pothole?',
+        ].map(prompt => (
+          <button
+            key={prompt}
+            onClick={() => handleQuickPrompt(prompt)}
+            style={{
+              padding: '14px 18px',
+              background: 'var(--surface-2)',
+              border: '1px solid var(--border)',
+              borderRadius: 12,
+              color: 'var(--text)',
+              fontSize: 14,
+              textAlign: 'left',
+              cursor: 'pointer',
+              lineHeight: 1.5,
+              fontFamily: 'inherit',
+            }}
+          >
+            {prompt}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  const MessageRow = ({ msg }) => (
+    <div style={{
+      display: 'flex',
+      justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
+      gap: 10,
+      alignItems: 'flex-start',
+    }}>
+      {msg.role === 'ai' && (
+        <div style={{
+          width: 32, height: 32, flexShrink: 0, borderRadius: '50%',
+          background: 'var(--accent-soft)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <Bot size={16} color="var(--accent)" />
+        </div>
+      )}
+      <div style={{
+        maxWidth: '72%',
+        padding: '12px 16px',
+        borderRadius: msg.role === 'user'
+          ? '18px 18px 4px 18px'
+          : '18px 18px 18px 4px',
+        background: msg.role === 'user' ? 'var(--accent)' : 'var(--surface-2)',
+        color: msg.role === 'user' ? '#fff' : 'var(--text)',
+        fontSize: 15,
+        lineHeight: 1.6,
+        wordBreak: 'break-word',
+      }}>
+        {msg.text}
+      </div>
+    </div>
+  );
 
   return (
     <>
@@ -215,16 +298,7 @@ export default function AIAssistant() {
           ) : undefined
         }
       />
-      <div 
-        className="rounded-2xl border border-[var(--border)] bg-[var(--bg)] overflow-hidden shadow-sm p-4"
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          height: 'calc(100vh - 180px)', // full viewport minus topbar+header
-          minHeight: 500,
-        }}
-      >
-
+      
       {/* Development status block */}
       {isDev && (
         <div style={{fontSize:'11px', color:'gray', padding:'4px 8px', background: 'var(--surface-2)', borderBottom: '1px solid var(--border)', textAlign: 'center', marginBottom: 8}}>
@@ -232,224 +306,103 @@ export default function AIAssistant() {
         </div>
       )}
 
-      {/* messages area — scrollable */}
       <div style={{
-        flex: 1,
-        overflowY: 'auto',
-        overflowX: 'hidden',
-        padding: '16px 0',
         display: 'flex',
         flexDirection: 'column',
-        gap: 16,
+        height: 'calc(100vh - 200px)',
+        minHeight: 480,
+        background: 'var(--surface)',
+        border: '1px solid var(--border)',
+        borderRadius: 16,
+        overflow: 'hidden',
       }}>
-        {messages.length === 0 ? (
-          <div style={{
-            flex: 1,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '40px 24px',
-            gap: 20,
-          }}>
-            <div style={{
-              width: 72, height: 72,
-              borderRadius: '50%',
-              background: 'var(--accent-soft)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              <Bot size={36} color="var(--accent)" />
-            </div>
-
-            <div style={{ textAlign: 'center', maxWidth: 480 }}>
-              <h3 style={{
-                fontSize: 20, fontWeight: 700,
-                color: 'var(--text)', margin: '0 0 8px',
-              }}>
-                {t('how_can_i_assist', 'How can I assist you today?')}
-              </h3>
-              <p style={{
-                fontSize: 15, color: 'var(--text-muted)',
-                lineHeight: 1.6, margin: 0,
-              }}>
-                {t('ai_helper_desc', 'I can guide you on local department responsibilities, predicted risks, or help compose a formal civic report.')}
-              </p>
-            </div>
-
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: 10,
-              width: '100%',
-              maxWidth: 560,
-            }}>
-              {[
-                t('suggested_1', 'Water overflowing near school'),
-                t('suggested_2', 'Who handles electricity issues?'),
-                t('suggested_3', 'Garbage not collected for 3 days'),
-                t('suggested_4', 'How to report a pothole?'),
-              ].map(prompt => (
-                <button
-                  key={prompt}
-                  onClick={() => handleSendMessage(prompt)}
-                  style={{
-                    padding: '12px 16px',
-                    background: 'var(--surface-2)',
-                    border: '1px solid var(--border)',
-                    borderRadius: 10,
-                    color: 'var(--text)',
-                    fontSize: 14,
-                    textAlign: 'left',
-                    cursor: 'pointer',
-                    lineHeight: 1.5,
-                  }}
-                >
-                  {prompt}
-                </button>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 16,
-            width: '100%',
-          }}>
-            {messages.map((msg, i) => (
-              <div key={msg.id || i} style={{
-                display: 'flex',
-                justifyContent: (msg.role === 'user' || msg.sender === 'user') ? 'flex-end' : 'flex-start',
-                width: '100%',
-                gap: 10,
-                alignItems: 'flex-start',
-              }}>
-                {!(msg.role === 'user' || msg.sender === 'user') && (
-                  <div style={{
-                    width: 32, height: 32, flexShrink: 0,
-                    borderRadius: '50%',
-                    background: 'var(--accent-soft)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>
-                    <Bot size={16} color="var(--accent)" />
-                  </div>
-                )}
-                <div style={{
-                  maxWidth: '72%',
-                  padding: '12px 16px',
-                  borderRadius: (msg.role === 'user' || msg.sender === 'user')
-                    ? '16px 16px 4px 16px'
-                    : '16px 16px 16px 4px',
-                  background: (msg.role === 'user' || msg.sender === 'user') ? 'var(--accent)' : 'var(--surface-2)',
-                  color: (msg.role === 'user' || msg.sender === 'user') ? '#fff' : 'var(--text)',
-                  fontSize: 15,
-                  lineHeight: 1.6,
-                  wordBreak: 'break-word',
-                }}>
-                  {msg.text}
-                </div>
-              </div>
-            ))}
-
-            {loading && (
-              <div style={{
-                display: 'flex',
-                justifyContent: 'flex-start',
-                width: '100%',
-                gap: 10,
-                alignItems: 'flex-start',
-              }}>
-                <div style={{
-                  width: 32, height: 32, flexShrink: 0,
-                  borderRadius: '50%',
-                  background: 'var(--accent-soft)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  <Bot size={16} color="var(--accent)" />
-                </div>
-                <div style={{
-                  maxWidth: '72%',
-                  padding: '12px 16px',
-                  borderRadius: '16px 16px 16px 4px',
-                  background: 'var(--surface-2)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 4,
-                }}>
-                  <Loader2 className="w-4 h-4 animate-spin text-[var(--accent)]" />
-                  <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Thinking...</span>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-        <div ref={chatEndRef} />
-      </div>
-
-      {/* input bar — always at bottom */}
-      <form 
-        onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }}
-        style={{
-          borderTop: '1px solid var(--border)',
-          padding: '16px 0 0',
-          flexShrink: 0,
+        {/* scrollable messages area */}
+        <div style={{
+          flex: 1,
+          overflowY: 'auto',
+          overflowX: 'hidden',
           display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-        }}
-      >
-        <button
-          type="button"
-          onClick={toggleListening}
-          style={{
-            width: 44, height: 44, borderRadius: 10,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: 'pointer', border: '1px solid var(--border)',
-            background: isListening ? '#DC2626' : 'var(--surface-2)',
-            color: isListening ? '#fff' : 'var(--text-muted)',
-            flexShrink: 0,
-          }}
-          title={t('voice_input', 'Voice input')}
-        >
-          <Mic size={20} color={isListening ? '#fff' : 'var(--accent)'} />
-        </button>
+          flexDirection: 'column',
+          gap: 16,
+          padding: '20px 24px',
+        }}>
+          {messages.length === 0
+            ? <EmptyStateJSX />
+            : messages.map((msg, i) => <MessageRow key={i} msg={msg} />)
+          }
+          {isLoading && (
+            <div style={{
+              display: 'flex', gap: 10, alignItems: 'center',
+              color: 'var(--text-muted)', fontSize: 14,
+            }}>
+              <div style={{
+                width: 32, height: 32, borderRadius: '50%',
+                background: 'var(--accent-soft)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <Bot size={16} color="var(--accent)" />
+              </div>
+              <span>Thinking...</span>
+            </div>
+          )}
+          <div ref={chatEndRef} />
+        </div>
 
-        <input
-          value={inputText}
-          onChange={(e) => setInputText(e.target.value)}
-          placeholder={t('ai_placeholder', 'Ask a question...')}
-          style={{
-            flex: 1,
-            height: 44,
-            padding: '0 16px',
-            background: 'var(--surface-2)',
-            border: '1px solid var(--border)',
-            borderRadius: 10,
-            fontSize: 14,
-            outline: 'none',
-            color: 'var(--text)',
-          }}
-        />
-
-        <button
-          type="submit"
-          disabled={!inputText.trim()}
-          style={{
-            width: 44, height: 44,
-            background: 'var(--accent)',
-            opacity: !inputText.trim() ? 0.4 : 1,
-            color: '#fff',
-            borderRadius: 10,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: !inputText.trim() ? 'default' : 'pointer',
-            border: 'none',
-            flexShrink: 0,
-          }}
-        >
-          <Send size={16} />
-        </button>
-      </form>
-    </div>
+        {/* input bar */}
+        <div style={{
+          borderTop: '1px solid var(--border)',
+          padding: '14px 20px',
+          display: 'flex', gap: 10, alignItems: 'center',
+          flexShrink: 0,
+          background: 'var(--surface)',
+        }}>
+          <button 
+            type="button"
+            onClick={toggleListening}
+            style={{
+              width: 40, height: 40, flexShrink: 0,
+              borderRadius: '50%', border: '1px solid var(--border)',
+              background: isListening ? '#DC2626' : 'var(--surface-2)',
+              cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: isListening ? '#fff' : 'var(--text-muted)',
+            }}
+          >
+            <Mic size={18} />
+          </button>
+          <input
+            value={inputValue}
+            onChange={e => setInputValue(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleSend()}
+            placeholder="Ask a question..."
+            style={{
+              flex: 1, height: 44,
+              padding: '0 16px',
+              background: 'var(--surface-2)',
+              border: '1px solid var(--border)',
+              borderRadius: 22,
+              color: 'var(--text)',
+              fontSize: 15,
+              outline: 'none',
+              fontFamily: 'inherit',
+            }}
+          />
+          <button
+            onClick={() => handleSend()}
+            disabled={!inputValue.trim()}
+            style={{
+              width: 44, height: 44, flexShrink: 0,
+              borderRadius: '50%',
+              background: inputValue.trim() ? 'var(--accent)' : 'var(--surface-2)',
+              border: 'none', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: inputValue.trim() ? '#fff' : 'var(--text-muted)',
+            }}
+          >
+            <Send size={18} />
+          </button>
+        </div>
+      </div>
     </>
   );
 }
