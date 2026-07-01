@@ -1,7 +1,23 @@
 import React from 'react';
+import useAuth from '../../hooks/useAuth';
 
 export default function WorkerCard({ worker, onHire }) {
-  const initials = (worker.name || 'W')[0].toUpperCase()
+  const { dbUser } = useAuth();
+  const currentUserDistrict = dbUser?.district;
+  const initial = (worker.name || 'W').charAt(0).toUpperCase()
+
+  const skillColors = {
+    electrician: { bg: '#FEF3C7', color: '#D97706' },
+    plumber: { bg: '#DBEAFE', color: '#1D4ED8' },
+    farmer: { bg: '#D1FAE5', color: '#065F46' },
+    construction: { bg: '#FCE7F3', color: '#9D174D' },
+    carpenter: { bg: '#EDE9FE', color: '#5B21B6' },
+    labor: { bg: '#FEE2E2', color: '#991B1B' },
+  }
+
+  const primarySkill = (worker.skills?.[0] || '').toLowerCase()
+  const skillStyle = skillColors[primarySkill] || 
+    { bg: 'var(--accent-soft)', color: 'var(--accent)' }
 
   return (
     <div style={{
@@ -12,86 +28,111 @@ export default function WorkerCard({ worker, onHire }) {
       background: 'var(--surface)',
       border: '1px solid var(--border)',
       borderRadius: 14,
-      transition: 'box-shadow 0.15s',
     }}>
-      {/* Avatar circle — NO robot image, just initials */}
+      {/* Initials avatar */}
       <div style={{
-        width: 52, height: 52, flexShrink: 0,
+        width: 50, height: 50, flexShrink: 0,
         borderRadius: '50%',
-        background: 'var(--accent-soft)',
-        color: 'var(--accent)',
+        background: skillStyle.bg,
+        color: skillStyle.color,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontSize: 20, fontWeight: 800,
+        fontFamily: 'inherit',
       }}>
-        {initials}
+        {initial}
       </div>
 
-      {/* Info */}
+      {/* Worker info */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{
-          display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
-          marginBottom: 4,
+          display: 'flex', alignItems: 'center',
+          gap: 8, flexWrap: 'wrap', marginBottom: 4,
         }}>
-          <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>
+          <span style={{
+            fontSize: 16, fontWeight: 700,
+            color: 'var(--text)',
+          }}>
             {worker.name}
           </span>
-          {worker.isNearYou && (
+          {worker.district === currentUserDistrict && (
             <span style={{
-              fontSize: 11, fontWeight: 600,
-              background: '#DCFCE7', color: '#16A34A',
+              fontSize: 11, fontWeight: 700,
+              background: '#D1FAE5', color: '#065F46',
               padding: '2px 8px', borderRadius: 20,
             }}>
               Near you
             </span>
           )}
+          {!worker.isAvailable && (
+            <span style={{
+              fontSize: 11, fontWeight: 700,
+              background: '#FEE2E2', color: '#991B1B',
+              padding: '2px 8px', borderRadius: 20,
+            }}>
+              Unavailable
+            </span>
+          )}
         </div>
 
         {/* Stars */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4 }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 2,
+          marginBottom: 6,
+        }}>
           {[1,2,3,4,5].map(s => (
             <span key={s} style={{
-              color: s <= Math.round(worker.rating||0) ? '#FBBF24' : 'var(--border)',
               fontSize: 14,
+              color: s <= Math.round(worker.rating || 0)
+                ? '#F59E0B' : 'var(--border)',
             }}>★</span>
           ))}
-          <span style={{ fontSize: 13, color: 'var(--text-muted)', marginLeft: 4 }}>
+          <span style={{
+            fontSize: 12, color: 'var(--text-muted)',
+            marginLeft: 4,
+          }}>
             ({worker.reviewCount || 0} reviews)
           </span>
         </div>
 
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          {(worker.skills || []).map(skill => (
-            <span key={skill} style={{
-              fontSize: 12, fontWeight: 700,
-              color: 'var(--text-muted)',
-              textTransform: 'uppercase',
-              letterSpacing: 0.5,
-            }}>
-              {skill}
-            </span>
-          ))}
-          <span style={{ fontSize: 13, color: 'var(--accent)', fontWeight: 600 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{
+            fontSize: 12, fontWeight: 700,
+            color: 'var(--text-muted)',
+            textTransform: 'uppercase',
+            letterSpacing: 0.5,
+          }}>
+            {(worker.skills || []).join(' · ')}
+          </span>
+          <span style={{
+            fontSize: 14, fontWeight: 700,
+            color: 'var(--accent)',
+          }}>
             ₹{worker.dailyRate || 0}/day
           </span>
         </div>
       </div>
 
-      {/* Hire button — rectangular, not pill */}
+      {/* Hire button — proper rectangle, NOT a tiny pill */}
       <button
         onClick={() => onHire?.(worker)}
+        disabled={!worker.isAvailable}
         style={{
           flexShrink: 0,
-          padding: '10px 22px',
-          background: 'var(--accent)',
-          color: '#fff',
+          minWidth: 72,
+          padding: '10px 20px',
+          background: worker.isAvailable ? 'var(--accent)' : 'var(--surface-3)',
+          color: worker.isAvailable ? '#fff' : 'var(--text-muted)',
           border: 'none',
           borderRadius: 10,
           fontSize: 14,
           fontWeight: 700,
-          cursor: 'pointer',
+          cursor: worker.isAvailable ? 'pointer' : 'not-allowed',
+          fontFamily: 'inherit',
         }}
       >
-        Hire
+        {worker.isAvailable ? 'Hire' : 'Busy'}
       </button>
     </div>
   )
