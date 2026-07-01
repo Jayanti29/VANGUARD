@@ -446,14 +446,14 @@ export default function Workers() {
             </button>
 
             <div className="flex flex-col items-center text-center space-y-4">
-              <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-accent bg-slate-100 flex items-center justify-center">
-                <img 
-                  src={`https://api.dicebear.com/7.x/bottts/svg?seed=${selectedWorker.userId || selectedWorker.name}`}
-                  alt={selectedWorker.name} 
-                  width={80}
-                  height={80}
-                  className="w-full h-full object-cover"
-                />
+              <div style={{
+                width: 80, height: 80, borderRadius: '50%',
+                background: 'var(--accent-soft)',
+                color: 'var(--accent)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 32, fontWeight: 800,
+              }}>
+                {(selectedWorker.name || 'W').charAt(0).toUpperCase()}
               </div>
 
               <div>
