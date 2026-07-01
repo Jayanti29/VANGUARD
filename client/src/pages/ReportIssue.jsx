@@ -285,51 +285,40 @@ export default function ReportIssue() {
 
   const handleSubmitIssue = async () => {
     if (!aiResult) {
-      toast.error('Please complete AI analysis first')
+      toast.error('Please analyze the image first')
       return
     }
-
     const currentUser = user;
-    const userProfile = dbUser;
-    const userDescription = description;
-    const uploadedPhotoUrl = photoBase64;
     const issueLocation = coords ? { lat: coords[0], lng: coords[1] } : null;
-
     setSubmitting(true)
     try {
-      const docRef = await addDoc(collection(db, 'issues'), {
+      await addDoc(collection(db, 'issues'), {
         reporterId: currentUser?.uid || 'guest',
-        reporterName: dbUser?.name || userProfile?.name || 'Citizen',
+        reporterName: dbUser?.name || 'Citizen',
         category: aiResult.category || 'other',
         categoryLabel: aiResult.categoryLabel || 'Community Issue',
         severity: aiResult.severity || 'yellow',
         severityLabel: aiResult.severityLabel || 'Needs Attention',
-        severityReason: aiResult.severityReason || '',
         impactScore: Number(aiResult.impactScore) || 0,
-        riskType: aiResult.riskType || 'none',
         riskPrediction: aiResult.riskPrediction || '',
         recommendedAuthority: aiResult.recommendedAuthority || '',
         escalationLevel: aiResult.escalationLevel || 'ward',
         reportText: aiResult.reportText || '',
-        suggestedAction: aiResult.suggestedAction || '',
-        isEmergency: aiResult.isEmergency || false,
-        description: userDescription || '',
-        photoUrl: uploadedPhotoUrl || null,
+        isEmergency: Boolean(aiResult.isEmergency),
+        description: description || '',
         lat: issueLocation?.lat || dbUser?.lat || null,
         lng: issueLocation?.lng || dbUser?.lng || null,
         village: dbUser?.village || '',
         ward: dbUser?.ward || '',
         district: dbUser?.district || '',
-        state: dbUser?.state || '',
         status: 'open',
         confirmations: [],
         createdAt: new Date().toISOString(),
       })
-      console.log('Issue saved with ID:', docRef.id)
-      toast.success('Issue submitted successfully!')
-      setTimeout(() => navigate('/'), 1500)
+      toast.success('Issue submitted!')
+      setTimeout(() => navigate('/'), 1200)
     } catch (err) {
-      console.error('Submit issue error:', err)
+      console.error('Submit failed:', err)
       toast.error('Failed to submit: ' + err.message)
     } finally {
       setSubmitting(false)
@@ -399,26 +388,55 @@ export default function ReportIssue() {
     );
   }
 
-  return (
-    <div style={{
+  const photoPreviewUrl = previewUrl;
+  const setPhoto = (val) => {
+    if (val === null) {
+      setPhotoFile(null);
+      setPreviewUrl(null);
+      setPhotoBase64(null);
+    }
+  };
+
+  const handleBack = () => {
+    if (step === 1) {
+      navigate('/');
+    } else {
+      setStep(prev => prev - 1);
+    }
+  };
+
+  const handleNext = () => {
+    if (step === 1) {
+      if (!photoFile) {
+        toast.error("Please upload or take a photo first.");
+        return;
+      }
+      setStep(2);
+    } else if (step === 2) {
+      setStep(3);
+    } else if (step === 3) {
+      runAIAnalysis();
+    }
+  };
+
+  const renderCurrentStep = () => {
+    const cardStyle = {
+      background: 'var(--surface)',
+      border: '1px solid var(--border)',
+      borderRadius: 16,
+      padding: 24,
+      width: '100%',
       display: 'flex',
       flexDirection: 'column',
-      minHeight: 'calc(100vh - 180px)',
-      gap: 24,
-    }}>
-      <PageHeader 
-        title="Report Civic Issue" 
-        subtitle="Log safety hazards, road blockages, medical concerns, or public safety issues" 
-      />
-      {/* progress card */}
-      <div className="bg-[var(--surface)] p-4 rounded-2xl shadow-sm border border-[var(--border)]">
-        {renderProgress()}
-      </div>
+      gap: 16,
+      flex: 1,
+    };
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-        {step === 1 && (
-          <div className="bg-[var(--surface)] p-6 rounded-2xl border border-[var(--border)] shadow-sm flex flex-col justify-between flex-1" style={{ minHeight: '400px' }}>
-            <div className="space-y-6">
+    switch (step) {
+      case 1:
+        return (
+          <div style={cardStyle}>
+            <div className="space-y-6" style={{ flex: 1 }}>
               <h2 className="text-lg font-black text-[var(--text)] flex items-center gap-2">
                 <Camera className="w-5 h-5 text-[var(--accent)]" /> {t('step_1_upload', 'Step 1: Upload Civic Hazard Photo')}
               </h2>
@@ -436,49 +454,50 @@ export default function ReportIssue() {
                   />
                 </label>
               ) : (
-                <div className="space-y-4">
-                  <div className="relative w-full h-[220px] rounded-xl overflow-hidden border border-[var(--border)]">
-                    <img 
-                      src={previewUrl} 
-                      alt="Hazard preview" 
-                      className="w-full h-full object-cover"
-                    />
-                    <button 
-                      onClick={() => {
-                        setPhotoFile(null);
-                        setPreviewUrl(null);
-                        setPhotoBase64(null);
-                      }}
-                      className="absolute top-3 right-3 bg-red-600 hover:bg-red-700 text-white rounded-xl px-3 py-1.5 text-xs font-bold shadow-md cursor-pointer"
-                    >
-                      {t('change_photo', 'Change Photo')}
-                    </button>
-                  </div>
+                <div style={{
+                  width: '100%',
+                  aspectRatio: '16/9',
+                  borderRadius: 12,
+                  overflow: 'hidden',
+                  background: 'var(--surface-3)',
+                  position: 'relative',
+                }}>
+                  <img
+                    src={photoPreviewUrl}
+                    alt="Uploaded photo"
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      display: 'block',
+                    }}
+                  />
+                  <button
+                    onClick={() => setPhoto(null)}
+                    style={{
+                      position: 'absolute',
+                      top: 10, right: 10,
+                      background: 'rgba(0,0,0,0.6)',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: 8,
+                      padding: '6px 14px',
+                      fontSize: 13,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Change Photo
+                  </button>
                 </div>
               )}
             </div>
-
-            <div className="flex justify-between items-center pt-6">
-              <button 
-                onClick={() => navigate('/')}
-                className="h-12 px-5 bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--text)] text-xs font-bold rounded-xl cursor-pointer"
-              >
-                {t('cancel', 'Cancel')}
-              </button>
-              <button 
-                disabled={!photoFile}
-                onClick={() => setStep(2)}
-                className="h-12 px-6 bg-[var(--accent)] hover:bg-opacity-90 disabled:opacity-50 text-white text-xs font-bold rounded-xl cursor-pointer shadow-sm flex items-center gap-1"
-              >
-                {t('next_step', 'Next Step')}
-              </button>
-            </div>
           </div>
-        )}
-
-        {step === 2 && (
-          <div className="bg-[var(--surface)] p-6 rounded-2xl border border-[var(--border)] shadow-sm flex flex-col justify-between flex-1" style={{ minHeight: '400px' }}>
-            <div className="space-y-6">
+        );
+      case 2:
+        return (
+          <div style={cardStyle}>
+            <div className="space-y-6" style={{ flex: 1 }}>
               <h2 className="text-lg font-black text-[var(--text)] flex items-center gap-2">
                 <Mic className="w-5 h-5 text-[var(--accent)]" /> {t('step_2_describe', 'Step 2: Describe the Hazard')}
               </h2>
@@ -521,27 +540,12 @@ export default function ReportIssue() {
                 </div>
               </div>
             </div>
-
-            <div className="flex justify-between items-center pt-6">
-              <button 
-                onClick={() => setStep(1)}
-                className="h-12 px-5 bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--text)] text-xs font-bold rounded-xl cursor-pointer"
-              >
-                {t('back', 'Back')}
-              </button>
-              <button 
-                onClick={() => setStep(3)}
-                className="h-12 px-6 bg-[var(--accent)] hover:bg-opacity-90 text-white text-xs font-bold rounded-xl cursor-pointer shadow-sm"
-              >
-                {t('next_step', 'Next Step')}
-              </button>
-            </div>
           </div>
-        )}
-
-        {step === 3 && (
-          <div className="bg-[var(--surface)] p-6 rounded-2xl border border-[var(--border)] shadow-sm flex flex-col justify-between flex-1" style={{ minHeight: '400px' }}>
-            <div className="space-y-6">
+        );
+      case 3:
+        return (
+          <div style={cardStyle}>
+            <div className="space-y-6" style={{ flex: 1 }}>
               <h2 className="text-lg font-black text-[var(--text)] flex items-center gap-2">
                 <MapPin className="w-5 h-5 text-[var(--accent)]" /> {t('step_3_confirm', 'Step 3: Confirm GPS Location')}
               </h2>
@@ -587,27 +591,13 @@ export default function ReportIssue() {
                 </p>
               </div>
             </div>
-
-            <div className="flex justify-between items-center pt-6">
-              <button 
-                onClick={() => setStep(2)}
-                className="h-12 px-5 bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--text)] text-xs font-bold rounded-xl cursor-pointer"
-              >
-                {t('back', 'Back')}
-              </button>
-              <button 
-                onClick={runAIAnalysis}
-                className="h-12 px-6 bg-[var(--accent)] hover:bg-opacity-90 text-white text-xs font-bold rounded-xl cursor-pointer shadow-sm flex items-center gap-1.5"
-              >
-                <Sparkles className="w-4 h-4 text-yellow-300" /> {t('analyze_with_ai', 'Analyze with AI')}
-              </button>
-            </div>
           </div>
-        )}
-
-        {step === 4 && aiResult && (
-          <div style={{ width: '100%', maxWidth: 'none' }} className="space-y-6 flex-1 flex flex-col justify-between">
-            <div>
+        );
+      case 4:
+        if (!aiResult) return null;
+        return (
+          <div style={cardStyle}>
+            <div style={{ flex: 1 }} className="space-y-6">
               {/* Severity Colored banner */}
               <div style={{
                 height: 52,
@@ -631,7 +621,7 @@ export default function ReportIssue() {
               </div>
 
               <div style={{
-                background: 'var(--surface)',
+                background: 'var(--surface-2)',
                 border: '1px solid var(--border)',
                 borderRadius: 20,
                 padding: 32,
@@ -694,7 +684,7 @@ export default function ReportIssue() {
                 </div>
 
                 {/* Recommended Authority */}
-                <div style={{ marginBottom: 24 }} className="p-4 bg-[var(--surface-2)] rounded-xl border border-[var(--border)] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div style={{ marginBottom: 24 }} className="p-4 bg-[var(--surface)] rounded-xl border border-[var(--border)] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="min-w-0">
                     <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block' }}>
                       {t('dispatch_agency', 'recommended dispatch agency')}
@@ -749,29 +739,100 @@ export default function ReportIssue() {
                 </div>
               </div>
             </div>
-
-            {/* Core Submit action bar */}
-            <div className="flex gap-3 justify-end items-center pt-6">
-              <button
-                onClick={() => setStep(3)}
-                className="h-12 px-6 bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--text)] text-xs font-bold rounded-xl cursor-pointer"
-              >
-                {t('modify_location', 'Modify Location')}
-              </button>
-              <button
-                onClick={handleSubmitIssue}
-                disabled={submitting || !aiResult}
-                style={{
-                  opacity: (submitting || !aiResult) ? 0.6 : 1,
-                  cursor: (submitting || !aiResult) ? 'not-allowed' : 'pointer',
-                }}
-                className="h-12 px-8 bg-[var(--accent)] text-white text-xs font-bold rounded-xl flex items-center gap-1 shadow-md"
-              >
-                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} {t('submit_issue_log', 'Submit Issue Log')}
-              </button>
-            </div>
           </div>
-        )}
+        );
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      minHeight: 'calc(100vh - 180px)',
+      gap: 24,
+    }}>
+      <PageHeader 
+        title="Report Civic Issue" 
+        subtitle="Log safety hazards, road blockages, medical concerns, or public safety issues" 
+      />
+      {/* progress card */}
+      <div className="bg-[var(--surface)] p-4 rounded-2xl shadow-sm border border-[var(--border)]">
+        {renderProgress()}
+      </div>
+
+      <div style={{
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 0,
+      }}>
+        {/* step content */}
+        <div style={{ flex: 1, paddingTop: 16, display: 'flex', flexDirection: 'column' }}>
+          {renderCurrentStep()}
+        </div>
+        {/* nav buttons at bottom */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          paddingTop: 16,
+          borderTop: '1px solid var(--border)',
+          marginTop: 16,
+        }}>
+          <button
+            onClick={handleBack}
+            style={{
+              padding: '12px 24px',
+              background: 'var(--surface-2)',
+              color: 'var(--text)',
+              border: '1px solid var(--border)',
+              borderRadius: 10,
+              fontSize: 14,
+              fontWeight: 700,
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+            }}
+          >
+            Cancel / Back
+          </button>
+          {step === 4 ? (
+            <button
+              onClick={handleSubmitIssue}
+              disabled={submitting || !aiResult}
+              style={{
+                padding: '13px 28px',
+                background: 'var(--accent)',
+                color: '#fff', border: 'none',
+                borderRadius: 10, fontSize: 15,
+                fontWeight: 700, cursor: 'pointer',
+                opacity: (submitting || !aiResult) ? 0.55 : 1,
+                fontFamily: 'inherit',
+              }}
+            >
+              {submitting ? 'Submitting...' : 'Submit Issue Log'}
+            </button>
+          ) : (
+            <button
+              onClick={handleNext}
+              disabled={step === 1 && !photoFile}
+              style={{
+                padding: '12px 24px',
+                background: (step === 1 && !photoFile) ? 'var(--surface-3)' : 'var(--accent)',
+                color: (step === 1 && !photoFile) ? 'var(--text-muted)' : '#fff',
+                border: 'none',
+                borderRadius: 10,
+                fontSize: 14,
+                fontWeight: 700,
+                cursor: (step === 1 && !photoFile) ? 'not-allowed' : 'pointer',
+                fontFamily: 'inherit',
+              }}
+            >
+              {step === 3 ? 'Analyze with AI' : 'Next Step'}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
