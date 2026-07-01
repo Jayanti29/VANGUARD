@@ -206,3 +206,7 @@ button { font-family: inherit; cursor: pointer; }
     border-color: #1E3A5F;
   }
 }
+
+[data-theme="dark"] .leaflet-tile-pane {
+  filter: brightness(0.85) contrast(1.05) saturate(0.9);
+}
