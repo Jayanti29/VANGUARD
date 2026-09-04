@@ -22,6 +22,7 @@ import AIAssistant from './pages/AIAssistant'
 import Officials from './pages/Officials'
 import Profile from './pages/Profile'
 import AdminDashboard from './pages/AdminDashboard'
+import Farmers from './pages/Farmers'
 
 function AdminRoute({ children }) {
   const { dbUser } = useAuth()
@@ -71,6 +72,7 @@ export default function App() {
                 <Route path="/ai" element={<AIAssistant />} />
                 <Route path="/officials" element={<Officials />} />
                 <Route path="/profile" element={<Profile />} />
+                <Route path="/farmers" element={<Farmers />} />
                 <Route 
                   path="/admin" 
                   element={

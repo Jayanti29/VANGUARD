@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import { Home, Map, MessageSquare, Users, AlertTriangle,
-         Bot, Building2, User, ChevronLeft, ChevronRight } from 'lucide-react'
+         Bot, Building2, User, ChevronLeft, ChevronRight, Sprout } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useTranslation } from 'react-i18next'
@@ -21,6 +21,7 @@ export default function Sidebar() {
     { path: '/workers', icon: Users, label: t('nav_workers') },
     { path: '/emergency', icon: AlertTriangle, label: t('nav_emergency') },
     { path: '/ai', icon: Bot, label: t('nav_ai') },
+    { path: '/farmers', icon: Sprout, label: t('nav_farmers', 'Farmers') },
     { path: '/officials', icon: Building2, label: t('nav_officials') },
     { path: '/profile', icon: User, label: t('nav_profile') },
   ]

@@ -1,11 +1,12 @@
 import { NavLink } from 'react-router-dom'
-import { Home, Map, MessageSquare, Bot, User } from 'lucide-react'
+import { Home, Map, MessageSquare, Bot, User, Sprout } from 'lucide-react'
 import { SIZE } from '../../styles/tokens'
 
 export default function BottomNav() {
   const items = [
     { path:'/', icon:Home, end:true },
     { path:'/map', icon:Map },
+    { path:'/farmers', icon:Sprout },
     { path:'/community', icon:MessageSquare },
     { path:'/ai', icon:Bot },
     { path:'/profile', icon:User },
