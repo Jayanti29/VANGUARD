@@ -513,6 +513,63 @@ export default function Farmers() {
         </div>
       </div>
 
+      {/* Seasonal Crop Calendar Advisory */}
+      <div className="p-5 bg-[var(--surface)] border border-[var(--border)] rounded-2xl space-y-4">
+        <div className="flex items-center justify-between">
+          <h4 className="text-sm font-extrabold text-[var(--text)] flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-teal-500" />
+            {t('crop_calendar', 'Seasonal Crop Calendar (Rabi / Kharif / Zaid)')}
+          </h4>
+          <span className="text-[10px] font-bold text-teal-600 bg-teal-500/10 px-2 py-0.5 rounded">
+            Current: Kharif Season
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {/* Kharif */}
+          <div className="p-4 bg-emerald-500/5 border border-emerald-500/20 rounded-xl space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-extrabold text-emerald-600">☔ Kharif (June-Oct)</span>
+              <span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded animate-pulse">Active</span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {['Paddy', 'Maize', 'Cotton', 'Soyabean', 'Groundnut'].map(crop => (
+                <span key={crop} className="text-[10px] font-bold bg-emerald-500/10 text-emerald-600 px-2 py-0.5 rounded-md">{crop}</span>
+              ))}
+            </div>
+            <p className="text-[10px] text-[var(--text-muted)] italic">Sowing: June-July • Harvesting: Sept-Oct</p>
+          </div>
+
+          {/* Rabi */}
+          <div className="p-4 bg-amber-500/5 border border-amber-500/20 rounded-xl space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-extrabold text-amber-600">❄️ Rabi (Nov-Mar)</span>
+              <span className="text-[10px] font-bold text-slate-500 bg-slate-500/10 px-1.5 py-0.5 rounded">Upcoming</span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {['Wheat', 'Mustard', 'Chickpea', 'Barley', 'Potato'].map(crop => (
+                <span key={crop} className="text-[10px] font-bold bg-amber-500/10 text-amber-600 px-2 py-0.5 rounded-md">{crop}</span>
+              ))}
+            </div>
+            <p className="text-[10px] text-[var(--text-muted)] italic">Sowing: Oct-Nov • Harvesting: Feb-Mar</p>
+          </div>
+
+          {/* Zaid */}
+          <div className="p-4 bg-blue-500/5 border border-blue-500/20 rounded-xl space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-extrabold text-blue-600">☀️ Zaid (Mar-Jun)</span>
+              <span className="text-[10px] font-bold text-slate-500 bg-slate-500/10 px-1.5 py-0.5 rounded">Completed</span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {['Watermelon', 'Muskmelon', 'Cucumber', 'Moong Dal', 'Sunflower'].map(crop => (
+                <span key={crop} className="text-[10px] font-bold bg-blue-500/10 text-blue-600 px-2 py-0.5 rounded-md">{crop}</span>
+              ))}
+            </div>
+            <p className="text-[10px] text-[var(--text-muted)] italic">Sowing: March • Harvesting: May-June</p>
+          </div>
+        </div>
+      </div>
+
       {/* Local Mandi Crop Price Engine Header & Filters */}
       <div className="bg-[var(--surface)] p-6 rounded-2xl border border-[var(--border)] space-y-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
