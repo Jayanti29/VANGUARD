@@ -1,0 +1,1 @@
+export const FONT_SCALE = { ELDERLY_READABLE: 1.15, NORMAL: 1.0, DENSE: 0.9 };
