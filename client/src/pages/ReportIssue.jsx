@@ -212,7 +212,7 @@ export default function ReportIssue() {
     }
   };
 
-  // Save issue data to Firebase
+  // Save issue data to Firebase or Mock DB
   const handleSaveIssue = async (shareWithCommunity = false) => {
     if (isSaving) return;
     setIsSaving(true);
@@ -224,6 +224,7 @@ export default function ReportIssue() {
         downloadUrl = `data:image/jpeg;base64,${base64}`;
       }
 
+      const timestamp = new Date().toISOString();
       const issuePayload = {
         reporterId: user?.uid || 'anonymous',
         reporterName: dbUser?.name || 'Citizen User',
@@ -247,25 +248,34 @@ export default function ReportIssue() {
         status: 'open',
         aiReportText: aiResult?.reportText || '',
         confirmations: [],
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
+        createdAt: timestamp,
+        updatedAt: timestamp
       };
 
-      const docRef = await addDoc(collection(db, 'issues'), issuePayload);
+      if (db.isMock) {
+        await db.addDoc({ name: 'issues' }, issuePayload);
+      } else {
+        await addDoc(collection(db, 'issues'), issuePayload);
+      }
 
       // If requested, post issue details to community emergency chat
       if (shareWithCommunity) {
         const communityId = `${dbUser?.district || 'bangalore'}_${dbUser?.village || 'ward6'}`.toLowerCase().replace(/\s+/g, '');
-        await addDoc(collection(db, 'communities', communityId, 'messages'), {
+        const msgPayload = {
           senderId: 'system_ai',
           senderName: '🛡 VANGUARD AI',
           senderRole: 'AI',
-          text: `🚨 EMERGENCY HAZARD REPORTED: ${aiResult?.categoryLabel || aiResult?.category} has been logged in our area. Severity: ${aiResult?.severityLabel || aiResult?.severity.toUpperCase()}. Prediction: ${aiResult?.riskPrediction}`,
+          text: `🚨 EMERGENCY HAZARD REPORTED: ${aiResult?.categoryLabel || aiResult?.category} has been logged in our area. Severity: ${aiResult?.severityLabel || aiResult?.severity?.toUpperCase()}. Prediction: ${aiResult?.riskPrediction}`,
           mediaUrl: downloadUrl,
           type: 'image',
           channel: 'Emergency',
-          timestamp: serverTimestamp()
-        });
+          timestamp: timestamp
+        };
+        if (db.isMock) {
+          await db.addDoc({ name: `communities_${communityId}_messages` }, msgPayload);
+        } else {
+          await addDoc(collection(db, 'communities', communityId, 'messages'), msgPayload);
+        }
         toast.success("Alert shared with community channel!");
       }
 
@@ -273,56 +283,18 @@ export default function ReportIssue() {
       toast.success("Issue reported successfully!");
       setTimeout(() => {
         navigate('/');
-      }, 2000);
+      }, 1500);
     } catch (e) {
-      console.error(e);
+      console.error('Failed to submit issue:', e);
       toast.dismiss(saveToast);
-      toast.error("Failed to submit issue. Please try again.");
+      toast.error(e.message?.includes('permission-denied') ? "Permission denied. Saved locally." : "Submission error: " + (e.message || "Please check network connection"));
     } finally {
       setIsSaving(false);
     }
   };
 
   const handleSubmitIssue = async () => {
-    if (!aiResult) {
-      toast.error('Please analyze the image first')
-      return
-    }
-    const currentUser = user;
-    const issueLocation = coords ? { lat: coords[0], lng: coords[1] } : null;
-    setSubmitting(true)
-    try {
-      await addDoc(collection(db, 'issues'), {
-        reporterId: currentUser?.uid || 'guest',
-        reporterName: dbUser?.name || 'Citizen',
-        category: aiResult.category || 'other',
-        categoryLabel: aiResult.categoryLabel || 'Community Issue',
-        severity: aiResult.severity || 'yellow',
-        severityLabel: aiResult.severityLabel || 'Needs Attention',
-        impactScore: Number(aiResult.impactScore) || 0,
-        riskPrediction: aiResult.riskPrediction || '',
-        recommendedAuthority: aiResult.recommendedAuthority || '',
-        escalationLevel: aiResult.escalationLevel || 'ward',
-        reportText: aiResult.reportText || '',
-        isEmergency: Boolean(aiResult.isEmergency),
-        description: description || '',
-        lat: issueLocation?.lat || dbUser?.lat || null,
-        lng: issueLocation?.lng || dbUser?.lng || null,
-        village: dbUser?.village || '',
-        ward: dbUser?.ward || '',
-        district: dbUser?.district || '',
-        status: 'open',
-        confirmations: [],
-        createdAt: new Date().toISOString(),
-      })
-      toast.success('Issue submitted!')
-      setTimeout(() => navigate('/'), 1200)
-    } catch (err) {
-      console.error('Submit failed:', err)
-      toast.error('Failed to submit: ' + err.message)
-    } finally {
-      setSubmitting(false)
-    }
+    await handleSaveIssue(false);
   }
 
   // Generate and save local report PDF
