@@ -1,0 +1,1 @@
+export const HEADER_HEIGHTS = { MOBILE: 56, DESKTOP: 64 };
