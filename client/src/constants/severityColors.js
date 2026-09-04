@@ -1,0 +1,1 @@
+export const SEVERITY_COLORS = { GREEN: "#16A34A", YELLOW: "#D97706", ORANGE: "#EA580C", RED: "#DC2626" };
