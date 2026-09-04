@@ -23,10 +23,14 @@ import {
   Layers,
   ArrowUpRight,
   ArrowDownRight,
-  BarChart3
+  BarChart3,
+  Loader2,
+  Bot,
+  MessageSquare
 } from 'lucide-react';
 import PageHeader from '../components/ui/PageHeader';
 import { useLanguage, getSpeechLang } from '../contexts/LanguageContext';
+import { getAgriAdvice } from '../lib/gemini';
 import toast from 'react-hot-toast';
 
 // Comprehensive Indian Mandi Crop Datasets
@@ -113,7 +117,7 @@ export const MANDI_DATASETS = [
   },
   {
     id: 'maize',
-    name: 'Maize (मक्का / ಮೆಕ್ಕೆಜੋಳ)',
+    name: 'Maize (मक्का / ಮೆಕ್ಕೆಜೋಳ)',
     category: 'Grains',
     state: 'Karnataka',
     mandi: 'Davangere APMC Mandi',
@@ -129,7 +133,7 @@ export const MANDI_DATASETS = [
   },
   {
     id: 'potato',
-    name: 'Potato (आलू / ಆಲೂಗಡ್ಡೆ)',
+    name: 'Potato (आलू / glass)',
     category: 'Vegetables',
     state: 'Uttar Pradesh',
     mandi: 'Agra APMC Yard',
@@ -145,7 +149,7 @@ export const MANDI_DATASETS = [
   },
   {
     id: 'sugarcane',
-    name: 'Sugarcane (गन्ना / ಕಬ್ಬು)',
+    name: 'Sugarcane (गन्ना / sugarcane)',
     category: 'Commercial',
     state: 'Uttar Pradesh',
     mandi: 'Muzaffarnagar Mill Yard',
@@ -201,9 +205,82 @@ export default function Farmers() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
 
+  // AI Advisory state
+  const [queryInput, setQueryInput] = useState('');
+  const [isListening, setIsListening] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiResponse, setAiResponse] = useState('');
+  const recognitionRef = useRef(null);
+
   // States list
   const statesList = ['All', 'Karnataka', 'Punjab', 'Maharashtra', 'Uttar Pradesh', 'Madhya Pradesh', 'Andhra Pradesh'];
   const categoriesList = ['All', 'Grains', 'Vegetables', 'Commercial', 'Spices'];
+
+  // Prompt Pills
+  const promptPills = [
+    { label: t('ask_fertilizer', 'Best NPK fertilizer ratio for Paddy crop'), query: 'What is the optimal NPK fertilizer ratio and timing for Paddy crop in India?' },
+    { label: t('pest_control', 'How to prevent yellow leaves on Tomato'), query: 'How to prevent yellowing leaves and early blight disease in tomato plants organically and chemically?' },
+    { label: t('govt_subsidy', 'Government subsidy for drip irrigation'), query: 'What are the government subsidies and application procedures for installing drip irrigation systems under PMKSY?' },
+    { label: '🌤 Optimal Sowing & Rainfall Window', query: 'What precautions should farmers take before harvesting crops during unexpected light rain?' }
+  ];
+
+  // Configure Speech Recognition
+  useEffect(() => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      const rec = new SpeechRecognition();
+      rec.continuous = false;
+      rec.interimResults = false;
+      rec.lang = getSpeechLang(currentLang);
+
+      rec.onresult = (event) => {
+        const text = event.results[0][0].transcript;
+        setQueryInput(text);
+        setIsListening(false);
+      };
+
+      rec.onerror = (err) => {
+        console.error("Agri Speech Recognition Error:", err);
+        setIsListening(false);
+      };
+
+      rec.onend = () => {
+        setIsListening(false);
+      };
+
+      recognitionRef.current = rec;
+    }
+  }, [currentLang]);
+
+  const toggleListening = () => {
+    if (!recognitionRef.current) {
+      toast.error("Voice input is not supported in this browser.");
+      return;
+    }
+    if (isListening) {
+      recognitionRef.current.stop();
+    } else {
+      setIsListening(true);
+      recognitionRef.current.start();
+    }
+  };
+
+  const handleAskAI = async (textToAsk = queryInput) => {
+    if (!textToAsk.trim()) {
+      toast.error("Please enter or record a question first.");
+      return;
+    }
+    setAiLoading(true);
+    try {
+      const answer = await getAgriAdvice(textToAsk, 'India', currentLang);
+      setAiResponse(answer);
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to get agricultural advice. Please try again.");
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   // Filter crops
   const filteredCrops = MANDI_DATASETS.filter(item => {
@@ -259,6 +336,94 @@ export default function Farmers() {
             <h4 className="text-base font-black text-[var(--text)]">68% Optimal</h4>
           </div>
         </div>
+      </div>
+
+      {/* AI Agricultural Assistant Card */}
+      <div className="p-6 bg-gradient-to-br from-emerald-950/40 to-teal-900/30 border border-emerald-500/30 rounded-2xl space-y-4 shadow-lg backdrop-blur-md">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center font-black shadow-md">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-lg font-black text-[var(--text)] flex items-center gap-2">
+                {t('ai_agri_advisor', 'AI Agri Assistant (Krishi Mitra)')}
+              </h3>
+              <p className="text-xs text-[var(--text-muted)]">
+                Ask crop advice, pest control solutions, fertilizer schedules in your native Indian language
+              </p>
+            </div>
+          </div>
+          <span className="text-[10px] font-extrabold uppercase bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full border border-emerald-500/30">
+            Powered by Gemini AI
+          </span>
+        </div>
+
+        {/* Input & Voice Controls */}
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <input 
+              type="text"
+              value={queryInput}
+              onChange={(e) => setQueryInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleAskAI()}
+              placeholder={t('ai_agri_placeholder', 'Ask Krishi Mitra AI (e.g. Best fertilizer for Paddy, tomato yellow leaf cure...)...')}
+              className="w-full pl-4 pr-12 py-3 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-inner"
+            />
+            <button
+              onClick={toggleListening}
+              className={`absolute right-2 top-2 p-1.5 rounded-lg transition cursor-pointer ${
+                isListening ? 'bg-red-600 text-white animate-pulse' : 'text-slate-400 hover:text-emerald-500'
+              }`}
+              title="Voice Input in Native Script"
+            >
+              <Mic className="w-5 h-5" />
+            </button>
+          </div>
+
+          <button
+            disabled={aiLoading}
+            onClick={() => handleAskAI()}
+            className="px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl flex items-center gap-2 transition cursor-pointer disabled:opacity-50 shadow-md flex-shrink-0"
+          >
+            {aiLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            <span>Ask AI</span>
+          </button>
+        </div>
+
+        {/* Pre-loaded Smart Prompt Pills */}
+        <div className="space-y-1.5">
+          <span className="text-[10px] uppercase font-bold text-[var(--text-muted)]">Suggested Prompts:</span>
+          <div className="flex flex-wrap gap-2">
+            {promptPills.map((pill, idx) => (
+              <button
+                key={idx}
+                onClick={() => {
+                  setQueryInput(pill.query);
+                  handleAskAI(pill.query);
+                }}
+                className="px-3 py-1.5 bg-[var(--surface)] border border-[var(--border)] hover:border-emerald-500 text-xs font-semibold text-[var(--text)] rounded-xl transition cursor-pointer shadow-sm text-left"
+              >
+                {pill.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* AI Response Output Display */}
+        {aiResponse && (
+          <div className="p-4 bg-[var(--surface)] border border-emerald-500/40 rounded-xl space-y-2 mt-4">
+            <div className="flex items-center justify-between text-xs font-bold text-emerald-600 border-b border-[var(--border)] pb-2">
+              <span className="flex items-center gap-1.5">
+                <Bot className="w-4 h-4" /> VANGUARD Krishi Mitra Response
+              </span>
+              <span className="text-[10px] text-[var(--text-muted)] uppercase">Multi-lingual AI Advice</span>
+            </div>
+            <div className="text-sm font-medium text-[var(--text)] whitespace-pre-line leading-relaxed">
+              {aiResponse}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Local Mandi Crop Price Engine Header & Filters */}

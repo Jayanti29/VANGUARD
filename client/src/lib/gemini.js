@@ -90,3 +90,45 @@ export async function analyzeIssueImage(base64Image, description = '', language 
 
   throw lastErr || new Error('All Gemini models failed')
 }
+
+export async function getAgriAdvice(query, location = 'India', language = 'en') {
+  if (!KEY) {
+    console.error('[Gemini] API key missing');
+    return 'Gemini API key is not configured. Please set VITE_GEMINI_API_KEY in environment variables.';
+  }
+
+  const langNames = { 
+    en: 'English', hi: 'Hindi', kn: 'Kannada', ta: 'Tamil',
+    te: 'Telugu', ml: 'Malayalam', bn: 'Bengali', mr: 'Marathi', gu: 'Gujarati', pa: 'Punjabi' 
+  };
+
+  let lastErr = null;
+  for (const m of models) {
+    try {
+      const res = await fetch(`${URL}/models/${m}:generateContent?key=${KEY}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{
+            text: `You are VANGUARD Krishi Mitra (AI Agricultural Advisor & Farming Scientist). Provide accurate, practical agricultural advice for Indian farmers. Topic: crop care, pest management, fertilizer ratios (NPK), irrigation, market prices, or government schemes (PM-KISAN, Drip Irrigation Subsidies). Respond in ${langNames[language] || 'English'}. Keep response clear, well-structured, and easy to understand for farmers. Question: ${query}`
+          }]}],
+          generationConfig: { temperature: 0.6, maxOutputTokens: 600 }
+        })
+      });
+
+      const data = await res.json();
+      if (data.error) throw new Error(data.error.message);
+
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!text) throw new Error('Empty AI advice response');
+
+      return text;
+    } catch (err) {
+      console.warn(`Model ${m} agri advice failed:`, err);
+      lastErr = err;
+    }
+  }
+
+  return `AI Agri Advisor connection error: ${lastErr?.message || 'Please check network connection'}`;
+}
+
