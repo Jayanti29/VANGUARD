@@ -1,0 +1,1 @@
+export const MODAL_CONFIG = { MAX_WIDTH: 540, RADIUS: 20, BACKDROP_BLUR: "4px" };
