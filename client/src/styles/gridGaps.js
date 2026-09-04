@@ -1,0 +1,1 @@
+export const GRID_GAPS = { COMPACT: 12, STANDARD: 16, RELAXED: 24 };
