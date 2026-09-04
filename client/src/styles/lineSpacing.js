@@ -1,0 +1,1 @@
+export const LINE_HEIGHTS = { TIGHT: 1.3, COMFORT: 1.6, SPACIOUS: 1.8 };
