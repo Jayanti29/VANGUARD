@@ -1,0 +1,1 @@
+export const ROUTES = { HOME: "/", MAP: "/map", FARMERS: "/farmers", REPORT: "/report", COMMUNITY: "/community", WORKERS: "/workers", EMERGENCY: "/emergency", AI: "/ai", PROFILE: "/profile", OFFICIALS: "/officials" };
