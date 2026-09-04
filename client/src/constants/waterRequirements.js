@@ -1,0 +1,1 @@
+export const WATER_CONSUMPTION = { PADDY: "1200-1500 mm", WHEAT: "450-650 mm", SUGARCANE: "1500-2500 mm" };
