@@ -26,7 +26,11 @@ import {
   BarChart3,
   Loader2,
   Bot,
-  MessageSquare
+  MessageSquare,
+  ThermometerSun,
+  Bug,
+  Lightbulb,
+  FileText
 } from 'lucide-react';
 import PageHeader from '../components/ui/PageHeader';
 import { useLanguage, getSpeechLang } from '../contexts/LanguageContext';
@@ -424,6 +428,89 @@ export default function Farmers() {
             </div>
           </div>
         )}
+      </div>
+
+      {/* Weather & Crop Health Advisory Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Weather & Irrigation Widget */}
+        <div className="p-5 bg-[var(--surface)] border border-[var(--border)] rounded-2xl space-y-3">
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-extrabold text-[var(--text)] flex items-center gap-2">
+              <CloudRain className="w-4 h-4 text-blue-500" />
+              {t('weather_advisory', 'Weather & Irrigation Advisory')}
+            </h4>
+            <span className="text-[10px] font-bold text-blue-600 bg-blue-500/10 px-2 py-0.5 rounded">
+              70% Rain Alert
+            </span>
+          </div>
+
+          <div className="space-y-2 text-xs">
+            <div className="flex items-center justify-between p-2.5 bg-[var(--surface-2)] rounded-xl">
+              <span className="font-semibold text-[var(--text-muted)]">Temperature Range</span>
+              <span className="font-bold text-[var(--text)]">24°C - 32°C</span>
+            </div>
+            <div className="flex items-center justify-between p-2.5 bg-[var(--surface-2)] rounded-xl">
+              <span className="font-semibold text-[var(--text-muted)]">Recommended Irrigation</span>
+              <span className="font-bold text-emerald-600">Postpone by 48 Hrs</span>
+            </div>
+            <p className="text-[11px] text-[var(--text-muted)] leading-relaxed italic">
+              "Moderate rainfall expected tomorrow evening. Avoid applying heavy nitrogen fertilizers prior to rain to prevent leaching."
+            </p>
+          </div>
+        </div>
+
+        {/* Pest Risk & Crop Protection */}
+        <div className="p-5 bg-[var(--surface)] border border-[var(--border)] rounded-2xl space-y-3">
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-extrabold text-[var(--text)] flex items-center gap-2">
+              <Bug className="w-4 h-4 text-amber-500" />
+              {t('pest_risk', 'Pest Risk Index')}
+            </h4>
+            <span className="text-[10px] font-bold text-amber-600 bg-amber-500/10 px-2 py-0.5 rounded">
+              Moderate Risk
+            </span>
+          </div>
+
+          <div className="space-y-2 text-xs">
+            <div className="flex items-center justify-between p-2.5 bg-[var(--surface-2)] rounded-xl">
+              <span className="font-semibold text-[var(--text-muted)]">Stem Borer / Leaf Folder</span>
+              <span className="font-bold text-amber-600">Paddy Fields</span>
+            </div>
+            <div className="flex items-center justify-between p-2.5 bg-[var(--surface-2)] rounded-xl">
+              <span className="font-semibold text-[var(--text-muted)]">Recommended Bio-Spray</span>
+              <span className="font-bold text-[var(--text)]">Neem Oil 10,000 PPM</span>
+            </div>
+            <p className="text-[11px] text-[var(--text-muted)] leading-relaxed italic">
+              "Inspect paddy leaves early morning for yellowing tips. Spray Neem-based bio-pesticide every 14 days."
+            </p>
+          </div>
+        </div>
+
+        {/* Government Subsidy & Helpline */}
+        <div className="p-5 bg-[var(--surface)] border border-[var(--border)] rounded-2xl space-y-3">
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-extrabold text-[var(--text)] flex items-center gap-2">
+              <Lightbulb className="w-4 h-4 text-purple-500" />
+              Government Schemes & Helpline
+            </h4>
+            <span className="text-[10px] font-bold text-purple-600 bg-purple-500/10 px-2 py-0.5 rounded">
+              80% Subsidy
+            </span>
+          </div>
+
+          <div className="space-y-2 text-xs">
+            <div className="p-2.5 bg-[var(--surface-2)] rounded-xl space-y-1">
+              <span className="font-bold text-[var(--text)] block">PM Krishi Sinchayee Yojana (PMKSY)</span>
+              <span className="text-[10px] text-[var(--text-muted)]">Drip & Sprinkler irrigation subsidy up to 80% for small farmers.</span>
+            </div>
+            <div className="flex items-center justify-between p-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+              <span className="font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
+                <Phone className="w-3.5 h-3.5" /> Kisan Call Center
+              </span>
+              <a href="tel:18001801551" className="font-black text-emerald-600 hover:underline">1800-180-1551</a>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Local Mandi Crop Price Engine Header & Filters */}
