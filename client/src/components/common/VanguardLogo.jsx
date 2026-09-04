@@ -39,7 +39,7 @@ export default function VanguardLogo({
 
             <linearGradient id="vgCoreGlowComp" x1="0%" y1="0%" x2="0%" y2="100%">
               <stop offset="0%" stopColor="#22D3EE" />
-              <stop offset="100%" stop-color="#0284C7" />
+              <stop offset="100%" stopColor="#0284C7" />
             </linearGradient>
 
             <filter id="vgGlowFilter" x="-20%" y="-20%" width="140%" height="140%">
