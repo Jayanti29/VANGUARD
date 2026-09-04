@@ -16,22 +16,6 @@ export const languagesList = [
   { code: 'pa', name: 'Punjabi', nativeName: 'ਪੰਜਾਬੀ', flag: '🇮🇳' }
 ];
 
-export const getSpeechLang = (langCode) => {
-  const mapping = {
-    en: 'en-IN',
-    hi: 'hi-IN',
-    kn: 'kn-IN',
-    ta: 'ta-IN',
-    te: 'te-IN',
-    ml: 'ml-IN',
-    bn: 'bn-IN',
-    mr: 'mr-IN',
-    gu: 'gu-IN',
-    pa: 'pa-IN'
-  };
-  return mapping[langCode] || 'en-IN';
-};
-
 export const LanguageProvider = ({ children }) => {
   const [currentLang, setCurrentLang] = useState(() => {
     return localStorage.getItem('vanguard_language') || 'en';
@@ -45,7 +29,7 @@ export const LanguageProvider = ({ children }) => {
       document.documentElement.lang = langCode;
     }
     if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('vanguard_language_changed', { detail: langCode }));
+      window.dispatchEvent(new CustomEvent('vanguard_lang_changed', { detail: { lang: langCode } }));
     }
   };
 
@@ -58,7 +42,7 @@ export const LanguageProvider = ({ children }) => {
   }, [currentLang]);
 
   return (
-    <LanguageContext.Provider value={{ currentLang, changeLanguage, languagesList, getSpeechLang }}>
+    <LanguageContext.Provider value={{ currentLang, changeLanguage, languagesList }}>
       {children}
     </LanguageContext.Provider>
   );
@@ -72,13 +56,13 @@ export const useLanguage = () => {
   return context;
 };
 
-export function changeGlobalLanguage(langCode) {
+export function changeLanguage(langCode) {
   i18n.changeLanguage(langCode);
   localStorage.setItem('vanguard_language', langCode);
   if (typeof document !== 'undefined') {
     document.documentElement.lang = langCode;
   }
   if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent('vanguard_language_changed', { detail: langCode }));
+    window.dispatchEvent(new CustomEvent('vanguard_lang_changed', { detail: { lang: langCode } }));
   }
 }
