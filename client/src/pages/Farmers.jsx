@@ -13,12 +13,10 @@ import {
   CloudSun, 
   Droplets, 
   ShieldAlert, 
-  FileText, 
   CheckCircle2, 
-  ArrowRight,
-  Info,
   Layers,
-  ChevronDown
+  ChevronDown,
+  Volume2
 } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -26,11 +24,11 @@ import PageHeader from '../components/ui/PageHeader';
 import { getAgriAdvice } from '../lib/gemini';
 import toast from 'react-hot-toast';
 
-// Comprehensive Mandi Crop Price Data for major Indian States & Mandis
+// Comprehensive Mandi Crop Price Data
 const MANDI_DATA = [
   {
     id: 'paddy-basmati',
-    name: 'Paddy / Rice (धान / ಭತ್ತ / நெல்)',
+    name: 'Paddy / Basmati Rice (धान / ಭತ್ತ / நெல்)',
     crop: 'Paddy',
     category: 'Cereals',
     state: 'Punjab',
@@ -43,12 +41,11 @@ const MANDI_DATA = [
     unit: '₹/Quintal',
     trend: 'up',
     npk: '120:60:40 (N:P:K)',
-    optimalSoil: 'Clay Loam (pH 6.0-7.0)',
     bestFertilizer: 'Urea + DAP + Zinc Sulphate at tillering stage'
   },
   {
     id: 'paddy-sona',
-    name: 'Paddy Sona Masoori (ಸೋನಾ ಮಸೂರಿ)',
+    name: 'Paddy Sona Masoori (ಸೋನಾ ಮಸೂರಿ / धान)',
     crop: 'Paddy',
     category: 'Cereals',
     state: 'Karnataka',
@@ -61,7 +58,6 @@ const MANDI_DATA = [
     unit: '₹/Quintal',
     trend: 'up',
     npk: '100:50:50 (N:P:K)',
-    optimalSoil: 'Alluvial Loam',
     bestFertilizer: 'Organic Compost + Neem Coated Urea'
   },
   {
@@ -79,7 +75,6 @@ const MANDI_DATA = [
     unit: '₹/Quintal',
     trend: 'down',
     npk: '120:60:40 (N:P:K)',
-    optimalSoil: 'Loamy Soil (pH 6.5-7.5)',
     bestFertilizer: 'DAP at sowing, Urea top-dress at first irrigation'
   },
   {
@@ -97,7 +92,6 @@ const MANDI_DATA = [
     unit: '₹/Quintal',
     trend: 'up',
     npk: '150:100:120 (N:P:K)',
-    optimalSoil: 'Sandy Loam (pH 6.0-6.8)',
     bestFertilizer: '19:19:19 water soluble spray + Calcium Nitrate'
   },
   {
@@ -115,7 +109,6 @@ const MANDI_DATA = [
     unit: '₹/Quintal',
     trend: 'down',
     npk: '100:50:50 (N:P:K) + Sulphur',
-    optimalSoil: 'Well-drained Fertile Loam',
     bestFertilizer: 'Single Super Phosphate (SSP) + Sulphur granules'
   },
   {
@@ -133,7 +126,6 @@ const MANDI_DATA = [
     unit: '₹/Quintal',
     trend: 'up',
     npk: '120:60:60 (N:P:K) + Boron',
-    optimalSoil: 'Black Deep Cotton Soil',
     bestFertilizer: 'MOP (Potash) + DAP + Micronutrient Boron spray'
   },
   {
@@ -151,7 +143,6 @@ const MANDI_DATA = [
     unit: '₹/Quintal',
     trend: 'up',
     npk: '120:60:40 (N:P:K)',
-    optimalSoil: 'Well Drained Loam',
     bestFertilizer: 'Zinc Sulphate + Urea in split doses'
   },
   {
@@ -169,12 +160,11 @@ const MANDI_DATA = [
     unit: '₹/Quintal',
     trend: 'up',
     npk: '150:100:150 (N:P:K)',
-    optimalSoil: 'Loose Sandy Loam (pH 5.2-6.4)',
     bestFertilizer: 'Potassium Schoenite + Well-rotted Farm Yard Manure'
   },
   {
     id: 'soybean-yellow',
-    name: 'Soybean (सोयाबीन / ಸೋಯಾಬೀನ್)',
+    name: 'Soybean (सोयाबीन / ಸೋಯಾಬೀನ್ / সয়াবিন)',
     crop: 'Soybean',
     category: 'Oilseeds',
     state: 'Maharashtra',
@@ -187,37 +177,18 @@ const MANDI_DATA = [
     unit: '₹/Quintal',
     trend: 'down',
     npk: '30:60:30 (N:P:K) + Rhizobium',
-    optimalSoil: 'Clay Loam with good drainage',
     bestFertilizer: 'Bio-fertilizer Rhizobium seed treatment + SSP'
-  },
-  {
-    id: 'chilli-guntur',
-    name: 'Dry Red Chilli (सूखी लाल मिर्च / ಒಣ ಮೆಣಸಿನಕಾಯಿ)',
-    crop: 'Chilli',
-    category: 'Spices',
-    state: 'Andhra Pradesh',
-    mandi: 'Guntur Mirchi Yard',
-    distanceKm: 28,
-    todayPrice: 18500,
-    yesterdayPrice: 18200,
-    minPrice: 16500,
-    maxPrice: 20500,
-    unit: '₹/Quintal',
-    trend: 'up',
-    npk: '120:60:60 (N:P:K) + Magnesium',
-    optimalSoil: 'Light Loam Soil',
-    bestFertilizer: 'NPK 13:0:45 + Micronutrient spray for flowering'
   }
 ];
 
-const STATES = ['All States', 'Karnataka', 'Maharashtra', 'Punjab', 'Madhya Pradesh', 'Gujarat', 'Uttar Pradesh', 'Andhra Pradesh'];
+const STATES = ['All States', 'Karnataka', 'Maharashtra', 'Punjab', 'Madhya Pradesh', 'Gujarat', 'Uttar Pradesh'];
 
 const QUICK_PROMPTS = [
   'Best fertilizer ratio for Paddy crop right now?',
   'How to prevent yellow leaves and pests on Tomato plants?',
   'Government subsidy schemes for drip irrigation & solar pumps',
   'Organic bio-pesticides for stem borer in Maize & Cotton',
-  'Current market price trend & when to sell stored Wheat?'
+  'When to sell stored Wheat for maximum market rate?'
 ];
 
 export default function Farmers() {
@@ -225,7 +196,6 @@ export default function Farmers() {
   const { currentLang } = useLanguage();
   const { dbUser } = useAuth();
 
-  // State Management
   const [selectedState, setSelectedState] = useState('All States');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -317,97 +287,109 @@ export default function Farmers() {
   };
 
   return (
-    <div className="space-y-6 pb-12 animate-fadeIn">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', paddingBottom: '40px' }} className="animate-fadeIn">
       {/* Header */}
       <PageHeader 
         title={t('farmers_title') || 'Farmers Mandi & Agri Dashboard'} 
-        subtitle="Compare real-time local mandi crop rates, calculate fertilization needs, and consult AI in your language."
+        subtitle="Real-time crop market prices across APMC mandis, AI agriculture advisor, and soil care recommendations."
       />
 
-      {/* Top Banner Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="card-vanguard p-4 flex items-center gap-3 border-l-4 border-emerald-500">
-          <div className="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-black">
-            <Sprout className="w-6 h-6" />
+      {/* 4 Stat Cards */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+        gap: '16px'
+      }}>
+        <div className="card-vanguard" style={{ padding: '18px 20px', display: 'flex', alignItems: 'center', gap: '16px', borderLeft: '4px solid #10B981' }}>
+          <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(16, 185, 129, 0.15)', color: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Sprout size={26} />
           </div>
           <div>
-            <div className="text-xs font-bold text-text-muted uppercase">Tracked Crops</div>
-            <div className="text-xl font-extrabold text-slate-900 dark:text-white">24+ Commodities</div>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Tracked Crops</div>
+            <div style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text)' }}>24+ Commodities</div>
           </div>
         </div>
 
-        <div className="card-vanguard p-4 flex items-center gap-3 border-l-4 border-blue-500">
-          <div className="w-12 h-12 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center font-black">
-            <MapPin className="w-6 h-6" />
+        <div className="card-vanguard" style={{ padding: '18px 20px', display: 'flex', alignItems: 'center', gap: '16px', borderLeft: '4px solid #3B82F6' }}>
+          <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(59, 130, 246, 0.15)', color: '#3B82F6', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <MapPin size={26} />
           </div>
           <div>
-            <div className="text-xs font-bold text-text-muted uppercase">Connected Mandis</div>
-            <div className="text-xl font-extrabold text-slate-900 dark:text-white">120+ APMC Yards</div>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Connected Mandis</div>
+            <div style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text)' }}>120+ APMC Yards</div>
           </div>
         </div>
 
-        <div className="card-vanguard p-4 flex items-center gap-3 border-l-4 border-amber-500">
-          <div className="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center font-black">
-            <CloudSun className="w-6 h-6" />
+        <div className="card-vanguard" style={{ padding: '18px 20px', display: 'flex', alignItems: 'center', gap: '16px', borderLeft: '4px solid #F59E0B' }}>
+          <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(245, 158, 11, 0.15)', color: '#F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <CloudSun size={26} />
           </div>
           <div>
-            <div className="text-xs font-bold text-text-muted uppercase">Weather Outlook</div>
-            <div className="text-xl font-extrabold text-slate-900 dark:text-white">28°C • Good Sowing</div>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Weather Outlook</div>
+            <div style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text)' }}>28°C • Good Sowing</div>
           </div>
         </div>
 
-        <div className="card-vanguard p-4 flex items-center gap-3 border-l-4 border-cyan-500">
-          <div className="w-12 h-12 rounded-xl bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 flex items-center justify-center font-black">
-            <Sparkles className="w-6 h-6" />
+        <div className="card-vanguard" style={{ padding: '18px 20px', display: 'flex', alignItems: 'center', gap: '16px', borderLeft: '4px solid #06B6D4' }}>
+          <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(6, 182, 212, 0.15)', color: '#06B6D4', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Sparkles size={26} />
           </div>
           <div>
-            <div className="text-xs font-bold text-text-muted uppercase">AI Krishi Mitra</div>
-            <div className="text-xl font-extrabold text-slate-900 dark:text-white">10 Indian Languages</div>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>AI Krishi Mitra</div>
+            <div style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text)' }}>10 Indian Languages</div>
           </div>
         </div>
       </div>
 
       {/* SECTION 1: AI KRISHI MITRA ADVISOR */}
-      <div className="card-vanguard p-6 bg-gradient-to-br from-emerald-500/5 via-surface to-cyan-500/5 border-emerald-500/30">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2.5 rounded-xl bg-emerald-600 text-white shadow-md">
-              <Sparkles className="w-5 h-5" />
+      <div className="card-vanguard" style={{ padding: '24px', border: '1.5px solid rgba(16, 185, 129, 0.35)', background: 'var(--surface)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ padding: '10px', borderRadius: '12px', background: '#059669', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Sparkles size={22} />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+              <h2 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text)', margin: 0 }}>
                 {t('ai_agri_advisor') || 'AI Agri Assistant (Krishi Mitra)'}
               </h2>
-              <p className="text-xs text-text-muted font-medium">
-                Ask about fertilization ratios, pest solutions, government subsidies, or sowing tips.
+              <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
+                Ask about crop diseases, fertilization ratios, market rates, or government subsidies in your language.
               </p>
             </div>
           </div>
-          <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
-            🌾 Active Voice Engine
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: '6px',
+            padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 700,
+            background: 'rgba(16, 185, 129, 0.15)', color: '#10B981', border: '1px solid rgba(16, 185, 129, 0.3)'
+          }}>
+            <Volume2 size={15} /> Native Voice Support
           </span>
         </div>
 
         {/* Input Bar with Voice */}
-        <div className="flex flex-col sm:flex-row items-center gap-2">
-          <div className="relative flex-1 w-full">
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          <div style={{ position: 'relative', flex: '1 1 300px' }}>
             <input 
               type="text" 
               value={aiQuery} 
               onChange={(e) => setAiQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleAskAgriAI()}
               placeholder={t('ask_ai_voice') || 'Ask AI in your language (Tap mic or type)...'}
-              className="w-full pl-4 pr-12 py-3 bg-surface-2 border border-border rounded-xl text-sm font-medium text-text focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              style={{ width: '100%', paddingRight: '50px', height: '48px' }}
             />
             <button 
               type="button" 
               onClick={toggleSpeech}
               title="Speak in your language"
-              className={`absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg transition-colors ${
-                isListening ? 'bg-red-500 text-white animate-pulse' : 'text-text-muted hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-slate-700'
-              }`}
+              style={{
+                position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)',
+                width: '36px', height: '36px', borderRadius: '8px', border: 'none',
+                background: isListening ? '#DC2626' : 'transparent',
+                color: isListening ? '#fff' : 'var(--accent)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center'
+              }}
             >
-              {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+              {isListening ? <MicOff size={20} /> : <Mic size={20} />}
             </button>
           </div>
 
@@ -415,16 +397,18 @@ export default function Farmers() {
             type="button"
             onClick={() => handleAskAgriAI()}
             disabled={aiLoading || !aiQuery.trim()}
-            className="w-full sm:w-auto px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-md transition-colors"
+            style={{
+              height: '48px', padding: '0 24px', borderRadius: 'var(--radius)',
+              background: '#059669', color: '#fff', border: 'none',
+              fontWeight: 700, fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px',
+              opacity: (aiLoading || !aiQuery.trim()) ? 0.6 : 1, cursor: (aiLoading || !aiQuery.trim()) ? 'not-allowed' : 'pointer'
+            }}
           >
             {aiLoading ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                <span>Analyzing...</span>
-              </>
+              <span>Analyzing...</span>
             ) : (
               <>
-                <Send className="w-4 h-4" />
+                <Send size={16} />
                 <span>Ask Advice</span>
               </>
             )}
@@ -432,7 +416,7 @@ export default function Farmers() {
         </div>
 
         {/* Quick Question Pills */}
-        <div className="flex flex-wrap gap-2 mt-3">
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '14px' }}>
           {QUICK_PROMPTS.map((prompt, idx) => (
             <button 
               key={idx} 
@@ -441,7 +425,14 @@ export default function Farmers() {
                 setAiQuery(prompt);
                 handleAskAgriAI(prompt);
               }}
-              className="px-3 py-1.5 rounded-lg bg-surface border border-border hover:border-emerald-500 text-[11px] font-semibold text-text-muted hover:text-emerald-600 transition-colors text-left"
+              style={{
+                padding: '8px 14px', borderRadius: '20px',
+                background: 'var(--surface-2)', border: '1px solid var(--border)',
+                color: 'var(--text)', fontSize: '12px', fontWeight: 600,
+                cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s ease'
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#10B981'; e.currentTarget.style.color = '#10B981'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text)'; }}
             >
               💡 {prompt}
             </button>
@@ -450,12 +441,16 @@ export default function Farmers() {
 
         {/* AI Response Output */}
         {aiResponse && (
-          <div className="mt-4 p-4 rounded-2xl bg-surface border border-emerald-500/40 shadow-inner animate-fadeIn">
-            <div className="flex items-center gap-2 text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase mb-2">
-              <Sparkles className="w-4 h-4" />
+          <div style={{
+            marginTop: '16px', padding: '18px 20px', borderRadius: '16px',
+            background: 'var(--surface-2)', border: '1.5px solid rgba(16, 185, 129, 0.4)',
+            color: 'var(--text)', fontSize: '14px', lineHeight: '1.7'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 800, color: '#10B981', textTransform: 'uppercase', marginBottom: '8px' }}>
+              <Sparkles size={16} />
               <span>Krishi Mitra Recommendation</span>
             </div>
-            <div className="text-sm text-text font-normal leading-relaxed whitespace-pre-line">
+            <div style={{ whiteSpace: 'pre-line' }}>
               {aiResponse}
             </div>
           </div>
@@ -463,42 +458,45 @@ export default function Farmers() {
       </div>
 
       {/* SECTION 2: MANDI CROP PRICE COMPARISON */}
-      <div className="card-vanguard p-6 space-y-5">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="card-vanguard" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px' }}>
           <div>
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-accent" />
+            <h2 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <TrendingUp size={22} color="var(--accent)" />
               <span>{t('mandi_prices') || 'Local Mandi Crop Rates & Price Comparison'}</span>
             </h2>
-            <p className="text-xs text-text-muted font-medium mt-0.5">
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '4px 0 0 0' }}>
               Compare rates across APMC mandis to maximize farm profits.
             </p>
           </div>
 
           {/* State Filter Dropdown */}
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="relative">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <div style={{ position: 'relative' }}>
               <select 
                 value={selectedState} 
                 onChange={(e) => setSelectedState(e.target.value)}
-                className="appearance-none bg-surface-2 border border-border rounded-xl px-4 py-2 pr-8 text-xs font-bold text-text focus:outline-none focus:ring-2 focus:ring-accent cursor-pointer"
+                style={{ padding: '8px 32px 8px 14px', fontSize: '13px', fontWeight: 700, height: '40px' }}
               >
                 {STATES.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
-              <ChevronDown className="w-4 h-4 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted" />
+              <ChevronDown size={16} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--text-muted)' }} />
             </div>
 
             {/* Category Filter */}
-            {['All', 'Cereals', 'Vegetables', 'Cash Crops', 'Oilseeds', 'Spices'].map(cat => (
+            {['All', 'Cereals', 'Vegetables', 'Cash Crops', 'Oilseeds'].map(cat => (
               <button 
                 key={cat}
                 type="button"
                 onClick={() => setSelectedCategory(cat)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${
-                  selectedCategory === cat 
-                    ? 'bg-accent text-white shadow-sm' 
-                    : 'bg-surface-2 text-text-muted hover:text-text border border-border'
-                }`}
+                style={{
+                  height: '40px', padding: '0 16px', borderRadius: '10px',
+                  fontSize: '13px', fontWeight: 700, border: '1px solid',
+                  borderColor: selectedCategory === cat ? 'var(--accent)' : 'var(--border)',
+                  background: selectedCategory === cat ? 'var(--accent)' : 'var(--surface-2)',
+                  color: selectedCategory === cat ? '#fff' : 'var(--text-muted)',
+                  cursor: 'pointer'
+                }}
               >
                 {cat}
               </button>
@@ -507,19 +505,23 @@ export default function Farmers() {
         </div>
 
         {/* Search Bar */}
-        <div className="relative">
-          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted" />
+        <div style={{ position: 'relative' }}>
+          <Search size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
           <input 
             type="text" 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={t('crop_search') || 'Search crop (Paddy, Wheat, Tomato...)...'}
-            className="w-full pl-10 pr-4 py-2.5 bg-surface-2 border border-border rounded-xl text-xs font-medium text-text focus:outline-none focus:ring-2 focus:ring-accent"
+            placeholder={t('crop_search') || 'Search crop (Paddy, Wheat, Tomato, Onion...)...'}
+            style={{ width: '100%', paddingLeft: '44px', height: '46px' }}
           />
         </div>
 
         {/* Crop Price Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(310px, 1fr))',
+          gap: '16px'
+        }}>
           {filteredCrops.map((crop) => {
             const priceDiff = crop.todayPrice - crop.yesterdayPrice;
             const pctChange = ((priceDiff / crop.yesterdayPrice) * 100).toFixed(1);
@@ -528,55 +530,75 @@ export default function Farmers() {
             return (
               <div 
                 key={crop.id}
-                className="p-4 rounded-2xl bg-surface-2 border border-border hover:border-accent/40 transition-all hover:shadow-md flex flex-col justify-between space-y-4"
+                className="card-vanguard"
+                style={{
+                  padding: '18px 20px',
+                  display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '14px',
+                  background: 'var(--surface-2)'
+                }}
               >
                 <div>
-                  <div className="flex items-start justify-between gap-2">
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
                     <div>
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-accent px-2 py-0.5 rounded-md bg-accent/10">
+                      <span style={{
+                        fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px',
+                        padding: '3px 8px', borderRadius: '6px',
+                        background: 'var(--accent-soft)', color: 'var(--accent)'
+                      }}>
                         {crop.category}
                       </span>
-                      <h3 className="font-bold text-sm text-slate-900 dark:text-white mt-1.5 leading-snug">
+                      <h3 style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text)', margin: '8px 0 0 0', lineHeight: 1.4 }}>
                         {crop.name}
                       </h3>
                     </div>
-                    <div className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-black ${
-                      isPositive ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-red-500/10 text-red-600 dark:text-red-400'
-                    }`}>
-                      {isPositive ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
+                    <div style={{
+                      display: 'inline-flex', alignItems: 'center', gap: '4px',
+                      padding: '4px 8px', borderRadius: '8px', fontSize: '12px', fontWeight: 800,
+                      background: isPositive ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                      color: isPositive ? '#10B981' : '#EF4444'
+                    }}>
+                      {isPositive ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
                       <span>{isPositive ? `+${pctChange}%` : `${pctChange}%`}</span>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1.5 text-xs text-text-muted font-medium mt-2">
-                    <MapPin className="w-3.5 h-3.5 text-red-500" />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px', fontWeight: 600 }}>
+                    <MapPin size={14} color="#EF4444" />
                     <span>{crop.mandi}, {crop.state} ({crop.distanceKm} km away)</span>
                   </div>
                 </div>
 
-                {/* Price Display */}
-                <div className="p-3 rounded-xl bg-surface border border-border/80 flex items-center justify-between">
+                {/* Price Box */}
+                <div style={{
+                  padding: '12px 14px', borderRadius: '12px',
+                  background: 'var(--surface)', border: '1px solid var(--border)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                }}>
                   <div>
-                    <div className="text-[10px] font-bold text-text-muted uppercase">Today's Rate</div>
-                    <div className="text-lg font-black text-slate-900 dark:text-white">
-                      ₹{crop.todayPrice.toLocaleString()} <span className="text-[11px] font-semibold text-text-muted">{crop.unit}</span>
+                    <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Today's Rate</div>
+                    <div style={{ fontSize: '18px', fontWeight: 900, color: 'var(--text)' }}>
+                      ₹{crop.todayPrice.toLocaleString()} <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)' }}>{crop.unit}</span>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-[10px] font-bold text-text-muted uppercase">Range (Min-Max)</div>
-                    <div className="text-xs font-extrabold text-text">
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Range</div>
+                    <div style={{ fontSize: '13px', fontWeight: 800, color: 'var(--text)' }}>
                       ₹{crop.minPrice} - ₹{crop.maxPrice}
                     </div>
                   </div>
                 </div>
 
-                {/* Fertilization & Soil Health Pill */}
-                <div className="p-2.5 rounded-xl bg-emerald-500/5 border border-emerald-500/20 text-xs space-y-1">
-                  <div className="flex items-center gap-1 font-bold text-emerald-700 dark:text-emerald-300 text-[11px]">
-                    <Droplets className="w-3.5 h-3.5" />
-                    <span>NPK Ratio: {crop.npk}</span>
+                {/* Fertilizer Advice */}
+                <div style={{
+                  padding: '10px 12px', borderRadius: '10px',
+                  background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.25)',
+                  fontSize: '12px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 800, color: '#10B981', marginBottom: '2px' }}>
+                    <Droplets size={14} />
+                    <span>NPK: {crop.npk}</span>
                   </div>
-                  <p className="text-[11px] text-text-muted line-clamp-2">
+                  <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.4 }}>
                     {crop.bestFertilizer}
                   </p>
                 </div>
@@ -586,13 +608,13 @@ export default function Farmers() {
         </div>
 
         {filteredCrops.length === 0 && (
-          <div className="text-center py-12 text-text-muted space-y-2">
-            <Sprout className="w-10 h-10 mx-auto text-text-light opacity-50" />
-            <p className="text-sm font-bold">No crops found matching your filters.</p>
+          <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>
+            <Sprout size={40} style={{ margin: '0 auto 12px', opacity: 0.5 }} />
+            <p style={{ fontSize: '14px', fontWeight: 700 }}>No crops found matching your search or filters.</p>
             <button 
-              type="button"
+              type="button" 
               onClick={() => { setSelectedState('All States'); setSelectedCategory('All'); setSearchQuery(''); }}
-              className="text-xs text-accent font-bold underline"
+              style={{ marginTop: '8px', background: 'transparent', border: 'none', color: 'var(--accent)', fontWeight: 700, fontSize: '13px', textDecoration: 'underline' }}
             >
               Reset Filters
             </button>
@@ -601,54 +623,58 @@ export default function Farmers() {
       </div>
 
       {/* SECTION 3: CROP CALENDAR & SOIL HEALTH GUIDE */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="card-vanguard p-5 space-y-3 border-l-4 border-cyan-500">
-          <div className="flex items-center gap-2">
-            <Layers className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
-            <h3 className="font-bold text-sm text-slate-900 dark:text-white">
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+        gap: '16px'
+      }}>
+        <div className="card-vanguard" style={{ padding: '20px', borderLeft: '4px solid #06B6D4' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+            <Layers size={22} color="#06B6D4" />
+            <h3 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text)', margin: 0 }}>
               {t('soil_advisory') || 'Soil Health & NPK Recommendation'}
             </h3>
           </div>
-          <p className="text-xs text-text-muted leading-relaxed">
+          <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.6, margin: 0 }}>
             Get automated soil test recommendations. Test pH balance before sowing Kharif or Rabi crops to prevent fertilizer wastage by up to 30%.
           </p>
-          <div className="grid grid-cols-3 gap-2 pt-2 text-center text-xs">
-            <div className="p-2 rounded-lg bg-surface-2 border border-border">
-              <div className="font-extrabold text-blue-600 dark:text-blue-400">Nitrogen (N)</div>
-              <div className="text-[10px] text-text-muted">Leaf Growth</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginTop: '14px' }}>
+            <div style={{ padding: '10px', borderRadius: '10px', background: 'var(--surface-2)', textAlign: 'center' }}>
+              <div style={{ fontWeight: 800, color: '#3B82F6', fontSize: '13px' }}>Nitrogen (N)</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Leaf Growth</div>
             </div>
-            <div className="p-2 rounded-lg bg-surface-2 border border-border">
-              <div className="font-extrabold text-emerald-600 dark:text-emerald-400">Phosphorus (P)</div>
-              <div className="text-[10px] text-text-muted">Root Strength</div>
+            <div style={{ padding: '10px', borderRadius: '10px', background: 'var(--surface-2)', textAlign: 'center' }}>
+              <div style={{ fontWeight: 800, color: '#10B981', fontSize: '13px' }}>Phosphorus (P)</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Root Strength</div>
             </div>
-            <div className="p-2 rounded-lg bg-surface-2 border border-border">
-              <div className="font-extrabold text-amber-600 dark:text-amber-400">Potassium (K)</div>
-              <div className="text-[10px] text-text-muted">Disease Resistance</div>
+            <div style={{ padding: '10px', borderRadius: '10px', background: 'var(--surface-2)', textAlign: 'center' }}>
+              <div style={{ fontWeight: 800, color: '#F59E0B', fontSize: '13px' }}>Potassium (K)</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Disease Immunity</div>
             </div>
           </div>
         </div>
 
-        <div className="card-vanguard p-5 space-y-3 border-l-4 border-amber-500">
-          <div className="flex items-center gap-2">
-            <ShieldAlert className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-            <h3 className="font-bold text-sm text-slate-900 dark:text-white">
+        <div className="card-vanguard" style={{ padding: '20px', borderLeft: '4px solid #F59E0B' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+            <ShieldAlert size={22} color="#F59E0B" />
+            <h3 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text)', margin: 0 }}>
               Government Agriculture Schemes
             </h3>
           </div>
-          <ul className="text-xs text-text-muted space-y-2">
-            <li className="flex items-start gap-1.5">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
-              <span><strong>PM-KUSUM:</strong> 60% subsidy on Solar Agriculture Pumps.</span>
-            </li>
-            <li className="flex items-start gap-1.5">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
-              <span><strong>Per Drop More Crop:</strong> 45-55% subsidy for Micro/Drip Irrigation systems.</span>
-            </li>
-            <li className="flex items-start gap-1.5">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
-              <span><strong>PMFBY:</strong> Comprehensive Crop Insurance for natural calamity protection.</span>
-            </li>
-          </ul>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '13px', color: 'var(--text-muted)' }}>
+              <CheckCircle2 size={16} color="#10B981" style={{ flexShrink: 0, marginTop: '2px' }} />
+              <span><strong style={{ color: 'var(--text)' }}>PM-KUSUM:</strong> 60% subsidy on Solar Agriculture Water Pumps.</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '13px', color: 'var(--text-muted)' }}>
+              <CheckCircle2 size={16} color="#10B981" style={{ flexShrink: 0, marginTop: '2px' }} />
+              <span><strong style={{ color: 'var(--text)' }}>Per Drop More Crop:</strong> 45-55% subsidy for Drip & Micro Irrigation.</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '13px', color: 'var(--text-muted)' }}>
+              <CheckCircle2 size={16} color="#10B981" style={{ flexShrink: 0, marginTop: '2px' }} />
+              <span><strong style={{ color: 'var(--text)' }}>PMFBY:</strong> Crop insurance protection against droughts and floods.</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
