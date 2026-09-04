@@ -1,0 +1,1 @@
+export const OUTDOOR_SUNLIGHT = { BG: "#FFFFFF", TEXT: "#000000", SHIELD: "#0284C7" };
