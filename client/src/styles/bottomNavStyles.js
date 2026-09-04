@@ -1,0 +1,1 @@
+export const BOTTOM_NAV_TOKENS = { HEIGHT: 64, ICON_SIZE: 24 };
