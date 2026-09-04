@@ -155,21 +155,19 @@ export default function Login() {
       <div className="text-center flex flex-col items-center justify-center space-y-3">
         {/* V icon with glow */}
         <div className="relative group mt-2">
-          <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 via-teal-500 to-green-500 rounded-2xl blur opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
-          <img 
-            src="/vanguard-logo.png" 
-            alt="VANGUARD Logo" 
-            className="relative w-20 h-20 rounded-2xl object-contain bg-slate-900 p-1.5" 
-          />
+          <div className="absolute -inset-2 bg-gradient-to-r from-blue-500 via-cyan-400 to-indigo-500 rounded-3xl blur-md opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
+          <div className="relative bg-slate-900/90 backdrop-blur-xl border border-slate-700/50 p-4 rounded-3xl shadow-2xl flex items-center justify-center">
+            <VanguardLogo size={64} variant="icon" animated />
+          </div>
         </div>
 
-        <h1 className="text-2xl font-black text-primary dark:text-white uppercase tracking-wider mt-2">
+        <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-widest mt-3">
           VANGUARD
         </h1>
-        <h2 className="text-sm font-bold text-accent">
+        <h2 className="text-sm font-extrabold text-cyan-600 dark:text-cyan-400 uppercase tracking-wider">
           AI Community Guardian
         </h2>
-        <p className="text-xs text-text-muted font-bold">
+        <p className="text-xs text-text-muted font-semibold tracking-wide">
           Protect &bull; Connect &bull; Empower
         </p>
       </div>

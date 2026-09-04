@@ -6,6 +6,8 @@ import { useAuth } from '../../contexts/AuthContext'
 import { useTranslation } from 'react-i18next'
 import { SIZE, SPACE, RADIUS, FONT } from '../../styles/tokens'
 
+import VanguardLogo from '../common/VanguardLogo'
+
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false)
   const { userProfile } = useAuth()
@@ -27,14 +29,14 @@ export default function Sidebar() {
     <aside style={{
       width: w,
       flex: `0 0 ${w}px`,
-      height: '100vh',
-      position: 'sticky',
-      top: 0,
       background: 'var(--surface)',
       borderRight: '1px solid var(--border)',
       display: 'flex',
       flexDirection: 'column',
-      transition: 'width 0.18s ease',
+      height: '100vh',
+      position: 'sticky',
+      top: 0,
+      transition: 'all 0.2s ease',
       zIndex: 20,
     }}>
       <div style={{
@@ -47,12 +49,7 @@ export default function Sidebar() {
         borderBottom: '1px solid var(--border)',
       }}>
         <div style={{display:'flex', alignItems:'center', gap: collapsed ? 0 : 8}}>
-          <img src="/vanguard-icon.png" alt="VANGUARD" 
-               style={{height:26, width:26, flexShrink:0, objectFit:'contain'}} />
-          {!collapsed && (
-            <span style={{fontWeight:800, fontSize:16, color:'var(--text)', 
-                           whiteSpace:'nowrap'}}>VANGUARD</span>
-          )}
+          <VanguardLogo size={28} variant={collapsed ? 'icon' : 'full'} />
         </div>
         <button onClick={() => setCollapsed(c => !c)} aria-label="Toggle sidebar" style={{
           width:32, height:32, flexShrink:0, borderRadius:RADIUS.sm,

@@ -5,6 +5,7 @@ import { useLanguage } from '../../contexts/LanguageContext'
 import { useViewport } from '../../hooks/useViewport'
 import { SIZE, SPACE, RADIUS, FONT } from '../../styles/tokens'
 import { useNavigate } from 'react-router-dom'
+import VanguardLogo from '../common/VanguardLogo'
 
 export default function TopBar() {
   const { userProfile } = useAuth()
@@ -26,8 +27,7 @@ export default function TopBar() {
     }}>
       {/* Left: logo only on mobile/tablet (sidebar has it on desktop) */}
       {!isDesktop ? (
-        <img src="/vanguard-icon.png" alt="VANGUARD" 
-             style={{height:24, width:24, flexShrink:0, objectFit:'contain'}} />
+        <VanguardLogo size={26} variant="full" />
       ) : <div />}
 
       <div style={{display:'flex', alignItems:'center', gap: isDesktop ? SPACE.md : SPACE.sm}}>

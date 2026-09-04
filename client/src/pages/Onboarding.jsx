@@ -12,6 +12,7 @@ import { auth, db } from '../lib/firebase'
 import { useAuth } from '../contexts/AuthContext'
 import { useLanguage } from '../contexts/LanguageContext'
 import { useTranslation } from 'react-i18next'
+import VanguardLogo from '../components/common/VanguardLogo'
 
 const LANGUAGES = [
   { code: 'en', name: 'English', native: 'English' },
@@ -496,10 +497,9 @@ export default function Onboarding() {
     <div style={styles.container}>
       <div style={styles.card}>
         {/* Header */}
-        <div style={{ ...styles.header, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <img src="/vanguard-logo-full.png" alt="VANGUARD"
-               style={{width: 120, height: 'auto', objectFit: 'contain', display: 'block', margin: '0 auto 16px auto'}} />
-          <h1 style={styles.title}>VANGUARD</h1>
+        <div style={{ ...styles.header, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, marginBottom: 20 }}>
+          <VanguardLogo size={52} variant="icon" animated />
+          <h1 style={{ ...styles.title, margin: '8px 0 2px 0' }}>VANGUARD</h1>
           <p style={styles.subtitle}>Community Protection Platform</p>
         </div>
 
