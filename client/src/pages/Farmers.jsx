@@ -711,6 +711,75 @@ export default function Farmers() {
           </div>
         )}
       </div>
+
+      {/* MSP (Minimum Support Price) Reference Table */}
+      <div className="p-5 bg-[var(--surface)] border border-[var(--border)] rounded-2xl space-y-4">
+        <div className="flex items-center justify-between">
+          <h4 className="text-sm font-extrabold text-[var(--text)] flex items-center gap-2">
+            <FileText className="w-4 h-4 text-indigo-500" />
+            {t('msp_reference', 'MSP Reference Rates (Govt. of India 2024-25)')}
+          </h4>
+          <span className="text-[10px] font-bold text-indigo-600 bg-indigo-500/10 px-2 py-0.5 rounded">
+            Central Govt. Notified
+          </span>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-[var(--border)]">
+                <th className="text-left py-2 font-extrabold text-[var(--text-muted)] uppercase tracking-wider">Crop</th>
+                <th className="text-right py-2 font-extrabold text-[var(--text-muted)] uppercase tracking-wider">MSP (₹/Qtl)</th>
+                <th className="text-right py-2 font-extrabold text-[var(--text-muted)] uppercase tracking-wider">Season</th>
+                <th className="text-right py-2 font-extrabold text-[var(--text-muted)] uppercase tracking-wider">vs Mandi Avg</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                { name: 'Paddy (Common)', msp: 2300, season: 'Kharif', diff: '+6.5%' },
+                { name: 'Wheat', msp: 2275, season: 'Rabi', diff: '0.0%' },
+                { name: 'Maize', msp: 2090, season: 'Kharif', diff: '-5.2%' },
+                { name: 'Cotton (Long)', msp: 7020, season: 'Kharif', diff: '+1.8%' },
+                { name: 'Soyabean (Yellow)', msp: 4600, season: 'Kharif', diff: '+1.0%' },
+                { name: 'Sugarcane (FRP)', msp: 340, season: 'Year-round', diff: '+4.4%' },
+              ].map((item, idx) => (
+                <tr key={idx} className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)] transition">
+                  <td className="py-2.5 font-bold text-[var(--text)]">{item.name}</td>
+                  <td className="py-2.5 text-right font-extrabold text-[var(--text)]">₹{item.msp.toLocaleString('en-IN')}</td>
+                  <td className="py-2.5 text-right font-semibold text-[var(--text-muted)]">{item.season}</td>
+                  <td className={`py-2.5 text-right font-extrabold ${item.diff.startsWith('+') ? 'text-emerald-600' : item.diff.startsWith('-') ? 'text-red-500' : 'text-slate-500'}`}>
+                    {item.diff}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="text-[10px] text-[var(--text-muted)] italic">
+          * MSP rates are notified by CACP (Commission for Agricultural Costs & Prices). Actual procurement varies by state.
+        </p>
+      </div>
+
+      {/* Important Farmer Helplines */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        {[
+          { name: 'Kisan Call Center', number: '1800-180-1551', desc: 'Free agri advisory', color: 'emerald' },
+          { name: 'PM-KISAN Helpline', number: '155261', desc: 'PM-KISAN scheme queries', color: 'blue' },
+          { name: 'Crop Insurance (PMFBY)', number: '1800-120-0868', desc: 'Claim & enrollment', color: 'amber' },
+          { name: 'Soil Health Card', number: '1800-180-1551', desc: 'Soil testing info', color: 'purple' },
+        ].map((line, idx) => (
+          <div key={idx} className={`p-4 bg-[var(--surface)] border border-[var(--border)] rounded-2xl flex items-center gap-3 hover:border-${line.color}-500/40 transition`}>
+            <div className={`w-9 h-9 rounded-xl bg-${line.color}-500/10 text-${line.color}-600 flex items-center justify-center`}>
+              <Phone className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <span className="text-xs font-extrabold text-[var(--text)] block">{line.name}</span>
+              <a href={`tel:${line.number}`} className={`text-xs font-bold text-${line.color}-600 hover:underline`}>{line.number}</a>
+              <span className="text-[10px] text-[var(--text-muted)] block">{line.desc}</span>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
