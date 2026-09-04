@@ -1,0 +1,1 @@
+export const SENIOR_MODE = { BIG_ICONS: 28, SIMPLIFIED_NAVIGATION: true };
