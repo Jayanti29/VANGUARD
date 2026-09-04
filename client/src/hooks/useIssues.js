@@ -57,9 +57,25 @@ export const useIssues = () => {
           setIssues(fetched);
           setLoading(false);
         }, (err) => {
-          console.error("Firestore onSnapshot error:", err);
-          setError(err.message);
-          setLoading(false);
+          console.warn("Firestore onSnapshot index/query error, falling back to in-memory sort:", err);
+          // Fallback query without orderBy to prevent composite index failure
+          const fallbackQuery = query(
+            issuesRef,
+            where('village', '==', dbUser.village)
+          );
+          unsubscribe = onSnapshot(fallbackQuery, (fbSnapshot) => {
+            const fetched = [];
+            fbSnapshot.forEach((docSnap) => {
+              fetched.push({ id: docSnap.id, ...docSnap.data() });
+            });
+            fetched.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+            setIssues(fetched);
+            setLoading(false);
+          }, (fbErr) => {
+            console.error("Fallback query failed:", fbErr);
+            setError(fbErr.message);
+            setLoading(false);
+          });
         });
       }
     } catch (err) {
