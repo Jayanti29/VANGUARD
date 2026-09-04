@@ -1,0 +1,1 @@
+export const HIGH_CONTRAST = { DARK_TEXT: "#000000", LIGHT_TEXT: "#FFFFFF", ACCENT: "#0284C7" };
