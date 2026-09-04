@@ -1,0 +1,1 @@
+export const STEPPER_CONFIG = { STEP_SIZE: 36, ACTIVE_BG: "#0284C7" };
