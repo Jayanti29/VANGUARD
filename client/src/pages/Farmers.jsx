@@ -4,247 +4,273 @@ import {
   Sprout, 
   TrendingUp, 
   TrendingDown, 
-  Minus, 
   Search, 
-  CloudRain, 
-  Droplets, 
-  Sun, 
-  AlertCircle, 
+  MapPin, 
   Sparkles, 
   Mic, 
+  MicOff, 
   Send, 
-  HelpCircle, 
+  CloudSun, 
+  Droplets, 
+  ShieldAlert, 
+  FileText, 
   CheckCircle2, 
-  MapPin, 
-  Phone, 
-  ExternalLink,
-  ShieldAlert,
-  Calendar,
+  ArrowRight,
+  Info,
   Layers,
-  ArrowUpRight,
-  ArrowDownRight,
-  BarChart3,
-  Loader2,
-  Bot,
-  MessageSquare,
-  ThermometerSun,
-  Bug,
-  Lightbulb,
-  FileText
+  ChevronDown
 } from 'lucide-react';
+import { useLanguage } from '../contexts/LanguageContext';
+import { useAuth } from '../contexts/AuthContext';
 import PageHeader from '../components/ui/PageHeader';
-import { useLanguage, getSpeechLang } from '../contexts/LanguageContext';
 import { getAgriAdvice } from '../lib/gemini';
 import toast from 'react-hot-toast';
 
-// Comprehensive Indian Mandi Crop Datasets
-export const MANDI_DATASETS = [
+// Comprehensive Mandi Crop Price Data for major Indian States & Mandis
+const MANDI_DATA = [
   {
-    id: 'paddy',
-    name: 'Paddy (Rice / धान / ਭੱਤ)',
-    category: 'Grains',
-    state: 'Karnataka',
-    mandi: 'Ramanagara Main Mandi',
-    todayPrice: 2450,
-    yesterdayPrice: 2380,
-    minPrice: 2200,
-    maxPrice: 2600,
-    unit: '₹ / Quintal',
-    trend: 'up',
-    percentChange: '+2.9%',
-    arrivals: '620 Quintals',
-    quality: 'Grade A',
-  },
-  {
-    id: 'wheat',
-    name: 'Wheat (गेहूं / ਕਣਕ)',
-    category: 'Grains',
+    id: 'paddy-basmati',
+    name: 'Paddy / Rice (धान / ಭತ್ತ / நெல்)',
+    crop: 'Paddy',
+    category: 'Cereals',
     state: 'Punjab',
-    mandi: 'Ludhiana Central Mandi',
-    todayPrice: 2275,
-    yesterdayPrice: 2275,
-    minPrice: 2150,
-    maxPrice: 2350,
-    unit: '₹ / Quintal',
-    trend: 'stable',
-    percentChange: '0.0%',
-    arrivals: '1200 Quintals',
-    quality: 'Sharbati Premium',
+    mandi: 'Khanna Mandi',
+    distanceKm: 14,
+    todayPrice: 3850,
+    yesterdayPrice: 3720,
+    minPrice: 3500,
+    maxPrice: 4100,
+    unit: '₹/Quintal',
+    trend: 'up',
+    npk: '120:60:40 (N:P:K)',
+    optimalSoil: 'Clay Loam (pH 6.0-7.0)',
+    bestFertilizer: 'Urea + DAP + Zinc Sulphate at tillering stage'
   },
   {
-    id: 'tomato',
-    name: 'Tomato (टमाटर / ಟೊಮೆಟೊ)',
-    category: 'Vegetables',
+    id: 'paddy-sona',
+    name: 'Paddy Sona Masoori (ಸೋನಾ ಮಸೂರಿ)',
+    crop: 'Paddy',
+    category: 'Cereals',
     state: 'Karnataka',
-    mandi: 'Kolar Wholesale Mandi',
-    todayPrice: 1850,
-    yesterdayPrice: 2100,
-    minPrice: 1400,
-    maxPrice: 2200,
-    unit: '₹ / Quintal',
-    trend: 'down',
-    percentChange: '-11.9%',
-    arrivals: '850 Quintals',
-    quality: 'Hybrid Red',
-  },
-  {
-    id: 'onion',
-    name: 'Onion (प्याज / ಈರುള്ളി)',
-    category: 'Vegetables',
-    state: 'Maharashtra',
-    mandi: 'Lasalgaon Mandi',
-    todayPrice: 3200,
-    yesterdayPrice: 2950,
-    minPrice: 2700,
-    maxPrice: 3450,
-    unit: '₹ / Quintal',
+    mandi: 'Ramanagara APMC',
+    distanceKm: 8,
+    todayPrice: 3420,
+    yesterdayPrice: 3400,
+    minPrice: 3200,
+    maxPrice: 3600,
+    unit: '₹/Quintal',
     trend: 'up',
-    percentChange: '+8.4%',
-    arrivals: '1500 Quintals',
-    quality: 'Nashik Pink',
+    npk: '100:50:50 (N:P:K)',
+    optimalSoil: 'Alluvial Loam',
+    bestFertilizer: 'Organic Compost + Neem Coated Urea'
   },
   {
-    id: 'cotton',
-    name: 'Cotton (कपास / ಹತ್ತಿ)',
-    category: 'Commercial',
-    state: 'Maharashtra',
-    mandi: 'Nagpur Cotton Market',
-    todayPrice: 7150,
-    yesterdayPrice: 7000,
-    minPrice: 6800,
-    maxPrice: 7400,
-    unit: '₹ / Quintal',
-    trend: 'up',
-    percentChange: '+2.1%',
-    arrivals: '430 Quintals',
-    quality: 'Long Staple',
-  },
-  {
-    id: 'maize',
-    name: 'Maize (मक्का / ಮೆಕ್ಕೆಜೋಳ)',
-    category: 'Grains',
-    state: 'Karnataka',
-    mandi: 'Davangere APMC Mandi',
-    todayPrice: 1980,
-    yesterdayPrice: 2020,
-    minPrice: 1850,
-    maxPrice: 2100,
-    unit: '₹ / Quintal',
-    trend: 'down',
-    percentChange: '-1.9%',
-    arrivals: '980 Quintals',
-    quality: 'Yellow Kernel',
-  },
-  {
-    id: 'potato',
-    name: 'Potato (आलू / glass)',
-    category: 'Vegetables',
-    state: 'Uttar Pradesh',
-    mandi: 'Agra APMC Yard',
-    todayPrice: 1420,
-    yesterdayPrice: 1400,
-    minPrice: 1250,
-    maxPrice: 1550,
-    unit: '₹ / Quintal',
-    trend: 'up',
-    percentChange: '+1.4%',
-    arrivals: '1100 Quintals',
-    quality: 'Kufri Jyoti',
-  },
-  {
-    id: 'sugarcane',
-    name: 'Sugarcane (गन्ना / sugarcane)',
-    category: 'Commercial',
-    state: 'Uttar Pradesh',
-    mandi: 'Muzaffarnagar Mill Yard',
-    todayPrice: 355,
-    yesterdayPrice: 355,
-    minPrice: 340,
-    maxPrice: 370,
-    unit: '₹ / Quintal',
-    trend: 'stable',
-    percentChange: '0.0%',
-    arrivals: '3200 Quintals',
-    quality: 'High Sucrose',
-  },
-  {
-    id: 'soyabean',
-    name: 'Soyabean (सोयाबीन)',
-    category: 'Commercial',
+    id: 'wheat-sharbati',
+    name: 'Wheat Sharbati (गेहूं / ಗೋಧಿ / கோதுமை)',
+    crop: 'Wheat',
+    category: 'Cereals',
     state: 'Madhya Pradesh',
-    mandi: 'Indore APMC Yard',
-    todayPrice: 4650,
-    yesterdayPrice: 4500,
+    mandi: 'Sehore APMC',
+    distanceKm: 18,
+    todayPrice: 2850,
+    yesterdayPrice: 2890,
+    minPrice: 2600,
+    maxPrice: 3100,
+    unit: '₹/Quintal',
+    trend: 'down',
+    npk: '120:60:40 (N:P:K)',
+    optimalSoil: 'Loamy Soil (pH 6.5-7.5)',
+    bestFertilizer: 'DAP at sowing, Urea top-dress at first irrigation'
+  },
+  {
+    id: 'tomato-hybrid',
+    name: 'Tomato Hybrid (टमाटर / ಟೊಮೆಟೊ / தக்காளி)',
+    crop: 'Tomato',
+    category: 'Vegetables',
+    state: 'Karnataka',
+    mandi: 'Kolar APMC Market',
+    distanceKm: 22,
+    todayPrice: 1950,
+    yesterdayPrice: 1750,
+    minPrice: 1500,
+    maxPrice: 2200,
+    unit: '₹/Quintal',
+    trend: 'up',
+    npk: '150:100:120 (N:P:K)',
+    optimalSoil: 'Sandy Loam (pH 6.0-6.8)',
+    bestFertilizer: '19:19:19 water soluble spray + Calcium Nitrate'
+  },
+  {
+    id: 'onion-nasik',
+    name: 'Red Onion (लाल प्याज / ಈರುಳ್ಳಿ / வெங்காயம்)',
+    crop: 'Onion',
+    category: 'Vegetables',
+    state: 'Maharashtra',
+    mandi: 'Lasalgaon Mandi (Nashik)',
+    distanceKm: 25,
+    todayPrice: 2450,
+    yesterdayPrice: 2580,
+    minPrice: 2100,
+    maxPrice: 2750,
+    unit: '₹/Quintal',
+    trend: 'down',
+    npk: '100:50:50 (N:P:K) + Sulphur',
+    optimalSoil: 'Well-drained Fertile Loam',
+    bestFertilizer: 'Single Super Phosphate (SSP) + Sulphur granules'
+  },
+  {
+    id: 'cotton-bt',
+    name: 'Cotton Long Staple (कपास / ಹತ್ತಿ / பருத்தி)',
+    crop: 'Cotton',
+    category: 'Cash Crops',
+    state: 'Gujarat',
+    mandi: 'Rajkot APMC Yard',
+    distanceKm: 30,
+    todayPrice: 7250,
+    yesterdayPrice: 7100,
+    minPrice: 6800,
+    maxPrice: 7600,
+    unit: '₹/Quintal',
+    trend: 'up',
+    npk: '120:60:60 (N:P:K) + Boron',
+    optimalSoil: 'Black Deep Cotton Soil',
+    bestFertilizer: 'MOP (Potash) + DAP + Micronutrient Boron spray'
+  },
+  {
+    id: 'maize-yellow',
+    name: 'Maize / Corn (मक्का / ಮೆಕ್ಕೆಜೋಳ / மக்காச்சோளம்)',
+    crop: 'Maize',
+    category: 'Cereals',
+    state: 'Karnataka',
+    mandi: 'Davanagere APMC',
+    distanceKm: 15,
+    todayPrice: 2180,
+    yesterdayPrice: 2120,
+    minPrice: 1950,
+    maxPrice: 2300,
+    unit: '₹/Quintal',
+    trend: 'up',
+    npk: '120:60:40 (N:P:K)',
+    optimalSoil: 'Well Drained Loam',
+    bestFertilizer: 'Zinc Sulphate + Urea in split doses'
+  },
+  {
+    id: 'potato-jyoti',
+    name: 'Potato Kufri Jyoti (आलू / ಆಲೂಗಡ್ಡೆ / உருளைக்கிழங்கு)',
+    crop: 'Potato',
+    category: 'Vegetables',
+    state: 'Uttar Pradesh',
+    mandi: 'Agra Mandi',
+    distanceKm: 12,
+    todayPrice: 1450,
+    yesterdayPrice: 1420,
+    minPrice: 1250,
+    maxPrice: 1600,
+    unit: '₹/Quintal',
+    trend: 'up',
+    npk: '150:100:150 (N:P:K)',
+    optimalSoil: 'Loose Sandy Loam (pH 5.2-6.4)',
+    bestFertilizer: 'Potassium Schoenite + Well-rotted Farm Yard Manure'
+  },
+  {
+    id: 'soybean-yellow',
+    name: 'Soybean (सोयाबीन / ಸೋಯಾಬೀನ್)',
+    crop: 'Soybean',
+    category: 'Oilseeds',
+    state: 'Maharashtra',
+    mandi: 'Latur APMC',
+    distanceKm: 19,
+    todayPrice: 4620,
+    yesterdayPrice: 4680,
     minPrice: 4300,
     maxPrice: 4850,
-    unit: '₹ / Quintal',
-    trend: 'up',
-    percentChange: '+3.3%',
-    arrivals: '750 Quintals',
-    quality: 'Yellow Bold',
+    unit: '₹/Quintal',
+    trend: 'down',
+    npk: '30:60:30 (N:P:K) + Rhizobium',
+    optimalSoil: 'Clay Loam with good drainage',
+    bestFertilizer: 'Bio-fertilizer Rhizobium seed treatment + SSP'
   },
   {
-    id: 'chillies',
-    name: 'Red Chillies (लाल मिर्च)',
+    id: 'chilli-guntur',
+    name: 'Dry Red Chilli (सूखी लाल मिर्च / ಒಣ ಮೆಣಸಿನಕಾಯಿ)',
+    crop: 'Chilli',
     category: 'Spices',
     state: 'Andhra Pradesh',
-    mandi: 'Guntur Spices Yard',
-    todayPrice: 18400,
-    yesterdayPrice: 18900,
+    mandi: 'Guntur Mirchi Yard',
+    distanceKm: 28,
+    todayPrice: 18500,
+    yesterdayPrice: 18200,
     minPrice: 16500,
-    maxPrice: 19800,
-    unit: '₹ / Quintal',
-    trend: 'down',
-    percentChange: '-2.6%',
-    arrivals: '310 Quintals',
-    quality: 'Teja Superior',
+    maxPrice: 20500,
+    unit: '₹/Quintal',
+    trend: 'up',
+    npk: '120:60:60 (N:P:K) + Magnesium',
+    optimalSoil: 'Light Loam Soil',
+    bestFertilizer: 'NPK 13:0:45 + Micronutrient spray for flowering'
   }
+];
+
+const STATES = ['All States', 'Karnataka', 'Maharashtra', 'Punjab', 'Madhya Pradesh', 'Gujarat', 'Uttar Pradesh', 'Andhra Pradesh'];
+
+const QUICK_PROMPTS = [
+  'Best fertilizer ratio for Paddy crop right now?',
+  'How to prevent yellow leaves and pests on Tomato plants?',
+  'Government subsidy schemes for drip irrigation & solar pumps',
+  'Organic bio-pesticides for stem borer in Maize & Cotton',
+  'Current market price trend & when to sell stored Wheat?'
 ];
 
 export default function Farmers() {
   const { t } = useTranslation();
   const { currentLang } = useLanguage();
+  const { dbUser } = useAuth();
 
-  const [selectedState, setSelectedState] = useState('All');
+  // State Management
+  const [selectedState, setSelectedState] = useState('All States');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
-
-  // AI Advisory state
-  const [queryInput, setQueryInput] = useState('');
-  const [isListening, setIsListening] = useState(false);
-  const [aiLoading, setAiLoading] = useState(false);
+  
+  // AI Advisor State
+  const [aiQuery, setAiQuery] = useState('');
   const [aiResponse, setAiResponse] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef(null);
 
-  // States list
-  const statesList = ['All', 'Karnataka', 'Punjab', 'Maharashtra', 'Uttar Pradesh', 'Madhya Pradesh', 'Andhra Pradesh'];
-  const categoriesList = ['All', 'Grains', 'Vegetables', 'Commercial', 'Spices'];
+  // Filtered Mandi List
+  const filteredCrops = MANDI_DATA.filter(item => {
+    const matchesState = selectedState === 'All States' || item.state === selectedState;
+    const matchesCategory = selectedCategory === 'All' || item.category === selectedCategory;
+    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          item.crop.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          item.mandi.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesState && matchesCategory && matchesSearch;
+  });
 
-  // Prompt Pills
-  const promptPills = [
-    { label: t('ask_fertilizer', 'Best NPK fertilizer ratio for Paddy crop'), query: 'What is the optimal NPK fertilizer ratio and timing for Paddy crop in India?' },
-    { label: t('pest_control', 'How to prevent yellow leaves on Tomato'), query: 'How to prevent yellowing leaves and early blight disease in tomato plants organically and chemically?' },
-    { label: t('govt_subsidy', 'Government subsidy for drip irrigation'), query: 'What are the government subsidies and application procedures for installing drip irrigation systems under PMKSY?' },
-    { label: '🌤 Optimal Sowing & Rainfall Window', query: 'What precautions should farmers take before harvesting crops during unexpected light rain?' }
-  ];
-
-  // Configure Speech Recognition
+  // Speech Recognition Setup
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
       const rec = new SpeechRecognition();
       rec.continuous = false;
       rec.interimResults = false;
-      rec.lang = getSpeechLang(currentLang);
+      
+      const speechLangMap = {
+        en: 'en-IN', hi: 'hi-IN', kn: 'kn-IN', ta: 'ta-IN',
+        te: 'te-IN', ml: 'ml-IN', bn: 'bn-IN', mr: 'mr-IN',
+        gu: 'gu-IN', pa: 'pa-IN'
+      };
+      rec.lang = speechLangMap[currentLang] || 'en-IN';
 
-      rec.onresult = (event) => {
-        const text = event.results[0][0].transcript;
-        setQueryInput(text);
+      rec.onresult = (e) => {
+        const text = e.results[0][0].transcript;
+        setAiQuery(text);
         setIsListening(false);
+        handleAskAgriAI(text);
       };
 
-      rec.onerror = (err) => {
-        console.error("Agri Speech Recognition Error:", err);
+      rec.onerror = (e) => {
+        console.error('Speech error:', e);
         setIsListening(false);
       };
 
@@ -256,9 +282,9 @@ export default function Farmers() {
     }
   }, [currentLang]);
 
-  const toggleListening = () => {
+  const toggleSpeech = () => {
     if (!recognitionRef.current) {
-      toast.error("Voice input is not supported in this browser.");
+      toast.error('Voice input is not supported in this browser.');
       return;
     }
     if (isListening) {
@@ -269,362 +295,209 @@ export default function Farmers() {
     }
   };
 
-  const handleAskAI = async (textToAsk = queryInput) => {
-    if (!textToAsk.trim()) {
-      toast.error("Please enter or record a question first.");
+  const handleAskAgriAI = async (queryText = aiQuery) => {
+    const queryToAsk = queryText || aiQuery;
+    if (!queryToAsk.trim()) {
+      toast.error('Please enter or speak a question.');
       return;
     }
+
     setAiLoading(true);
+    setAiResponse('');
     try {
-      const answer = await getAgriAdvice(textToAsk, 'India', currentLang);
-      setAiResponse(answer);
-    } catch (e) {
-      console.error(e);
-      toast.error("Failed to get agricultural advice. Please try again.");
+      const response = await getAgriAdvice(queryToAsk, dbUser?.district || 'India', currentLang);
+      setAiResponse(response);
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to get agricultural advice. Please try again.');
+      setAiResponse('AI Advisor is currently unreachable. Please check your internet connection.');
     } finally {
       setAiLoading(false);
     }
   };
 
-  // Filter crops
-  const filteredCrops = MANDI_DATASETS.filter(item => {
-    const matchesState = selectedState === 'All' || item.state === selectedState;
-    const matchesCategory = selectedCategory === 'All' || item.category === selectedCategory;
-    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          item.mandi.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesState && matchesCategory && matchesSearch;
-  });
-
   return (
-    <div className="space-y-6 pb-12">
+    <div className="space-y-6 pb-12 animate-fadeIn">
+      {/* Header */}
       <PageHeader 
-        title={t('farmers_title', 'Farmers Mandi & Agri Dashboard')}
-        subtitle={t('farmers_subtitle', 'Real-time crop price comparison, AI Agri Advisory & Weather Insights')}
+        title={t('farmers_title') || 'Farmers Mandi & Agri Dashboard'} 
+        subtitle="Compare real-time local mandi crop rates, calculate fertilization needs, and consult AI in your language."
       />
 
-      {/* Overview Metric Pills */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="p-4 bg-[var(--surface)] border border-[var(--border)] rounded-2xl flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-bold">
-            <Sprout className="w-5 h-5" />
+      {/* Top Banner Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="card-vanguard p-4 flex items-center gap-3 border-l-4 border-emerald-500">
+          <div className="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-black">
+            <Sprout className="w-6 h-6" />
           </div>
           <div>
-            <span className="text-[10px] uppercase font-bold text-[var(--text-muted)]">Active Mandis</span>
-            <h4 className="text-base font-black text-[var(--text)]">142+ APMC Yards</h4>
+            <div className="text-xs font-bold text-text-muted uppercase">Tracked Crops</div>
+            <div className="text-xl font-extrabold text-slate-900 dark:text-white">24+ Commodities</div>
           </div>
         </div>
-        <div className="p-4 bg-[var(--surface)] border border-[var(--border)] rounded-2xl flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center font-bold">
-            <BarChart3 className="w-5 h-5" />
+
+        <div className="card-vanguard p-4 flex items-center gap-3 border-l-4 border-blue-500">
+          <div className="w-12 h-12 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center font-black">
+            <MapPin className="w-6 h-6" />
           </div>
           <div>
-            <span className="text-[10px] uppercase font-bold text-[var(--text-muted)]">Tracked Commodities</span>
-            <h4 className="text-base font-black text-[var(--text)]">24+ Major Crops</h4>
+            <div className="text-xs font-bold text-text-muted uppercase">Connected Mandis</div>
+            <div className="text-xl font-extrabold text-slate-900 dark:text-white">120+ APMC Yards</div>
           </div>
         </div>
-        <div className="p-4 bg-[var(--surface)] border border-[var(--border)] rounded-2xl flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center font-bold">
-            <CloudRain className="w-5 h-5" />
+
+        <div className="card-vanguard p-4 flex items-center gap-3 border-l-4 border-amber-500">
+          <div className="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center font-black">
+            <CloudSun className="w-6 h-6" />
           </div>
           <div>
-            <span className="text-[10px] uppercase font-bold text-[var(--text-muted)]">Weather Alert</span>
-            <h4 className="text-base font-black text-[var(--text)]">29°C (Light Rain)</h4>
+            <div className="text-xs font-bold text-text-muted uppercase">Weather Outlook</div>
+            <div className="text-xl font-extrabold text-slate-900 dark:text-white">28°C • Good Sowing</div>
           </div>
         </div>
-        <div className="p-4 bg-[var(--surface)] border border-[var(--border)] rounded-2xl flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-600 flex items-center justify-center font-bold">
-            <Droplets className="w-5 h-5" />
+
+        <div className="card-vanguard p-4 flex items-center gap-3 border-l-4 border-cyan-500">
+          <div className="w-12 h-12 rounded-xl bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 flex items-center justify-center font-black">
+            <Sparkles className="w-6 h-6" />
           </div>
           <div>
-            <span className="text-[10px] uppercase font-bold text-[var(--text-muted)]">Soil Moisture</span>
-            <h4 className="text-base font-black text-[var(--text)]">68% Optimal</h4>
+            <div className="text-xs font-bold text-text-muted uppercase">AI Krishi Mitra</div>
+            <div className="text-xl font-extrabold text-slate-900 dark:text-white">10 Indian Languages</div>
           </div>
         </div>
       </div>
 
-      {/* AI Agricultural Assistant Card */}
-      <div className="p-6 bg-gradient-to-br from-emerald-950/40 to-teal-900/30 border border-emerald-500/30 rounded-2xl space-y-4 shadow-lg backdrop-blur-md">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center font-black shadow-md">
+      {/* SECTION 1: AI KRISHI MITRA ADVISOR */}
+      <div className="card-vanguard p-6 bg-gradient-to-br from-emerald-500/5 via-surface to-cyan-500/5 border-emerald-500/30">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2.5 rounded-xl bg-emerald-600 text-white shadow-md">
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-lg font-black text-[var(--text)] flex items-center gap-2">
-                {t('ai_agri_advisor', 'AI Agri Assistant (Krishi Mitra)')}
-              </h3>
-              <p className="text-xs text-[var(--text-muted)]">
-                Ask crop advice, pest control solutions, fertilizer schedules in your native Indian language
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+                {t('ai_agri_advisor') || 'AI Agri Assistant (Krishi Mitra)'}
+              </h2>
+              <p className="text-xs text-text-muted font-medium">
+                Ask about fertilization ratios, pest solutions, government subsidies, or sowing tips.
               </p>
             </div>
           </div>
-          <span className="text-[10px] font-extrabold uppercase bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full border border-emerald-500/30">
-            Powered by Gemini AI
+          <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+            🌾 Active Voice Engine
           </span>
         </div>
 
-        {/* Input & Voice Controls */}
-        <div className="flex items-center gap-2">
-          <div className="relative flex-1">
+        {/* Input Bar with Voice */}
+        <div className="flex flex-col sm:flex-row items-center gap-2">
+          <div className="relative flex-1 w-full">
             <input 
-              type="text"
-              value={queryInput}
-              onChange={(e) => setQueryInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleAskAI()}
-              placeholder={t('ai_agri_placeholder', 'Ask Krishi Mitra AI (e.g. Best fertilizer for Paddy, tomato yellow leaf cure...)...')}
-              className="w-full pl-4 pr-12 py-3 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-inner"
+              type="text" 
+              value={aiQuery} 
+              onChange={(e) => setAiQuery(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleAskAgriAI()}
+              placeholder={t('ask_ai_voice') || 'Ask AI in your language (Tap mic or type)...'}
+              className="w-full pl-4 pr-12 py-3 bg-surface-2 border border-border rounded-xl text-sm font-medium text-text focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
-            <button
-              onClick={toggleListening}
-              className={`absolute right-2 top-2 p-1.5 rounded-lg transition cursor-pointer ${
-                isListening ? 'bg-red-600 text-white animate-pulse' : 'text-slate-400 hover:text-emerald-500'
+            <button 
+              type="button" 
+              onClick={toggleSpeech}
+              title="Speak in your language"
+              className={`absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg transition-colors ${
+                isListening ? 'bg-red-500 text-white animate-pulse' : 'text-text-muted hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-slate-700'
               }`}
-              title="Voice Input in Native Script"
             >
-              <Mic className="w-5 h-5" />
+              {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
             </button>
           </div>
 
-          <button
-            disabled={aiLoading}
-            onClick={() => handleAskAI()}
-            className="px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl flex items-center gap-2 transition cursor-pointer disabled:opacity-50 shadow-md flex-shrink-0"
+          <button 
+            type="button"
+            onClick={() => handleAskAgriAI()}
+            disabled={aiLoading || !aiQuery.trim()}
+            className="w-full sm:w-auto px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-md transition-colors"
           >
-            {aiLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-            <span>Ask AI</span>
+            {aiLoading ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <span>Analyzing...</span>
+              </>
+            ) : (
+              <>
+                <Send className="w-4 h-4" />
+                <span>Ask Advice</span>
+              </>
+            )}
           </button>
         </div>
 
-        {/* Pre-loaded Smart Prompt Pills */}
-        <div className="space-y-1.5">
-          <span className="text-[10px] uppercase font-bold text-[var(--text-muted)]">Suggested Prompts:</span>
-          <div className="flex flex-wrap gap-2">
-            {promptPills.map((pill, idx) => (
-              <button
-                key={idx}
-                onClick={() => {
-                  setQueryInput(pill.query);
-                  handleAskAI(pill.query);
-                }}
-                className="px-3 py-1.5 bg-[var(--surface)] border border-[var(--border)] hover:border-emerald-500 text-xs font-semibold text-[var(--text)] rounded-xl transition cursor-pointer shadow-sm text-left"
-              >
-                {pill.label}
-              </button>
-            ))}
-          </div>
+        {/* Quick Question Pills */}
+        <div className="flex flex-wrap gap-2 mt-3">
+          {QUICK_PROMPTS.map((prompt, idx) => (
+            <button 
+              key={idx} 
+              type="button"
+              onClick={() => {
+                setAiQuery(prompt);
+                handleAskAgriAI(prompt);
+              }}
+              className="px-3 py-1.5 rounded-lg bg-surface border border-border hover:border-emerald-500 text-[11px] font-semibold text-text-muted hover:text-emerald-600 transition-colors text-left"
+            >
+              💡 {prompt}
+            </button>
+          ))}
         </div>
 
-        {/* AI Response Output Display */}
+        {/* AI Response Output */}
         {aiResponse && (
-          <div className="p-4 bg-[var(--surface)] border border-emerald-500/40 rounded-xl space-y-2 mt-4">
-            <div className="flex items-center justify-between text-xs font-bold text-emerald-600 border-b border-[var(--border)] pb-2">
-              <span className="flex items-center gap-1.5">
-                <Bot className="w-4 h-4" /> VANGUARD Krishi Mitra Response
-              </span>
-              <span className="text-[10px] text-[var(--text-muted)] uppercase">Multi-lingual AI Advice</span>
+          <div className="mt-4 p-4 rounded-2xl bg-surface border border-emerald-500/40 shadow-inner animate-fadeIn">
+            <div className="flex items-center gap-2 text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase mb-2">
+              <Sparkles className="w-4 h-4" />
+              <span>Krishi Mitra Recommendation</span>
             </div>
-            <div className="text-sm font-medium text-[var(--text)] whitespace-pre-line leading-relaxed">
+            <div className="text-sm text-text font-normal leading-relaxed whitespace-pre-line">
               {aiResponse}
             </div>
           </div>
         )}
       </div>
 
-      {/* Weather & Crop Health Advisory Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Weather & Irrigation Widget */}
-        <div className="p-5 bg-[var(--surface)] border border-[var(--border)] rounded-2xl space-y-3">
-          <div className="flex items-center justify-between">
-            <h4 className="text-sm font-extrabold text-[var(--text)] flex items-center gap-2">
-              <CloudRain className="w-4 h-4 text-blue-500" />
-              {t('weather_advisory', 'Weather & Irrigation Advisory')}
-            </h4>
-            <span className="text-[10px] font-bold text-blue-600 bg-blue-500/10 px-2 py-0.5 rounded">
-              70% Rain Alert
-            </span>
-          </div>
-
-          <div className="space-y-2 text-xs">
-            <div className="flex items-center justify-between p-2.5 bg-[var(--surface-2)] rounded-xl">
-              <span className="font-semibold text-[var(--text-muted)]">Temperature Range</span>
-              <span className="font-bold text-[var(--text)]">24°C - 32°C</span>
-            </div>
-            <div className="flex items-center justify-between p-2.5 bg-[var(--surface-2)] rounded-xl">
-              <span className="font-semibold text-[var(--text-muted)]">Recommended Irrigation</span>
-              <span className="font-bold text-emerald-600">Postpone by 48 Hrs</span>
-            </div>
-            <p className="text-[11px] text-[var(--text-muted)] leading-relaxed italic">
-              "Moderate rainfall expected tomorrow evening. Avoid applying heavy nitrogen fertilizers prior to rain to prevent leaching."
-            </p>
-          </div>
-        </div>
-
-        {/* Pest Risk & Crop Protection */}
-        <div className="p-5 bg-[var(--surface)] border border-[var(--border)] rounded-2xl space-y-3">
-          <div className="flex items-center justify-between">
-            <h4 className="text-sm font-extrabold text-[var(--text)] flex items-center gap-2">
-              <Bug className="w-4 h-4 text-amber-500" />
-              {t('pest_risk', 'Pest Risk Index')}
-            </h4>
-            <span className="text-[10px] font-bold text-amber-600 bg-amber-500/10 px-2 py-0.5 rounded">
-              Moderate Risk
-            </span>
-          </div>
-
-          <div className="space-y-2 text-xs">
-            <div className="flex items-center justify-between p-2.5 bg-[var(--surface-2)] rounded-xl">
-              <span className="font-semibold text-[var(--text-muted)]">Stem Borer / Leaf Folder</span>
-              <span className="font-bold text-amber-600">Paddy Fields</span>
-            </div>
-            <div className="flex items-center justify-between p-2.5 bg-[var(--surface-2)] rounded-xl">
-              <span className="font-semibold text-[var(--text-muted)]">Recommended Bio-Spray</span>
-              <span className="font-bold text-[var(--text)]">Neem Oil 10,000 PPM</span>
-            </div>
-            <p className="text-[11px] text-[var(--text-muted)] leading-relaxed italic">
-              "Inspect paddy leaves early morning for yellowing tips. Spray Neem-based bio-pesticide every 14 days."
-            </p>
-          </div>
-        </div>
-
-        {/* Government Subsidy & Helpline */}
-        <div className="p-5 bg-[var(--surface)] border border-[var(--border)] rounded-2xl space-y-3">
-          <div className="flex items-center justify-between">
-            <h4 className="text-sm font-extrabold text-[var(--text)] flex items-center gap-2">
-              <Lightbulb className="w-4 h-4 text-purple-500" />
-              Government Schemes & Helpline
-            </h4>
-            <span className="text-[10px] font-bold text-purple-600 bg-purple-500/10 px-2 py-0.5 rounded">
-              80% Subsidy
-            </span>
-          </div>
-
-          <div className="space-y-2 text-xs">
-            <div className="p-2.5 bg-[var(--surface-2)] rounded-xl space-y-1">
-              <span className="font-bold text-[var(--text)] block">PM Krishi Sinchayee Yojana (PMKSY)</span>
-              <span className="text-[10px] text-[var(--text-muted)]">Drip & Sprinkler irrigation subsidy up to 80% for small farmers.</span>
-            </div>
-            <div className="flex items-center justify-between p-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
-              <span className="font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
-                <Phone className="w-3.5 h-3.5" /> Kisan Call Center
-              </span>
-              <a href="tel:18001801551" className="font-black text-emerald-600 hover:underline">1800-180-1551</a>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Seasonal Crop Calendar Advisory */}
-      <div className="p-5 bg-[var(--surface)] border border-[var(--border)] rounded-2xl space-y-4">
-        <div className="flex items-center justify-between">
-          <h4 className="text-sm font-extrabold text-[var(--text)] flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-teal-500" />
-            {t('crop_calendar', 'Seasonal Crop Calendar (Rabi / Kharif / Zaid)')}
-          </h4>
-          <span className="text-[10px] font-bold text-teal-600 bg-teal-500/10 px-2 py-0.5 rounded">
-            Current: Kharif Season
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {/* Kharif */}
-          <div className="p-4 bg-emerald-500/5 border border-emerald-500/20 rounded-xl space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-extrabold text-emerald-600">☔ Kharif (June-Oct)</span>
-              <span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded animate-pulse">Active</span>
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {['Paddy', 'Maize', 'Cotton', 'Soyabean', 'Groundnut'].map(crop => (
-                <span key={crop} className="text-[10px] font-bold bg-emerald-500/10 text-emerald-600 px-2 py-0.5 rounded-md">{crop}</span>
-              ))}
-            </div>
-            <p className="text-[10px] text-[var(--text-muted)] italic">Sowing: June-July • Harvesting: Sept-Oct</p>
-          </div>
-
-          {/* Rabi */}
-          <div className="p-4 bg-amber-500/5 border border-amber-500/20 rounded-xl space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-extrabold text-amber-600">❄️ Rabi (Nov-Mar)</span>
-              <span className="text-[10px] font-bold text-slate-500 bg-slate-500/10 px-1.5 py-0.5 rounded">Upcoming</span>
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {['Wheat', 'Mustard', 'Chickpea', 'Barley', 'Potato'].map(crop => (
-                <span key={crop} className="text-[10px] font-bold bg-amber-500/10 text-amber-600 px-2 py-0.5 rounded-md">{crop}</span>
-              ))}
-            </div>
-            <p className="text-[10px] text-[var(--text-muted)] italic">Sowing: Oct-Nov • Harvesting: Feb-Mar</p>
-          </div>
-
-          {/* Zaid */}
-          <div className="p-4 bg-blue-500/5 border border-blue-500/20 rounded-xl space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-extrabold text-blue-600">☀️ Zaid (Mar-Jun)</span>
-              <span className="text-[10px] font-bold text-slate-500 bg-slate-500/10 px-1.5 py-0.5 rounded">Completed</span>
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {['Watermelon', 'Muskmelon', 'Cucumber', 'Moong Dal', 'Sunflower'].map(crop => (
-                <span key={crop} className="text-[10px] font-bold bg-blue-500/10 text-blue-600 px-2 py-0.5 rounded-md">{crop}</span>
-              ))}
-            </div>
-            <p className="text-[10px] text-[var(--text-muted)] italic">Sowing: March • Harvesting: May-June</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Local Mandi Crop Price Engine Header & Filters */}
-      <div className="bg-[var(--surface)] p-6 rounded-2xl border border-[var(--border)] space-y-4">
+      {/* SECTION 2: MANDI CROP PRICE COMPARISON */}
+      <div className="card-vanguard p-6 space-y-5">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h3 className="text-lg font-black text-[var(--text)] flex items-center gap-2">
-              <Sprout className="w-5 h-5 text-emerald-600" />
-              {t('mandi_prices', 'Local Mandi Crop Rates')}
-            </h3>
-            <p className="text-xs text-[var(--text-muted)] mt-0.5">
-              Live APMC market daily arrivals, price comparison & percentage trends
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-accent" />
+              <span>{t('mandi_prices') || 'Local Mandi Crop Rates & Price Comparison'}</span>
+            </h2>
+            <p className="text-xs text-text-muted font-medium mt-0.5">
+              Compare rates across APMC mandis to maximize farm profits.
             </p>
           </div>
 
-          {/* Search bar */}
-          <div className="relative min-w-[240px]">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-            <input 
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={t('crop_search', 'Search crop (Paddy, Wheat, Tomato...)...')}
-              className="w-full pl-9 pr-4 py-2 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl text-xs text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-emerald-500"
-            />
-          </div>
-        </div>
-
-        {/* Filter Pills */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-[var(--border)]">
-          <div className="flex items-center gap-2 overflow-x-auto pb-1">
-            <span className="text-xs font-bold text-[var(--text-muted)] mr-1">{t('state_select', 'State')}:</span>
-            {statesList.map(st => (
-              <button
-                key={st}
-                onClick={() => setSelectedState(st)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
-                  selectedState === st 
-                    ? 'bg-emerald-600 text-white shadow-sm' 
-                    : 'bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--text)]'
-                }`}
+          {/* State Filter Dropdown */}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative">
+              <select 
+                value={selectedState} 
+                onChange={(e) => setSelectedState(e.target.value)}
+                className="appearance-none bg-surface-2 border border-border rounded-xl px-4 py-2 pr-8 text-xs font-bold text-text focus:outline-none focus:ring-2 focus:ring-accent cursor-pointer"
               >
-                {st}
-              </button>
-            ))}
-          </div>
+                {STATES.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+              <ChevronDown className="w-4 h-4 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted" />
+            </div>
 
-          <div className="flex items-center gap-2 overflow-x-auto pb-1">
-            <span className="text-xs font-bold text-[var(--text-muted)] mr-1">Category:</span>
-            {categoriesList.map(cat => (
-              <button
+            {/* Category Filter */}
+            {['All', 'Cereals', 'Vegetables', 'Cash Crops', 'Oilseeds', 'Spices'].map(cat => (
+              <button 
                 key={cat}
+                type="button"
                 onClick={() => setSelectedCategory(cat)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${
                   selectedCategory === cat 
-                    ? 'bg-[var(--accent)] text-white shadow-sm' 
-                    : 'bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--text)]'
+                    ? 'bg-accent text-white shadow-sm' 
+                    : 'bg-surface-2 text-text-muted hover:text-text border border-border'
                 }`}
               >
                 {cat}
@@ -633,152 +506,150 @@ export default function Farmers() {
           </div>
         </div>
 
-        {/* Mandi Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
-          {filteredCrops.map(crop => (
-            <div 
-              key={crop.id}
-              className="p-5 bg-[var(--surface-2)] border border-[var(--border)] rounded-2xl flex flex-col justify-between hover:border-emerald-500/50 transition shadow-sm space-y-4"
-            >
-              <div>
-                <div className="flex items-start justify-between">
-                  <div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-md inline-block mb-1">
-                      {crop.category} • {crop.state}
-                    </span>
-                    <h4 className="text-base font-extrabold text-[var(--text)]">{crop.name}</h4>
-                    <p className="text-xs text-[var(--text-muted)] flex items-center gap-1 mt-0.5">
-                      <MapPin className="w-3 h-3 text-slate-400" /> {crop.mandi}
-                    </p>
+        {/* Search Bar */}
+        <div className="relative">
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted" />
+          <input 
+            type="text" 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={t('crop_search') || 'Search crop (Paddy, Wheat, Tomato...)...'}
+            className="w-full pl-10 pr-4 py-2.5 bg-surface-2 border border-border rounded-xl text-xs font-medium text-text focus:outline-none focus:ring-2 focus:ring-accent"
+          />
+        </div>
+
+        {/* Crop Price Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredCrops.map((crop) => {
+            const priceDiff = crop.todayPrice - crop.yesterdayPrice;
+            const pctChange = ((priceDiff / crop.yesterdayPrice) * 100).toFixed(1);
+            const isPositive = priceDiff >= 0;
+
+            return (
+              <div 
+                key={crop.id}
+                className="p-4 rounded-2xl bg-surface-2 border border-border hover:border-accent/40 transition-all hover:shadow-md flex flex-col justify-between space-y-4"
+              >
+                <div>
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-accent px-2 py-0.5 rounded-md bg-accent/10">
+                        {crop.category}
+                      </span>
+                      <h3 className="font-bold text-sm text-slate-900 dark:text-white mt-1.5 leading-snug">
+                        {crop.name}
+                      </h3>
+                    </div>
+                    <div className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-black ${
+                      isPositive ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-red-500/10 text-red-600 dark:text-red-400'
+                    }`}>
+                      {isPositive ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
+                      <span>{isPositive ? `+${pctChange}%` : `${pctChange}%`}</span>
+                    </div>
                   </div>
 
-                  {/* Trend badge */}
-                  <div className={`px-2.5 py-1 rounded-xl text-xs font-extrabold flex items-center gap-1 ${
-                    crop.trend === 'up' ? 'bg-emerald-500/15 text-emerald-600' :
-                    crop.trend === 'down' ? 'bg-red-500/15 text-red-600' : 'bg-slate-500/15 text-slate-600'
-                  }`}>
-                    {crop.trend === 'up' && <ArrowUpRight className="w-3.5 h-3.5" />}
-                    {crop.trend === 'down' && <ArrowDownRight className="w-3.5 h-3.5" />}
-                    {crop.trend === 'stable' && <Minus className="w-3.5 h-3.5" />}
-                    {crop.percentChange}
+                  <div className="flex items-center gap-1.5 text-xs text-text-muted font-medium mt-2">
+                    <MapPin className="w-3.5 h-3.5 text-red-500" />
+                    <span>{crop.mandi}, {crop.state} ({crop.distanceKm} km away)</span>
                   </div>
                 </div>
 
                 {/* Price Display */}
-                <div className="mt-4 p-3 bg-[var(--surface)] border border-[var(--border)] rounded-xl flex items-center justify-between">
+                <div className="p-3 rounded-xl bg-surface border border-border/80 flex items-center justify-between">
                   <div>
-                    <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase block">{t('today_price', "Today's Rate")}</span>
-                    <span className="text-xl font-black text-[var(--text)]">₹{crop.todayPrice.toLocaleString('en-IN')}</span>
-                    <span className="text-[10px] text-[var(--text-muted)] ml-1">/ Quintal</span>
+                    <div className="text-[10px] font-bold text-text-muted uppercase">Today's Rate</div>
+                    <div className="text-lg font-black text-slate-900 dark:text-white">
+                      ₹{crop.todayPrice.toLocaleString()} <span className="text-[11px] font-semibold text-text-muted">{crop.unit}</span>
+                    </div>
                   </div>
                   <div className="text-right">
-                    <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase block">{t('yesterday_price', "Yesterday's Rate")}</span>
-                    <span className="text-sm font-bold text-slate-400 line-through">₹{crop.yesterdayPrice.toLocaleString('en-IN')}</span>
+                    <div className="text-[10px] font-bold text-text-muted uppercase">Range (Min-Max)</div>
+                    <div className="text-xs font-extrabold text-text">
+                      ₹{crop.minPrice} - ₹{crop.maxPrice}
+                    </div>
                   </div>
                 </div>
 
-                {/* Min / Max Range Bar */}
-                <div className="mt-3 space-y-1">
-                  <div className="flex items-center justify-between text-[10px] font-bold text-[var(--text-muted)]">
-                    <span>Min: ₹{crop.minPrice}</span>
-                    <span>Arrivals: {crop.arrivals}</span>
-                    <span>Max: ₹{crop.maxPrice}</span>
+                {/* Fertilization & Soil Health Pill */}
+                <div className="p-2.5 rounded-xl bg-emerald-500/5 border border-emerald-500/20 text-xs space-y-1">
+                  <div className="flex items-center gap-1 font-bold text-emerald-700 dark:text-emerald-300 text-[11px]">
+                    <Droplets className="w-3.5 h-3.5" />
+                    <span>NPK Ratio: {crop.npk}</span>
                   </div>
-                  <div className="w-full h-1.5 bg-[var(--surface-3)] rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full" 
-                      style={{
-                        width: `${Math.min(100, Math.max(15, ((crop.todayPrice - crop.minPrice) / (crop.maxPrice - crop.minPrice)) * 100))}%`
-                      }}
-                    />
-                  </div>
+                  <p className="text-[11px] text-text-muted line-clamp-2">
+                    {crop.bestFertilizer}
+                  </p>
                 </div>
               </div>
-
-              <div className="pt-2 border-t border-[var(--border)] flex items-center justify-between text-xs font-semibold text-[var(--text-muted)]">
-                <span>Quality: <strong className="text-[var(--text)]">{crop.quality}</strong></span>
-                <span className="text-emerald-600 font-bold hover:underline cursor-pointer flex items-center gap-0.5">
-                  Mandi History <ArrowUpRight className="w-3 h-3" />
-                </span>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {filteredCrops.length === 0 && (
-          <div className="text-center py-8 text-[var(--text-muted)] font-bold text-sm">
-            No crops found matching your state or search query. Try clearing filters.
+          <div className="text-center py-12 text-text-muted space-y-2">
+            <Sprout className="w-10 h-10 mx-auto text-text-light opacity-50" />
+            <p className="text-sm font-bold">No crops found matching your filters.</p>
+            <button 
+              type="button"
+              onClick={() => { setSelectedState('All States'); setSelectedCategory('All'); setSearchQuery(''); }}
+              className="text-xs text-accent font-bold underline"
+            >
+              Reset Filters
+            </button>
           </div>
         )}
       </div>
 
-      {/* MSP (Minimum Support Price) Reference Table */}
-      <div className="p-5 bg-[var(--surface)] border border-[var(--border)] rounded-2xl space-y-4">
-        <div className="flex items-center justify-between">
-          <h4 className="text-sm font-extrabold text-[var(--text)] flex items-center gap-2">
-            <FileText className="w-4 h-4 text-indigo-500" />
-            {t('msp_reference', 'MSP Reference Rates (Govt. of India 2024-25)')}
-          </h4>
-          <span className="text-[10px] font-bold text-indigo-600 bg-indigo-500/10 px-2 py-0.5 rounded">
-            Central Govt. Notified
-          </span>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="border-b border-[var(--border)]">
-                <th className="text-left py-2 font-extrabold text-[var(--text-muted)] uppercase tracking-wider">Crop</th>
-                <th className="text-right py-2 font-extrabold text-[var(--text-muted)] uppercase tracking-wider">MSP (₹/Qtl)</th>
-                <th className="text-right py-2 font-extrabold text-[var(--text-muted)] uppercase tracking-wider">Season</th>
-                <th className="text-right py-2 font-extrabold text-[var(--text-muted)] uppercase tracking-wider">vs Mandi Avg</th>
-              </tr>
-            </thead>
-            <tbody>
-              {[
-                { name: 'Paddy (Common)', msp: 2300, season: 'Kharif', diff: '+6.5%' },
-                { name: 'Wheat', msp: 2275, season: 'Rabi', diff: '0.0%' },
-                { name: 'Maize', msp: 2090, season: 'Kharif', diff: '-5.2%' },
-                { name: 'Cotton (Long)', msp: 7020, season: 'Kharif', diff: '+1.8%' },
-                { name: 'Soyabean (Yellow)', msp: 4600, season: 'Kharif', diff: '+1.0%' },
-                { name: 'Sugarcane (FRP)', msp: 340, season: 'Year-round', diff: '+4.4%' },
-              ].map((item, idx) => (
-                <tr key={idx} className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)] transition">
-                  <td className="py-2.5 font-bold text-[var(--text)]">{item.name}</td>
-                  <td className="py-2.5 text-right font-extrabold text-[var(--text)]">₹{item.msp.toLocaleString('en-IN')}</td>
-                  <td className="py-2.5 text-right font-semibold text-[var(--text-muted)]">{item.season}</td>
-                  <td className={`py-2.5 text-right font-extrabold ${item.diff.startsWith('+') ? 'text-emerald-600' : item.diff.startsWith('-') ? 'text-red-500' : 'text-slate-500'}`}>
-                    {item.diff}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <p className="text-[10px] text-[var(--text-muted)] italic">
-          * MSP rates are notified by CACP (Commission for Agricultural Costs & Prices). Actual procurement varies by state.
-        </p>
-      </div>
-
-      {/* Important Farmer Helplines */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        {[
-          { name: 'Kisan Call Center', number: '1800-180-1551', desc: 'Free agri advisory', color: 'emerald' },
-          { name: 'PM-KISAN Helpline', number: '155261', desc: 'PM-KISAN scheme queries', color: 'blue' },
-          { name: 'Crop Insurance (PMFBY)', number: '1800-120-0868', desc: 'Claim & enrollment', color: 'amber' },
-          { name: 'Soil Health Card', number: '1800-180-1551', desc: 'Soil testing info', color: 'purple' },
-        ].map((line, idx) => (
-          <div key={idx} className={`p-4 bg-[var(--surface)] border border-[var(--border)] rounded-2xl flex items-center gap-3 hover:border-${line.color}-500/40 transition`}>
-            <div className={`w-9 h-9 rounded-xl bg-${line.color}-500/10 text-${line.color}-600 flex items-center justify-center`}>
-              <Phone className="w-4 h-4" />
+      {/* SECTION 3: CROP CALENDAR & SOIL HEALTH GUIDE */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="card-vanguard p-5 space-y-3 border-l-4 border-cyan-500">
+          <div className="flex items-center gap-2">
+            <Layers className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
+            <h3 className="font-bold text-sm text-slate-900 dark:text-white">
+              {t('soil_advisory') || 'Soil Health & NPK Recommendation'}
+            </h3>
+          </div>
+          <p className="text-xs text-text-muted leading-relaxed">
+            Get automated soil test recommendations. Test pH balance before sowing Kharif or Rabi crops to prevent fertilizer wastage by up to 30%.
+          </p>
+          <div className="grid grid-cols-3 gap-2 pt-2 text-center text-xs">
+            <div className="p-2 rounded-lg bg-surface-2 border border-border">
+              <div className="font-extrabold text-blue-600 dark:text-blue-400">Nitrogen (N)</div>
+              <div className="text-[10px] text-text-muted">Leaf Growth</div>
             </div>
-            <div className="min-w-0">
-              <span className="text-xs font-extrabold text-[var(--text)] block">{line.name}</span>
-              <a href={`tel:${line.number}`} className={`text-xs font-bold text-${line.color}-600 hover:underline`}>{line.number}</a>
-              <span className="text-[10px] text-[var(--text-muted)] block">{line.desc}</span>
+            <div className="p-2 rounded-lg bg-surface-2 border border-border">
+              <div className="font-extrabold text-emerald-600 dark:text-emerald-400">Phosphorus (P)</div>
+              <div className="text-[10px] text-text-muted">Root Strength</div>
+            </div>
+            <div className="p-2 rounded-lg bg-surface-2 border border-border">
+              <div className="font-extrabold text-amber-600 dark:text-amber-400">Potassium (K)</div>
+              <div className="text-[10px] text-text-muted">Disease Resistance</div>
             </div>
           </div>
-        ))}
+        </div>
+
+        <div className="card-vanguard p-5 space-y-3 border-l-4 border-amber-500">
+          <div className="flex items-center gap-2">
+            <ShieldAlert className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+            <h3 className="font-bold text-sm text-slate-900 dark:text-white">
+              Government Agriculture Schemes
+            </h3>
+          </div>
+          <ul className="text-xs text-text-muted space-y-2">
+            <li className="flex items-start gap-1.5">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
+              <span><strong>PM-KUSUM:</strong> 60% subsidy on Solar Agriculture Pumps.</span>
+            </li>
+            <li className="flex items-start gap-1.5">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
+              <span><strong>Per Drop More Crop:</strong> 45-55% subsidy for Micro/Drip Irrigation systems.</span>
+            </li>
+            <li className="flex items-start gap-1.5">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
+              <span><strong>PMFBY:</strong> Comprehensive Crop Insurance for natural calamity protection.</span>
+            </li>
+          </ul>
+        </div>
       </div>
     </div>
   );
