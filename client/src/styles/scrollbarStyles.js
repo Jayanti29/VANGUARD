@@ -1,0 +1,1 @@
+export const SCROLLBAR_CONFIG = { THUMB_SIZE: 6, RADIUS: 3 };
